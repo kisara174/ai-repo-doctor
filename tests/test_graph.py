@@ -1,0 +1,249 @@
+import tempfile
+import unittest
+from pathlib import Path
+
+from repo_doctor.index import build_index
+
+
+class GraphTests(unittest.TestCase):
+    def test_resolves_relative_imports_aliases_and_self_methods(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "pkg").mkdir()
+            (root / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+            (root / "pkg" / "helpers.py").write_text("def save(item):\n    return item\n", encoding="utf-8")
+            (root / "pkg" / "service.py").write_text(
+                "from .helpers import save as persist\n"
+                "import pkg.helpers as h\n\n"
+                "class Service:\n"
+                "    def run(self, item):\n"
+                "        persist(item)\n"
+                "        h.save(item)\n"
+                "        self.done(item)\n"
+                "        unknown(item)\n\n"
+                "    def done(self, item):\n"
+                "        return item\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(
+            [(edge.source, edge.target, edge.line) for edge in index.import_edges],
+            [("pkg/service.py", "pkg/helpers.py", 1), ("pkg/service.py", "pkg/helpers.py", 2)],
+        )
+        self.assertEqual(
+            [(edge.caller, edge.callee, edge.line) for edge in index.call_edges],
+            [
+                ("pkg/service.py::Service.run", "pkg/helpers.py::save", 6),
+                ("pkg/service.py::Service.run", "pkg/helpers.py::save", 7),
+                ("pkg/service.py::Service.run", "pkg/service.py::Service.done", 8),
+            ],
+        )
+        self.assertEqual(len(index.calls) - len(index.call_edges), 1)
+
+    def test_shadowed_parameter_is_not_assumed_to_be_module_function(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "def save():\n    pass\n\ndef run(save):\n    save()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index.call_edges, [])
+
+    def test_src_layout_resolves_project_import(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src" / "pkg").mkdir(parents=True)
+            (root / "src" / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+            (root / "src" / "pkg" / "helper.py").write_text("def foo():\n    pass\n", encoding="utf-8")
+            (root / "src" / "pkg" / "run.py").write_text(
+                "from pkg.helper import foo\n\ndef execute():\n    foo()\n", encoding="utf-8"
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index.import_edges[0].target, "src/pkg/helper.py")
+        self.assertEqual(index.call_edges[0].callee, "src/pkg/helper.py::foo")
+
+    def test_plain_dotted_import_binds_package_not_submodule(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "pkg").mkdir()
+            (root / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+            (root / "pkg" / "helpers.py").write_text("def save():\n    pass\n", encoding="utf-8")
+            (root / "app.py").write_text(
+                "import pkg.helpers\n\ndef run():\n    pkg.save()\n", encoding="utf-8"
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index.call_edges, [])
+
+    def test_import_cycle_is_reported_deterministically(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "a.py").write_text("import b\n", encoding="utf-8")
+            (root / "b.py").write_text("import a\n", encoding="utf-8")
+
+            index = build_index(root)
+
+        self.assertEqual(index.import_cycles, [["a.py", "b.py"]])
+
+    def test_long_acyclic_import_chain_does_not_hit_recursion_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for number in range(1100):
+                next_import = f"import m{number + 1}\n" if number < 1099 else ""
+                (root / f"m{number}.py").write_text(next_import, encoding="utf-8")
+
+            index = build_index(root)
+
+        self.assertEqual(index.import_cycles, [])
+        self.assertEqual(len(index.import_edges), 1099)
+
+    def test_relative_import_beyond_package_is_not_resolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "pkg").mkdir()
+            (root / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+            (root / "foo.py").write_text("def bar():\n    pass\n", encoding="utf-8")
+            (root / "pkg" / "service.py").write_text(
+                "from ..foo import bar\n\ndef run():\n    bar()\n", encoding="utf-8"
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index.import_edges, [])
+        self.assertEqual(index.call_edges, [])
+
+    def test_multiple_names_from_one_module_make_one_import_edge(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "pkg").mkdir()
+            (root / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+            (root / "pkg" / "helpers.py").write_text(
+                "def one():\n    pass\n\ndef two():\n    pass\n", encoding="utf-8"
+            )
+            (root / "pkg" / "service.py").write_text(
+                "from .helpers import one, two\n\ndef run():\n    one()\n    two()\n", encoding="utf-8"
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(len(index.import_edges), 1)
+        self.assertEqual(len(index.call_edges), 2)
+
+    def test_external_import_shadowing_local_alias_is_not_resolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "local.py").write_text("def save():\n    pass\n", encoding="utf-8")
+            (root / "app.py").write_text(
+                "from local import save\nfrom external import save\n\ndef run():\n    save()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index.call_edges, [])
+
+    def test_module_assignment_shadowing_import_is_not_resolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "local.py").write_text("def save():\n    pass\n", encoding="utf-8")
+            (root / "app.py").write_text(
+                "from local import save\nsave = lambda: None\n\ndef run():\n    save()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index.call_edges, [])
+
+    def test_local_import_then_reassignment_is_not_resolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "local.py").write_text("def save():\n    pass\n", encoding="utf-8")
+            (root / "app.py").write_text(
+                "def run():\n    from local import save\n    save = lambda: None\n    save()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index.call_edges, [])
+
+    def test_external_import_shadowing_same_file_function_is_not_resolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "def save():\n    pass\n\nfrom external import save\n\ndef run():\n    save()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index.call_edges, [])
+
+    def test_module_function_shadowing_import_alias_is_not_resolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "local.py").write_text("def save():\n    pass\n", encoding="utf-8")
+            (root / "app.py").write_text(
+                "import local as h\n\ndef h():\n    pass\n\ndef run():\n    h.save()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index.call_edges, [])
+
+    def test_dotted_import_with_explicit_first_segment_alias_binds_submodule(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "pkg").mkdir()
+            (root / "pkg" / "__init__.py").write_text("def run():\n    return 0\n", encoding="utf-8")
+            (root / "pkg" / "mod.py").write_text("def run():\n    return 1\n", encoding="utf-8")
+            (root / "app.py").write_text(
+                "import pkg.mod as pkg\n\ndef call():\n    pkg.run()\n", encoding="utf-8"
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index.call_edges[0].callee, "pkg/mod.py::run")
+
+    def test_package_relative_import_does_not_create_self_cycle(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "pkg").mkdir()
+            (root / "pkg" / "__init__.py").write_text("from . import helper\n", encoding="utf-8")
+            (root / "pkg" / "helper.py").write_text("pass\n", encoding="utf-8")
+
+            index = build_index(root)
+
+        self.assertEqual(
+            [(edge.source, edge.target, edge.line) for edge in index.import_edges],
+            [("pkg/__init__.py", "pkg/helper.py", 1)],
+        )
+        self.assertEqual(index.import_cycles, [])
+
+    def test_duplicate_conditional_definitions_remain_ambiguous(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "if FLAG:\n"
+                "    def target():\n        return 1\n"
+                "else:\n"
+                "    def target():\n        return 2\n"
+                "\ndef caller():\n    return target()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index.ambiguous_symbols, {"app.py::target"})
+        self.assertNotIn("app.py::target", index.symbols)
+        self.assertEqual(index.call_edges, [])
