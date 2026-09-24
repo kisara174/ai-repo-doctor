@@ -10,11 +10,12 @@ import re
 import shutil
 import sys
 import tempfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from repo_doctor.deepseek import complete_json
 from .diagnosis_data import EvaluationDataError, prepare_cases
 from .diagnosis_runner import run_cases
+from .diagnosis_score import make_review_template, render_report, score_records
 
 
 def _read_manifest(path: Path) -> tuple[dict, str]:
@@ -138,6 +139,156 @@ def _run(args: argparse.Namespace) -> int:
     return 0 if summary["state"] == "complete" else 2
 
 
+def _read_json_object(path: Path, label: str) -> dict:
+    path = Path(path)
+    if path.is_symlink() or not path.is_file():
+        raise EvaluationDataError(f"{label} must be a regular file")
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise EvaluationDataError(f"cannot read a valid {label}") from exc
+    if not isinstance(value, dict):
+        raise EvaluationDataError(f"{label} must be a JSON object")
+    return value
+
+
+def _load_run_bundle(run_dir: Path) -> tuple[dict, list[dict], Path]:
+    root = Path(run_dir)
+    if root.is_symlink() or not root.is_dir():
+        raise EvaluationDataError("run directory must be a real directory")
+    root = root.resolve(strict=True)
+    run = _read_json_object(root / "run.json", "run.json")
+    record_files = run.get("record_files")
+    if not isinstance(record_files, list):
+        raise EvaluationDataError("run record_files must be a list")
+    records_dir = root / "records"
+    if records_dir.is_symlink() or not records_dir.is_dir():
+        if record_files:
+            raise EvaluationDataError("run records directory is missing or is a symlink")
+    records = []
+    for relative in record_files:
+        if not isinstance(relative, str) or "\\" in relative:
+            raise EvaluationDataError("run record_files contains an unsafe path")
+        posix = PurePosixPath(relative)
+        if (
+            posix.is_absolute()
+            or posix.as_posix() != relative
+            or len(posix.parts) != 2
+            or posix.parts[0] != "records"
+            or re.fullmatch(r"[A-Za-z0-9_-]+\.json", posix.parts[1]) is None
+        ):
+            raise EvaluationDataError("run record_files contains an unsafe path")
+        record_path = root / relative
+        if record_path.is_symlink() or not record_path.is_file():
+            raise EvaluationDataError("a listed run record is missing or is a symlink")
+        try:
+            record_path.resolve(strict=True).relative_to(root)
+        except (OSError, ValueError) as exc:
+            raise EvaluationDataError("a listed run record escapes its run directory") from exc
+        records.append(_read_json_object(record_path, "run record"))
+    return run, records, root
+
+
+def _stage_output(path: Path, content: str) -> Path:
+    if Path(path).is_symlink():
+        raise EvaluationDataError("output path cannot be a symlink")
+    destination = Path(path).resolve(strict=False)
+    if not destination.parent.is_dir():
+        raise EvaluationDataError("output parent directory must already exist")
+    if os.path.lexists(destination):
+        raise EvaluationDataError("output file already exists; choose a new filename")
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=destination.parent,
+            prefix=f".{destination.name}.tmp-", delete=False,
+        ) as stream:
+            temporary = Path(stream.name)
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        return temporary
+    except OSError as exc:
+        if temporary is not None:
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise EvaluationDataError("cannot stage output file") from exc
+
+
+def _publish_new_files(outputs: list[tuple[Path, str]]) -> None:
+    if any(Path(path).is_symlink() for path, _ in outputs):
+        raise EvaluationDataError("output paths cannot be symlinks")
+    destinations = [Path(path).resolve(strict=False) for path, _ in outputs]
+    if len(set(destinations)) != len(destinations):
+        raise EvaluationDataError("output paths must be different")
+    if any(os.path.lexists(path) for path in destinations):
+        raise EvaluationDataError("output file already exists; choose new filenames")
+
+    staged: list[Path] = []
+    published: list[Path] = []
+    try:
+        for path, (_, content) in zip(destinations, outputs, strict=True):
+            staged.append(_stage_output(path, content))
+        for temporary, destination in zip(staged, destinations, strict=True):
+            os.link(temporary, destination)
+            published.append(destination)
+    except OSError as exc:
+        for destination in published:
+            try:
+                destination.unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise EvaluationDataError("cannot publish output files") from exc
+    except BaseException:
+        for destination in published:
+            try:
+                destination.unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise
+    finally:
+        for temporary in staged:
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+def _prepare_review(args: argparse.Namespace) -> int:
+    run, records, _ = _load_run_bundle(Path(args.run_dir))
+    if run.get("state") == "running":
+        raise EvaluationDataError("cannot prepare a review for a running experiment")
+    if run.get("completed_calls") != len(records):
+        raise EvaluationDataError("run completed_calls does not match listed records")
+    review = make_review_template(records)
+    review["run"] = run
+    content = json.dumps(review, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+    _publish_new_files([(Path(args.out_file), content)])
+    print(f"Prepared {len(review['rows'])} review rows in {args.out_file}")
+    return 0
+
+
+def _score(args: argparse.Namespace) -> int:
+    manifest, manifest_sha256 = _read_manifest(Path(args.manifest))
+    run, records, _ = _load_run_bundle(Path(args.run_dir))
+    review = _read_json_object(Path(args.review), "review file")
+    if run.get("manifest_sha256") != manifest_sha256:
+        raise EvaluationDataError("run manifest SHA-256 does not match the supplied manifest bytes")
+    if not isinstance(review.get("run"), dict) or review["run"] != run:
+        raise EvaluationDataError("review run metadata does not match run.json")
+    report = score_records(manifest, records, review)
+    rendered = render_report(report)
+    json_content = json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+    _publish_new_files([
+        (Path(args.json_out), json_content),
+        (Path(args.markdown_out), rendered),
+    ])
+    print(f"Scored {report['totals']['completed_calls']} completed calls in {args.run_dir}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="evaluate_diagnosis")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -155,6 +306,17 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--repeats", type=int, default=1)
     run.add_argument("--max-calls", type=int, required=True)
     run.add_argument("--allow-network", action="store_true")
+    prepare_review = subparsers.add_parser(
+        "prepare-review", help="create a pending manual review template from a run"
+    )
+    prepare_review.add_argument("--run-dir", required=True)
+    prepare_review.add_argument("--out-file", required=True)
+    score = subparsers.add_parser("score", help="score a manually reviewed offline run")
+    score.add_argument("--manifest", required=True)
+    score.add_argument("--run-dir", required=True)
+    score.add_argument("--review", required=True)
+    score.add_argument("--json-out", required=True)
+    score.add_argument("--markdown-out", required=True)
     return parser
 
 
@@ -165,6 +327,10 @@ def main(argv: list[str] | None = None) -> int:
             return _prepare(args)
         if args.command == "run":
             return _run(args)
+        if args.command == "prepare-review":
+            return _prepare_review(args)
+        if args.command == "score":
+            return _score(args)
     except (EvaluationDataError, OSError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

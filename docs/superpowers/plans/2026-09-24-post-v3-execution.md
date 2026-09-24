@@ -122,6 +122,10 @@ status 为 success / provider_error / invalid_response；error 只用工具自�
 
 prepare-review 为每个 success record 的 accepted 和 rejected finding 生成一行：case_id、repeat_index、bucket、finding_index、verdict、matched_issue_id、rationale、reviewer。verdict 初始 pending；人工填写 tp / fp / uncertain / duplicate。额外 duplicate 必须指定其 canonical finding，不能指向另一个 duplicate。
 
+复核文件顶层保存 `schema_version`、`run`（从 `run.json` 复制数据集/manifest/plan 哈希、重复次数、计划/尝试/完成调用数、状态和显式 `record_files`）以及 `rows`。每行增加 `duplicate_of_bucket` 与 `duplicate_of_finding_index`；它们仅在 verdict 为 duplicate 时填写，指向同一个 case/repeat 下 verdict 为 tp 的非 duplicate canonical finding。duplicate 还必须填与 canonical finding 相同的 `matched_issue_id`。评分 CLI 必须将复核文件的 run 元数据与磁盘 `run.json` 逐字段比对，并用 manifest 原始字节 SHA 与 run 哈希核对；CLI 和打分器都只接受 `record_files` 列出的记录。run 仍为 running 或 `record_files` 与完成计数不符时拒绝评分。partial run 可以评分，但报告必须分别显示已完成失败、未完成尝试和未尝试请求。
+
+对每个 `by_repeat`，`all_requested_bug_cases` = 冻结 manifest 中 bug case 数；它是该轮的端到端分母，不乘 repeats，也不跨轮合并结果。提前停止后该轮尚未发送的 bug call 仍计入分母，并由 `not_attempted_calls` 单独揭示。条件 recall 只以该轮成功返回的 bug call 为分母。总体调用失败率定义为已完成调用中的失败比例（`failed_calls / completed_calls`）；尚未完成的尝试不算已完成失败，必须通过 `unresolved_calls` 单独显示。
+
 必须复核所有 finding。匹配以根因、触发条件和结果为依据，不能用标题相似度或模型自己判断代替人工。grounded 不等于正确。fixed/control 只表示已知问题修复或未标注，不代表没有其它缺陷；发现额外真实问题先标 uncertain，由主代理裁决并新建数据集版本，不能倒改本轮标签提高分数。
 
 评分输出约定：顶层 schema_version=1、dataset_id、manifest_sha256、by_repeat、totals、limitations。每个 by_repeat 元素包含 repeat_index、counts、metrics。counts 的字段为 accepted_tp、accepted_fp、uncertain、duplicate、accepted_count、rejected_count、detected_known_bug_cases、successful_bug_cases、all_requested_bug_cases、successful_control_cases_with_accepted_fp、successful_fixed_and_control_cases、failed_calls、rejected_true_positive。metrics 使用下面公式中的五个名称。totals 仅汇总请求/资源数量，不把多轮结果冒充独立 case。
@@ -141,8 +145,8 @@ control_false_alarm_rate = ratio(successful_control_cases_with_accepted_fp,
                                  successful_fixed_and_control_cases)
 ~~~
 
-- 同一个 case/repeat/issue 的多个发现只能命中一次；额外 finding 单列 duplicate。
-- uncertain 不计入 TP/FP，但必须展示数量及其占比；precision 必须标注“排除 uncertain/duplicate 后”。
+- 同一个 case/repeat/issue 的多个发现只能命中一次；额外 finding 单列 duplicate，并显式指向同轮 canonical TP finding。
+- uncertain 不计入 TP/FP，但必须展示数量及其占比；precision 必须标注“排除 uncertain/duplicate 后”。uncertain/duplicate rate 的分母是所有成功请求的 accepted 与 rejected findings 总数，分母为 0 时为 null。
 - provider_error/invalid_response 不算“没有缺陷”，显示调用失败率；条件 recall 和端到端检出率同时报告。
 - rejected findings 即使人工认为根因正确，也不能算 accepted_tp；单列 rejected_true_positive 诊断证据门禁损失。
 - 每次 repeat 分别报告；重复请求不是新增独立样本。bug/fixed 配对也不是独立随机抽样。
@@ -327,16 +331,18 @@ python3 -m unittest discover -s tests -q
 
 CLI 增加 prepare-review --run-dir --out-file，以及 score --manifest --run-dir --review --json-out --markdown-out。prepare-review 可以生成 pending；score 遇到 pending/缺行/重复行/未知 finding index/manifest 哈希不匹配时返回 2，保持旧报告原样。
 
-- [ ] 写手算 fixture：3 个 bug case 中 2 个 success（仅一个命中）、1 个 provider_error；2 个 control success（一个有 FP）；accepted 共 1 TP、1 FP、1 uncertain、1 duplicate；另有 1 个 rejected finding。
-- [ ] 断言：precision=1/2；条件 recall=1/2；端到端检出率=1/3；grounding_rate=4/5；control_false_alarm_rate=1/2；uncertain=1、duplicate=1、failed_calls=1。为无 findings/无正例/全失败分别断言相关比率为 null，不能写成 100%。
-- [ ] 实现第 1.6 节定义的计算；报告同时展示原始分子分母、样本 ID、版本/哈希、每轮结果、token 缺失数、延迟原值与中位数，避免仅有一个总分。
-- [ ] rejected TP 单列；模糊问题不强塞 TP。输出中的 reviewer/rationale 缺失同样拒绝 score。
-- [ ] 原子写 JSON/Markdown，路径相同或覆盖已有报告需要显式新文件名；失败不部分覆盖旧结果。
+- [x] 写手算 fixture：3 个 bug case 中 2 个 success（仅一个命中）、1 个 provider_error；2 个 control success（一个有 FP）；accepted 共 1 TP、1 FP、1 uncertain、1 duplicate；另有 1 个 rejected finding。
+- [x] 断言：precision=1/2；条件 recall=1/2；端到端检出率=1/3；grounding_rate=4/5；control_false_alarm_rate=1/2；uncertain=1、duplicate=1、failed_calls=1。为无 findings/无正例/全失败分别断言相关比率为 null，不能写成 100%。
+- [x] 实现第 1.6 节定义的计算；报告同时展示原始分子分母、样本 ID、版本/哈希、每轮结果、token 缺失数、延迟原值与中位数，避免仅有一个总分。
+- [x] rejected TP 单列；模糊问题不强塞 TP。输出中的 reviewer/rationale 缺失同样拒绝 score。
+- [x] 原子写 JSON/Markdown，路径相同或覆盖已有报告需要显式新文件名；失败不部分覆盖旧结果。
 
 ~~~bash
 python3 -m unittest tests.test_diagnosis_score tests.test_diagnosis_evaluation_cli -v
 python3 -m unittest discover -s tests -q
 ~~~
+
+T6 追加审查修正：每轮 E2E 分母按该轮的 bug case 数计算；总体失败率的分母为 completed_calls，未完成尝试单列。定向测试 28 项、全量测试 221 项通过；compileall、三个 CLI help 和 `git diff --check` 通过。只读复审确认两个指标口径及回归覆盖无遗留问题。
 
 **验收：** 合成数据指标等于手算；人工判断无法被默认值绕过；离线可反复生成同样的计数。
 **提交：** eval: score human-reviewed diagnosis results。
