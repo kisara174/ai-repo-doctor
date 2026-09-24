@@ -472,11 +472,11 @@ def render_markdown(report: dict[str, object]) -> str:
         return str(value).replace("|", "\\|").replace("\n", " ")
 
     lines = ["# AI Repo Doctor V2 baseline", "",
-             f"Dataset: `{report['dataset_id']}`  ",
-             f"Generated: `{report['generated_at_utc']}`  ",
-             f"Analyzer commit: `{report['repo_doctor_commit']}`  ",
-             f"Python: `{cell(report['python_version'])}`  ",
-             f"Platform: `{cell(report['platform'])}` / `{cell(report['architecture'])}`", "",
+             f"- Dataset: `{report['dataset_id']}`",
+             f"- Generated: `{report['generated_at_utc']}`",
+             f"- Analyzer commit: `{report['repo_doctor_commit']}`",
+             f"- Python: `{cell(report['python_version'])}`",
+             f"- Platform: `{cell(report['platform'])}` / `{cell(report['architecture'])}`", "",
              "Precision and recall below cover only the manually annotated probes,",
              "not every relation in a repository. Timing is comparable within the",
              "same environment; filesystem cache state is not controlled.", ""]

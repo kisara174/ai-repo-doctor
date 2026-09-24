@@ -663,6 +663,7 @@ class ReportTests(unittest.TestCase):
         markdown = evaluate_baseline.render_markdown(report)
         self.assertIn("registration-1", markdown)
         self.assertIn("not_sampled", markdown)
+        self.assertTrue(all(line == line.rstrip() for line in markdown.splitlines()))
 
     def test_cli_rejects_invalid_runs_and_preserves_outputs_on_preflight_failure(self):
         with tempfile.TemporaryDirectory() as directory:
