@@ -5,7 +5,9 @@ from collections import defaultdict
 from pathlib import Path
 
 from .model import (
+    AttributeRebinding,
     CallSite,
+    CommandRegistrationCall,
     DecoratorRef,
     FileRecord,
     ImportRef,
@@ -41,6 +43,231 @@ def _bindings(node: ast.FunctionDef | ast.AsyncFunctionDef) -> frozenset[str]:
         elif isinstance(child, ast.MatchMapping) and child.rest:
             names.add(child.rest)
     return frozenset(names)
+
+
+def _class_bindings(node: ast.ClassDef) -> frozenset[str]:
+    bindings: set[str] = set()
+
+    class ClassBindingVisitor(ast.NodeVisitor):
+        def visit_Name(self, current: ast.Name) -> None:
+            if isinstance(current.ctx, (ast.Store, ast.Del)):
+                bindings.add(current.id)
+
+        def visit_FunctionDef(self, current: ast.FunctionDef) -> None:
+            bindings.add(current.name)
+            for expression in current.decorator_list:
+                self.visit(expression)
+            for expression in (*current.args.defaults, *current.args.kw_defaults):
+                if expression is not None:
+                    self.visit(expression)
+            for argument in (
+                *current.args.posonlyargs,
+                *current.args.args,
+                *current.args.kwonlyargs,
+                *([current.args.vararg] if current.args.vararg else []),
+                *([current.args.kwarg] if current.args.kwarg else []),
+            ):
+                if argument.annotation is not None:
+                    self.visit(argument.annotation)
+            if current.returns is not None:
+                self.visit(current.returns)
+
+        def visit_AsyncFunctionDef(self, current: ast.AsyncFunctionDef) -> None:
+            self.visit_FunctionDef(current)
+
+        def visit_Lambda(self, current: ast.Lambda) -> None:
+            for expression in (*current.args.defaults, *current.args.kw_defaults):
+                if expression is not None:
+                    self.visit(expression)
+
+        def visit_ClassDef(self, current: ast.ClassDef) -> None:
+            bindings.add(current.name)
+            for expression in (*current.decorator_list, *current.bases):
+                self.visit(expression)
+            for keyword in current.keywords:
+                self.visit(keyword.value)
+
+        def visit_Import(self, current: ast.Import) -> None:
+            bindings.update(
+                alias.asname or alias.name.split(".", 1)[0]
+                for alias in current.names
+            )
+
+        def visit_ImportFrom(self, current: ast.ImportFrom) -> None:
+            bindings.update(
+                alias.asname or alias.name
+                for alias in current.names
+                if alias.name != "*"
+            )
+
+        def visit_ExceptHandler(self, current: ast.ExceptHandler) -> None:
+            if current.name is not None:
+                bindings.add(current.name)
+            if current.type is not None:
+                self.visit(current.type)
+            for statement in current.body:
+                self.visit(statement)
+
+        def visit_MatchAs(self, current: ast.MatchAs) -> None:
+            if current.name is not None:
+                bindings.add(current.name)
+            if current.pattern is not None:
+                self.visit(current.pattern)
+
+        def visit_MatchStar(self, current: ast.MatchStar) -> None:
+            if current.name is not None:
+                bindings.add(current.name)
+
+        def visit_MatchMapping(self, current: ast.MatchMapping) -> None:
+            if current.rest is not None:
+                bindings.add(current.rest)
+            self.generic_visit(current)
+
+    visitor = ClassBindingVisitor()
+    for statement in node.body:
+        visitor.visit(statement)
+    return frozenset(bindings)
+
+
+def _reassigned_parameters(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> frozenset[str]:
+    parameters = {
+        argument.arg
+        for argument in (
+            *node.args.posonlyargs,
+            *node.args.args,
+            *node.args.kwonlyargs,
+        )
+    }
+    if node.args.vararg is not None:
+        parameters.add(node.args.vararg.arg)
+    if node.args.kwarg is not None:
+        parameters.add(node.args.kwarg.arg)
+    reassigned: set[str] = set()
+
+    class ReassignmentVisitor(ast.NodeVisitor):
+        def _record(self, name: str | None) -> None:
+            if name in parameters:
+                reassigned.add(name)
+
+        def visit_Name(self, current: ast.Name) -> None:
+            if isinstance(current.ctx, (ast.Store, ast.Del)):
+                self._record(current.id)
+
+        def visit_FunctionDef(self, current: ast.FunctionDef) -> None:
+            if current is node:
+                for statement in current.body:
+                    self.visit(statement)
+                return
+            self._record(current.name)
+            self._visit_function_creation(current)
+
+        def visit_AsyncFunctionDef(self, current: ast.AsyncFunctionDef) -> None:
+            if current is node:
+                for statement in current.body:
+                    self.visit(statement)
+                return
+            self._record(current.name)
+            self._visit_function_creation(current)
+
+        def _visit_function_creation(
+            self,
+            current: ast.FunctionDef | ast.AsyncFunctionDef,
+        ) -> None:
+            for expression in current.decorator_list:
+                self.visit(expression)
+            for expression in (*current.args.defaults, *current.args.kw_defaults):
+                if expression is not None:
+                    self.visit(expression)
+            for argument in (
+                *current.args.posonlyargs,
+                *current.args.args,
+                *current.args.kwonlyargs,
+                *([current.args.vararg] if current.args.vararg else []),
+                *([current.args.kwarg] if current.args.kwarg else []),
+            ):
+                if argument.annotation is not None:
+                    self.visit(argument.annotation)
+            if current.returns is not None:
+                self.visit(current.returns)
+
+        def visit_Lambda(self, current: ast.Lambda) -> None:
+            for expression in (*current.args.defaults, *current.args.kw_defaults):
+                if expression is not None:
+                    self.visit(expression)
+
+        def visit_ClassDef(self, current: ast.ClassDef) -> None:
+            self._record(current.name)
+            for expression in (*current.decorator_list, *current.bases):
+                self.visit(expression)
+            for keyword in current.keywords:
+                self.visit(keyword.value)
+
+        def _visit_comprehension(self, current: ast.comprehension) -> None:
+            self.visit(current.iter)
+            for condition in current.ifs:
+                self.visit(condition)
+
+        def visit_ListComp(self, current: ast.ListComp) -> None:
+            for generator in current.generators:
+                self._visit_comprehension(generator)
+            self.visit(current.elt)
+
+        def visit_SetComp(self, current: ast.SetComp) -> None:
+            for generator in current.generators:
+                self._visit_comprehension(generator)
+            self.visit(current.elt)
+
+        def visit_GeneratorExp(self, current: ast.GeneratorExp) -> None:
+            for generator in current.generators:
+                self._visit_comprehension(generator)
+            self.visit(current.elt)
+
+        def visit_DictComp(self, current: ast.DictComp) -> None:
+            for generator in current.generators:
+                self._visit_comprehension(generator)
+            self.visit(current.key)
+            self.visit(current.value)
+
+        def visit_Import(self, current: ast.Import) -> None:
+            for alias in current.names:
+                self._record(alias.asname or alias.name.split(".", 1)[0])
+
+        def visit_ImportFrom(self, current: ast.ImportFrom) -> None:
+            for alias in current.names:
+                if alias.name != "*":
+                    self._record(alias.asname or alias.name)
+
+        def visit_ExceptHandler(self, current: ast.ExceptHandler) -> None:
+            self._record(current.name)
+            if current.type is not None:
+                self.visit(current.type)
+            for statement in current.body:
+                self.visit(statement)
+
+        def visit_MatchAs(self, current: ast.MatchAs) -> None:
+            self._record(current.name)
+            if current.pattern is not None:
+                self.visit(current.pattern)
+
+        def visit_MatchStar(self, current: ast.MatchStar) -> None:
+            self._record(current.name)
+
+        def visit_MatchMapping(self, current: ast.MatchMapping) -> None:
+            self._record(current.rest)
+            self.generic_visit(current)
+
+        def visit_Global(self, current: ast.Global) -> None:
+            for name in current.names:
+                self._record(name)
+
+        def visit_Nonlocal(self, current: ast.Nonlocal) -> None:
+            for name in current.names:
+                self._record(name)
+
+    ReassignmentVisitor().visit(node)
+    return frozenset(reassigned)
 
 
 def _constructor_expression(value: ast.expr) -> str | None:
@@ -330,10 +557,13 @@ class _Extractor(ast.NodeVisitor):
         self.symbols: list[Symbol] = []
         self.imports: list[ImportRef] = []
         self.calls: list[CallSite] = []
+        self.registration_calls: list[CommandRegistrationCall] = []
+        self.attribute_rebindings: list[AttributeRebinding] = []
         self.module_bindings: set[str] = set()
         self._names: list[str] = []
         self._ids: list[str] = []
         self._kinds: list[str] = []
+        self._instance_methods: list[bool] = []
 
     def _add_symbol(self, node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef, kind: str) -> None:
         qualname = ".".join([*self._names, node.name])
@@ -351,6 +581,25 @@ class _Extractor(ast.NodeVisitor):
             isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
             and any(item.recognized == "typing.overload" for item in decorator_refs)
         )
+        is_instance_method = False
+        if kind == "method" and isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            positional = (*node.args.posonlyargs, *node.args.args)
+            non_instance_decorator = any(
+                (
+                    isinstance(item, ast.Name)
+                    and item.id in {"staticmethod", "classmethod"}
+                )
+                or (
+                    isinstance(item, ast.Attribute)
+                    and item.attr in {"staticmethod", "classmethod"}
+                )
+                for item in node.decorator_list
+            )
+            is_instance_method = (
+                bool(positional)
+                and positional[0].arg == "self"
+                and not non_instance_decorator
+            )
         overload_signature = _overload_signature(node) if is_overload else None
         local_bindings = _bindings(node) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) else frozenset()
         local_constructors = _local_constructors(node) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) else ()
@@ -377,13 +626,30 @@ class _Extractor(ast.NodeVisitor):
                 decorators=decorator_refs,
                 is_overload=is_overload,
                 overload_signature=overload_signature,
+                base_expressions=(
+                    tuple(ast.unparse(base) for base in node.bases)
+                    if isinstance(node, ast.ClassDef)
+                    else ()
+                ),
+                class_bindings=(
+                    _class_bindings(node) if isinstance(node, ast.ClassDef) else frozenset()
+                ),
+                reassigned_parameters=(
+                    _reassigned_parameters(node)
+                    if kind == "method"
+                    and is_instance_method
+                    and isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    else frozenset()
+                ),
             )
         )
         self._names.append(node.name)
         self._ids.append(symbol_id)
         self._kinds.append(kind)
+        self._instance_methods.append(is_instance_method)
         for child in node.body:
             self.visit(child)
+        self._instance_methods.pop()
         self._names.pop()
         self._ids.pop()
         self._kinds.pop()
@@ -444,8 +710,51 @@ class _Extractor(ast.NodeVisitor):
             )
 
     def visit_Call(self, node: ast.Call) -> None:
+        func = node.func
+        # Registration candidates are limited to module calls and direct
+        # methods, where the group or instance provenance is explicit.
+        if (
+            isinstance(func, ast.Attribute)
+            and func.attr == "add_command"
+            and isinstance(func.value, ast.Name)
+            and len(node.args) == 1
+            and isinstance(node.args[0], ast.Name)
+            and not node.keywords
+            and (
+                not self._ids
+                or (
+                    self._kinds[-1] == "method"
+                    and (func.value.id != "self" or self._instance_methods[-1])
+                )
+            )
+        ):
+            class_owner = next(
+                (
+                    symbol_id
+                    for symbol_id, kind in reversed(list(zip(self._ids, self._kinds)))
+                    if kind == "class"
+                ),
+                None,
+            )
+            caller = self._ids[-1] if self._ids else None
+            if func.value.id != "self" or (
+                caller is not None
+                and class_owner is not None
+                and self._instance_methods[-1]
+            ):
+                self.registration_calls.append(
+                    CommandRegistrationCall(
+                        file=self.file,
+                        line=node.lineno,
+                        column=node.col_offset,
+                        receiver=func.value.id,
+                        callback=node.args[0].id,
+                        caller=caller,
+                        class_owner=class_owner,
+                    )
+                )
+
         if self._ids and self._kinds[-1] in {"function", "method"}:
-            func = node.func
             name = func.id if isinstance(func, ast.Name) else func.attr if isinstance(func, ast.Attribute) else ""
             receiver = func.value.id if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name) else None
             self.calls.append(
@@ -456,6 +765,33 @@ class _Extractor(ast.NodeVisitor):
     def visit_Name(self, node: ast.Name) -> None:
         if not self._ids and isinstance(node.ctx, (ast.Store, ast.Del)):
             self.module_bindings.add(node.id)
+
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        if (
+            isinstance(node.ctx, (ast.Store, ast.Del))
+            and isinstance(node.value, ast.Name)
+            and node.attr == "add_command"
+        ):
+            class_owner = next(
+                (
+                    symbol_id
+                    for symbol_id, kind in reversed(list(zip(self._ids, self._kinds)))
+                    if kind == "class"
+                ),
+                None,
+            )
+            self.attribute_rebindings.append(
+                AttributeRebinding(
+                    file=self.file,
+                    line=node.lineno,
+                    column=node.col_offset,
+                    receiver=node.value.id,
+                    attribute=node.attr,
+                    owner=self._ids[-1] if self._ids else None,
+                    class_owner=class_owner,
+                )
+            )
+        self.generic_visit(node)
 
     def visit_Lambda(self, node: ast.Lambda) -> None:
         # Lambda bodies run later; attributing their calls to the enclosing
@@ -486,7 +822,13 @@ def parse_python_file(
     except (SyntaxError, UnicodeError, OSError, ValueError) as exc:
         if "file" not in locals():
             file = FileRecord(relative_path, 0, 0, False)
-        return ParsedFile(file, [], [], [], error=ParseError(relative_path, getattr(exc, "lineno", None) or 1, str(exc)))
+        return ParsedFile(
+            file,
+            [],
+            [],
+            [],
+            error=ParseError(relative_path, getattr(exc, "lineno", None) or 1, str(exc)),
+        )
     module_import_ids = {
         id(node) for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))
     }
@@ -498,4 +840,12 @@ def parse_python_file(
         overload_function_aliases,
     )
     extractor.visit(tree)
-    return ParsedFile(file, extractor.symbols, extractor.imports, extractor.calls, extractor.module_bindings)
+    return ParsedFile(
+        file,
+        extractor.symbols,
+        extractor.imports,
+        extractor.calls,
+        extractor.module_bindings,
+        registration_calls=extractor.registration_calls,
+        attribute_rebindings=extractor.attribute_rebindings,
+    )
