@@ -2,10 +2,95 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from repo_doctor.model import OverloadSignature
 from repo_doctor.parser import parse_python_file
 
 
 class ParserTests(unittest.TestCase):
+    def test_records_decorators_and_overload_aliases(self):
+        source = """import typing as t
+from typing_extensions import overload as ov
+if TYPE_CHECKING:
+    from click import group as conditional_group
+
+@t.overload
+def fetch(key: int) -> int: ...
+
+@ov
+def fetch(key: str) -> str: ...
+
+@custom
+def fetch(key):
+    return key
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "api.py").write_text(source, encoding="utf-8")
+
+            parsed = parse_python_file(root, "api.py")
+
+        self.assertIsNone(parsed.error)
+        fetch_symbols = [symbol for symbol in parsed.symbols if symbol.name == "fetch"]
+        self.assertEqual([symbol.is_overload for symbol in fetch_symbols], [True, True, False])
+        self.assertEqual(
+            [symbol.decorators[0].line for symbol in fetch_symbols],
+            [6, 9, 12],
+        )
+        self.assertEqual(
+            [symbol.decorators[0].expression for symbol in fetch_symbols],
+            ["t.overload", "ov", "custom"],
+        )
+        self.assertEqual(
+            [symbol.decorators[0].recognized for symbol in fetch_symbols],
+            ["typing.overload", "typing.overload", None],
+        )
+        self.assertEqual(
+            [symbol.overload_signature for symbol in fetch_symbols],
+            [
+                OverloadSignature(6, 7, "def fetch(key: int) -> int"),
+                OverloadSignature(9, 10, "def fetch(key: str) -> str"),
+                None,
+            ],
+        )
+        self.assertTrue(parsed.imports[0].is_unconditional_module_level)
+        self.assertTrue(parsed.imports[1].is_unconditional_module_level)
+        self.assertFalse(parsed.imports[2].is_unconditional_module_level)
+
+    def test_conditional_overload_import_is_not_recognized(self):
+        source = """if TYPE_CHECKING:
+    from typing import overload as ov
+
+@ov
+def fetch(key): ...
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "api.py").write_text(source, encoding="utf-8")
+
+            parsed = parse_python_file(root, "api.py")
+
+        self.assertIsNone(parsed.error)
+        self.assertFalse(parsed.imports[0].is_unconditional_module_level)
+        self.assertFalse(parsed.symbols[0].is_overload)
+        self.assertIsNone(parsed.symbols[0].decorators[0].recognized)
+
+    def test_shadowed_overload_alias_is_not_recognized(self):
+        source = """from typing import overload as ov
+ov = custom
+
+@ov
+def fetch(key): ...
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "api.py").write_text(source, encoding="utf-8")
+
+            parsed = parse_python_file(root, "api.py")
+
+        self.assertIsNone(parsed.error)
+        self.assertFalse(parsed.symbols[0].is_overload)
+        self.assertIsNone(parsed.symbols[0].decorators[0].recognized)
+
     def test_extracts_nested_symbols_imports_and_calls_with_source_lines(self):
         source = """from .helpers import save as persist
 import pkg.util as util

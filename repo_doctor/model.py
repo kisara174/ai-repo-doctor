@@ -21,6 +21,20 @@ class LocalConstructor:
 
 
 @dataclass(frozen=True, slots=True)
+class DecoratorRef:
+    expression: str
+    line: int
+    recognized: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class OverloadSignature:
+    start_line: int
+    end_line: int
+    signature: str
+
+
+@dataclass(frozen=True, slots=True)
 class Symbol:
     id: str
     file: str
@@ -34,6 +48,10 @@ class Symbol:
     local_constructors: tuple[tuple[str, LocalConstructor], ...] = ()
     returns_self: bool = False
     is_async: bool = False
+    decorators: tuple[DecoratorRef, ...] = ()
+    is_overload: bool = False
+    overload_signature: OverloadSignature | None = None
+    overloads: tuple[OverloadSignature, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +64,7 @@ class ImportRef:
     line: int
     owner: str | None
     explicit_alias: bool = False
+    is_unconditional_module_level: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,10 +103,29 @@ class ImportEdge:
 
 
 @dataclass(frozen=True, slots=True)
+class ExportHop:
+    file: str
+    name: str
+    line: int
+
+
+@dataclass(frozen=True, slots=True)
+class SemanticEdge:
+    kind: str
+    target_symbol: str
+    evidence_file: str
+    line: int
+    source_symbol: str | None = None
+    source_file: str | None = None
+    exported_name: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class CallEdge:
     caller: str
     callee: str
     line: int
+    via_reexports: tuple[ExportHop, ...] = ()
 
 
 @dataclass(slots=True)
@@ -104,4 +142,5 @@ class RepoIndex:
     parse_errors: list[ParseError] = field(default_factory=list)
     import_edges: list[ImportEdge] = field(default_factory=list)
     call_edges: list[CallEdge] = field(default_factory=list)
+    semantic_edges: list[SemanticEdge] = field(default_factory=list)
     import_cycles: list[list[str]] = field(default_factory=list)

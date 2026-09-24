@@ -87,4 +87,4 @@ def validate_findings(index: RepoIndex, payload: object) -> dict:
             rejected.append({**entry, "reasons": reasons})
         else:
             accepted.append(entry)
-    return {"schema_version": 1, "accepted": accepted, "rejected": rejected}
+    return {"schema_version": 2, "accepted": accepted, "rejected": rejected}

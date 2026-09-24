@@ -3,7 +3,17 @@
 from collections import defaultdict
 from pathlib import PurePosixPath
 
-from .model import CallEdge, CallSite, ImportEdge, ImportRef, LocalConstructor, RepoIndex, Symbol
+from .model import (
+    CallEdge,
+    CallSite,
+    ExportHop,
+    ImportEdge,
+    ImportRef,
+    LocalConstructor,
+    RepoIndex,
+    SemanticEdge,
+    Symbol,
+)
 
 
 def _module_names(path: str) -> set[str]:
@@ -31,11 +41,16 @@ def _base_module(ref: ImportRef) -> str | None:
     return ".".join(prefix)
 
 
-def _module_lookup(index: RepoIndex) -> dict[str, str]:
+def _module_candidates(index: RepoIndex) -> dict[str, set[str]]:
     candidates: dict[str, set[str]] = defaultdict(set)
     for file in index.files:
         for name in _module_names(file.path):
             candidates[name].add(file.path)
+    return candidates
+
+
+def _module_lookup(index: RepoIndex) -> dict[str, str]:
+    candidates = _module_candidates(index)
     return {name: next(iter(paths)) for name, paths in candidates.items() if len(paths) == 1}
 
 
@@ -194,6 +209,144 @@ def _resolve_call(
     return target if target in index.symbols else None
 
 
+def _module_level_imports(index: RepoIndex, file: str, name: str) -> list[ImportRef]:
+    return sorted(
+        (
+            ref
+            for ref in index.imports
+            if ref.file == file
+            and ref.owner is None
+            and ref.name is not None
+            and ref.name != "*"
+            and ref.alias == name
+        ),
+        key=lambda ref: (ref.line, ref.module, ref.name or "", ref.alias),
+    )
+
+
+def _submodule_candidates(index: RepoIndex, file: str, name: str) -> set[str]:
+    candidates = _module_candidates(index)
+    paths: set[str] = set()
+    for module_name in _module_names(file):
+        paths.update(candidates.get(f"{module_name}.{name}", set()))
+    return paths
+
+
+def _resolve_export(
+    index: RepoIndex,
+    file: str,
+    name: str,
+    active: set[tuple[str, str]],
+) -> tuple[str, tuple[ExportHop, ...]] | None:
+    """Resolve one explicit module binding to a local symbol with its re-export path."""
+    key = (file, name)
+    if key in active:
+        return None
+    active.add(key)
+    try:
+        return _resolve_direct_symbol_or_explicit_import(index, file, name, active)
+    finally:
+        active.remove(key)
+
+
+def _resolve_direct_symbol_or_explicit_import(
+    index: RepoIndex,
+    file: str,
+    name: str,
+    active: set[tuple[str, str]],
+) -> tuple[str, tuple[ExportHop, ...]] | None:
+    symbol_id = f"{file}::{name}"
+    if symbol_id in index.ambiguous_symbols:
+        return None
+    direct_symbol = symbol_id in index.symbols
+    imports = _module_level_imports(index, file, name)
+    submodules = _submodule_candidates(index, file, name)
+    has_wildcard_import = any(
+        ref.file == file and ref.owner is None and ref.name == "*"
+        for ref in index.imports
+    )
+
+    # A conditional binding, explicit import collision, or local submodule
+    # collision means the module attribute cannot be tied to one symbol.
+    if has_wildcard_import:
+        return None
+    if name in index.module_bindings.get(file, set()):
+        return None
+    if submodules and (direct_symbol or imports):
+        return None
+    if direct_symbol:
+        return (symbol_id, ()) if not imports else None
+    if len(imports) != 1:
+        return None
+
+    ref = imports[0]
+    if not ref.is_unconditional_module_level:
+        return None
+    base = _base_module(ref)
+    if base is None:
+        return None
+    modules = _module_lookup(index)
+    base_file = modules.get(base)
+    if base_file is None:
+        return None
+
+    child_module_exists = f"{base}.{ref.name}" in _module_candidates(index)
+    resolved = _resolve_export(index, base_file, ref.name, active)
+    if child_module_exists or resolved is None:
+        return None
+    target_symbol, inner_hops = resolved
+    hop = ExportHop(file, name, ref.line)
+    return target_symbol, (hop, *inner_hops)
+
+
+def _reexport_binding_for_call(
+    call: CallSite,
+    index: RepoIndex,
+    aliases: dict[tuple[str, str | None, str], set[tuple[str, str]]],
+) -> tuple[str, str] | None:
+    caller = index.symbols.get(call.caller)
+    if caller is None:
+        return None
+
+    if call.receiver is None and call.expression == call.name:
+        if (
+            call.name in caller.local_bindings
+            or call.name in index.module_bindings.get(call.file, set())
+            or f"{call.file}::{call.name}" in index.symbols
+        ):
+            return None
+        imports = _module_level_imports(index, call.file, call.name)
+        if len(imports) != 1 or not imports[0].is_unconditional_module_level:
+            return None
+        ref = imports[0]
+        base = _base_module(ref)
+        module_file = _module_lookup(index).get(base) if base is not None else None
+        if module_file is None:
+            return None
+        return module_file, ref.name
+
+    receiver = call.receiver
+    if receiver is None or call.expression != f"{receiver}.{call.name}":
+        return None
+    if (
+        receiver in caller.local_bindings
+        or receiver in index.module_bindings.get(call.file, set())
+        or f"{call.file}::{receiver}" in index.symbols
+    ):
+        return None
+    imports = [
+        ref
+        for ref in index.imports
+        if ref.file == call.file and ref.owner is None and ref.alias == receiver
+    ]
+    if len(imports) != 1 or not imports[0].is_unconditional_module_level:
+        return None
+    alias = _unique_alias(aliases, call.file, None, receiver)
+    if alias is None or alias[0] != "module":
+        return None
+    return alias[1], call.name
+
+
 def _import_cycles(index: RepoIndex) -> list[list[str]]:
     neighbors: dict[str, set[str]] = {item.path: set() for item in index.files}
     reverse: dict[str, set[str]] = {item.path: set() for item in index.files}
@@ -249,9 +402,52 @@ def resolve_graph(index: RepoIndex) -> None:
             targets = _alias_targets(ref, modules, index.symbols)
             aliases[(ref.file, None, ref.alias)].update(targets or {("unknown", "")})
     index.import_edges = sorted(set(index.import_edges), key=lambda edge: (edge.source, edge.line, edge.target))
+
+    for ref in index.imports:
+        if (
+            ref.owner is not None
+            or not ref.is_unconditional_module_level
+            or ref.name is None
+            or ref.name == "*"
+        ):
+            continue
+        resolved = _resolve_export(index, ref.file, ref.alias, set())
+        if resolved is None:
+            continue
+        target_symbol, _hops = resolved
+        index.semantic_edges.append(
+            SemanticEdge(
+                kind="reexport",
+                target_symbol=target_symbol,
+                evidence_file=ref.file,
+                line=ref.line,
+                source_file=ref.file,
+                exported_name=ref.alias,
+            )
+        )
+    index.semantic_edges = sorted(
+        set(index.semantic_edges),
+        key=lambda edge: (
+            edge.evidence_file,
+            edge.line,
+            edge.kind,
+            edge.source_symbol or "",
+            edge.exported_name or "",
+            edge.target_symbol,
+        ),
+    )
+
     for call in index.calls:
         target = _resolve_call(call, index, aliases)
+        via_reexports: tuple[ExportHop, ...] = ()
+        binding = _reexport_binding_for_call(call, index, aliases)
+        if binding is not None:
+            reexport = _resolve_export(index, binding[0], binding[1], set())
+            if reexport is None:
+                target = None
+            else:
+                target, via_reexports = reexport
         if target:
-            index.call_edges.append(CallEdge(call.caller, target, call.line))
+            index.call_edges.append(CallEdge(call.caller, target, call.line, via_reexports))
     index.call_edges.sort(key=lambda edge: (edge.caller, edge.line, edge.callee))
     index.import_cycles = _import_cycles(index)

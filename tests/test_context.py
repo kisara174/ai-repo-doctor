@@ -24,6 +24,127 @@ class ContextTests(unittest.TestCase):
         )
         return build_index(root)
 
+    def make_v2_index(self, root: Path):
+        (root / "pkg").mkdir()
+        (root / "impl.py").write_text(
+            "def canonical():\n    return 42\n",
+            encoding="utf-8",
+        )
+        (root / "pkg" / "__init__.py").write_text(
+            "from impl import canonical as public\n",
+            encoding="utf-8",
+        )
+        (root / "user.py").write_text(
+            "from pkg import public\n\n"
+            "def use():\n"
+            "    return public()\n",
+            encoding="utf-8",
+        )
+        (root / "cli.py").write_text(
+            "import click\n"
+            "@click.group()\n"
+            "def cli():\n"
+            "    pass\n\n"
+            "@cli.command()\n"
+            "def leaf():\n"
+            "    pass\n",
+            encoding="utf-8",
+        )
+        return build_index(root)
+
+    def test_context_includes_reexport_and_click_relationship_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            index = self.make_v2_index(Path(directory))
+
+            canonical = build_context(index, "impl.py::canonical")
+            group = build_context(index, "cli.py::cli")
+            leaf = build_context(index, "cli.py::leaf")
+
+        self.assertEqual(canonical["schema_version"], 2)
+        call = next(edge for edge in canonical["call_evidence"] if edge["caller"] == "user.py::use")
+        self.assertEqual(
+            call["via_reexports"],
+            [{"file": "pkg/__init__.py", "name": "public", "line": 1}],
+        )
+        self.assertTrue(
+            any(
+                edge["kind"] == "reexport"
+                and edge["exported_name"] == "public"
+                and edge["direction"] == "incoming"
+                for edge in canonical["semantic_evidence"]
+            )
+        )
+
+        self.assertEqual(group["schema_version"], 2)
+        self.assertTrue(
+            any(
+                block["symbol"] == "cli.py::leaf"
+                and block["relation"] == "registered_command"
+                for block in group["blocks"]
+            )
+        )
+        self.assertTrue(
+            any(
+                edge["kind"] == "command_registration"
+                and edge["direction"] == "outgoing"
+                for edge in group["semantic_evidence"]
+            )
+        )
+
+        self.assertEqual(leaf["schema_version"], 2)
+        self.assertTrue(
+            any(
+                block["symbol"] == "cli.py::cli" and block["relation"] == "registered_by"
+                for block in leaf["blocks"]
+            )
+        )
+
+    def test_semantic_context_neighbors_obey_source_line_budget(self):
+        with tempfile.TemporaryDirectory() as directory:
+            index = self.make_v2_index(Path(directory))
+
+            result = build_context(index, "cli.py::cli", max_lines=3)
+
+        self.assertEqual([block["symbol"] for block in result["blocks"]], ["cli.py::cli"])
+        self.assertTrue(result["budget_exhausted"])
+        self.assertEqual(result["omitted_symbols"], 1)
+
+    def test_impact_reports_semantic_relations_separately_from_call_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            index = self.make_v2_index(Path(directory))
+
+            canonical = build_impact(index, "impl.py::canonical")
+            group = build_impact(index, "cli.py::cli")
+            leaf = build_impact(index, "cli.py::leaf")
+
+        self.assertEqual(canonical["schema_version"], 2)
+        self.assertTrue(
+            any(
+                edge["kind"] == "reexport" and edge["direction"] == "incoming"
+                for edge in canonical["semantic_relations"]
+            )
+        )
+        self.assertEqual(
+            [(edge["symbol"], edge["distance"]) for edge in canonical["affected_symbols"]],
+            [("user.py::use", 1)],
+        )
+
+        self.assertEqual(group["schema_version"], 2)
+        self.assertEqual(group["affected_symbols"], [])
+        self.assertTrue(
+            any(
+                edge["kind"] == "command_registration" and edge["direction"] == "outgoing"
+                for edge in group["semantic_relations"]
+            )
+        )
+        self.assertEqual(leaf["schema_version"], 2)
+        self.assertTrue(
+            any(
+                edge["kind"] == "command_registration" and edge["direction"] == "incoming"
+                for edge in leaf["semantic_relations"]
+            )
+        )
+
     def test_context_orders_target_callee_caller_and_related_test(self):
         with tempfile.TemporaryDirectory() as directory:
             index = self.make_index(Path(directory))

@@ -697,3 +697,198 @@ class GraphTests(unittest.TestCase):
         self.assertEqual(index.ambiguous_symbols, {"app.py::target"})
         self.assertNotIn("app.py::target", index.symbols)
         self.assertEqual(index.call_edges, [])
+
+    def test_overload_declarations_resolve_to_single_implementation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "from typing import overload\n\n"
+                "@overload\n"
+                "def target(value: int) -> int: ...\n\n"
+                "@overload\n"
+                "def target(value: str) -> str: ...\n\n"
+                "def target(value):\n"
+                "    return value\n\n"
+                "def caller():\n"
+                "    return target(1)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertIn("app.py::target", index.symbols)
+        symbol = index.symbols["app.py::target"]
+        self.assertFalse(symbol.is_overload)
+        self.assertEqual(
+            [(signature.start_line, signature.signature) for signature in symbol.overloads],
+            [
+                (3, "def target(value: int) -> int"),
+                (6, "def target(value: str) -> str"),
+            ],
+        )
+        self.assertEqual(index.ambiguous_symbols, set())
+        self.assertEqual(
+            [(edge.caller, edge.callee) for edge in index.call_edges],
+            [("app.py::caller", "app.py::target")],
+        )
+
+    def test_overload_only_definitions_remain_ambiguous(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "from typing import overload\n\n"
+                "@overload\n"
+                "def target(value: int) -> int: ...\n\n"
+                "@overload\n"
+                "def target(value: str) -> str: ...\n\n"
+                "def caller():\n"
+                "    return target(1)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index.ambiguous_symbols, {"app.py::target"})
+        self.assertNotIn("app.py::target", index.symbols)
+        self.assertEqual(index.call_edges, [])
+
+    def test_overloads_with_multiple_implementations_remain_ambiguous(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "from typing import overload\n\n"
+                "@overload\n"
+                "def target(value: int) -> int: ...\n\n"
+                "def target(value):\n"
+                "    return value\n\n"
+                "def target(value):\n"
+                "    return str(value)\n\n"
+                "def caller():\n"
+                "    return target(1)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index.ambiguous_symbols, {"app.py::target"})
+        self.assertNotIn("app.py::target", index.symbols)
+        self.assertEqual(index.call_edges, [])
+
+    def test_resolves_calls_through_explicit_reexport_chain(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "pkg").mkdir()
+            (root / "pkg" / "__init__.py").write_text(
+                "from .api import public as public\n",
+                encoding="utf-8",
+            )
+            (root / "pkg" / "api.py").write_text(
+                "from .impl import internal as public\n",
+                encoding="utf-8",
+            )
+            (root / "pkg" / "impl.py").write_text(
+                "def internal():\n    return 1\n",
+                encoding="utf-8",
+            )
+            (root / "caller.py").write_text(
+                "import pkg as p\n"
+                "from pkg import public as imported_public\n\n"
+                "def via_module():\n    return p.public()\n\n"
+                "def via_import():\n    return imported_public()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        by_caller = {edge.caller: edge for edge in index.call_edges}
+        self.assertEqual(
+            set(by_caller),
+            {"caller.py::via_module", "caller.py::via_import"},
+        )
+        self.assertEqual(
+            {edge.callee for edge in by_caller.values()},
+            {"pkg/impl.py::internal"},
+        )
+        expected_chain = (
+            ("pkg/__init__.py", "public", 1),
+            ("pkg/api.py", "public", 1),
+        )
+        for edge in by_caller.values():
+            self.assertEqual(
+                [(hop.file, hop.name, hop.line) for hop in edge.via_reexports],
+                list(expected_chain),
+            )
+        self.assertEqual(
+            [
+                (edge.kind, edge.source_file, edge.exported_name, edge.target_symbol, edge.line)
+                for edge in index.semantic_edges
+            ],
+            [
+                ("reexport", "caller.py", "imported_public", "pkg/impl.py::internal", 2),
+                ("reexport", "pkg/__init__.py", "public", "pkg/impl.py::internal", 1),
+                ("reexport", "pkg/api.py", "public", "pkg/impl.py::internal", 1),
+            ],
+        )
+
+    def test_unsupported_reexports_stay_unresolved(self):
+        fixtures = {
+            "cycle": {
+                "pkg/__init__.py": "from .api import public\n",
+                "pkg/api.py": "from . import public\n",
+            },
+            "conflict": {
+                "pkg/__init__.py": "from .left import public\nfrom .right import public\n",
+                "pkg/left.py": "def public():\n    return 1\n",
+                "pkg/right.py": "def public():\n    return 2\n",
+            },
+            "module_symbol_collision": {
+                "pkg/__init__.py": "from .api import public\n",
+                "pkg/api.py": "def public():\n    return 1\n",
+                "pkg/public.py": "def child():\n    return 2\n",
+            },
+            "symbol_import_collision": {
+                "pkg/__init__.py": (
+                    "from .impl import internal as public\n"
+                    "def public():\n    return 2\n"
+                ),
+                "pkg/impl.py": "def internal():\n    return 1\n",
+            },
+            "rebound": {
+                "pkg/__init__.py": "from .impl import internal as public\npublic = unknown\n",
+                "pkg/impl.py": "def internal():\n    return 1\n",
+            },
+            "conditional": {
+                "pkg/__init__.py": "if TYPE_CHECKING:\n    from .impl import internal as public\n",
+                "pkg/impl.py": "def internal():\n    return 1\n",
+            },
+            "wildcard": {
+                "pkg/__init__.py": (
+                    "from .impl import internal as public\n"
+                    "from .other import *\n"
+                ),
+                "pkg/impl.py": "def internal():\n    return 1\n",
+                "pkg/other.py": "def public():\n    return 2\n",
+            },
+            "dynamic_getattr": {
+                "pkg/__init__.py": "def __getattr__(name):\n    return None\n",
+            },
+        }
+        for name, files in fixtures.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                for relative_path, source in files.items():
+                    path = root / relative_path
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text(source, encoding="utf-8")
+                (root / "caller.py").write_text(
+                    "import pkg as p\n\n"
+                    "def caller():\n    return p.public()\n",
+                    encoding="utf-8",
+                )
+
+                index = build_index(root)
+
+                self.assertFalse(
+                    any(edge.caller == "caller.py::caller" for edge in index.call_edges)
+                )
+                self.assertEqual(getattr(index, "semantic_edges", None), [])
