@@ -100,3 +100,16 @@ python3 -m repo_doctor impact /path/to/python-repo 'app/services/user.py::UserSe
 - 自动生成或应用补丁、执行目标仓库测试，以及跨多个目标符号的整体审查不在当前范围内。
 
 详细设计见 [V2 设计文档](docs/superpowers/specs/2026-09-24-repo-doctor-v2-design.md) 和 [V3 设计文档](docs/superpowers/specs/2026-09-24-repo-doctor-v3-design.md)。
+
+## 开发验证
+
+需要 Python 3.11 或更高版本。在仓库根目录运行：
+
+```bash
+python -m unittest discover -s tests -v
+python -m compileall -q repo_doctor tools
+python -m repo_doctor --help
+python -m repo_doctor diagnose --help
+```
+
+GitHub Actions 会在 Python 3.11、3.12 和 3.13 上运行相同命令；该工作流只读仓库内容，不安装项目依赖，也不运行固定评估集。

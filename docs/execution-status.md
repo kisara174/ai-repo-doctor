@@ -4,13 +4,13 @@ Plan: `docs/superpowers/plans/2026-09-24-post-v3-execution.md`
 
 Branch / worktree: `codex/post-v3-integration` / `/Users/kisara/.codex/worktrees/post-v3-integration/AI Repo Doctor`
 
-Integrated source commit: `ac263823ebee51e3b2ffff80d979b587f8f463a3` (the T0 tracking-document commit follows it).
+Integrated source commit: `ac263823ebee51e3b2ffff80d979b587f8f463a3`; T0 tracking commits: `b16f0a8` and `363388e`.
 
 Completed task IDs: T0.
 
-Current task and last completed step: T0 complete. Both prerequisite branches are integrated. V2 semantic graph output and V3 explicit DeepSeek diagnosis are present; conflict resolutions are recorded in `docs/integration-notes.md`.
+Current task: T1. The offline CI workflow and README instructions are implemented locally; full SHA pins and minimal token permissions have been reviewed. T1 remains incomplete until the branch is pushed and all three GitHub matrix jobs pass.
 
-Changed areas: merge commits `830586e` and `ac263823`; README integration; T0 plan checkboxes; `docs/integration-notes.md`; this status file. The original workspace `/Users/kisara/Documents/ChatGPT/AI Repo Doctor` remains untouched, including its four untracked V3 planning/specification files.
+Changed areas: merge commits `830586e` and `ac263823`; README integration and development commands; T0/T1 plan progress; `docs/integration-notes.md`; `.github/workflows/ci.yml`; this status file. The original workspace `/Users/kisara/Documents/ChatGPT/AI Repo Doctor` remains untouched, including its four untracked V3 planning/specification files.
 
 Validation and actual outcomes:
 
@@ -20,10 +20,11 @@ Validation and actual outcomes:
 - `python3 -m repo_doctor scan . --json`: schema v2, 71 semantic edges.
 - `git diff --check` and `git diff --cached --check`: passed.
 - Three fixed 5-run evaluations passed against clean Click, Requests, and Flask checkouts. Every probe prediction and relation metric matches the existing report; repeat hashes are deterministic. Details and `/tmp` output paths are in `docs/integration-notes.md`.
+- T1 commands passed locally under Python 3.14; YAML syntax parsed. Python 3.11–3.13 and actionlint are not installed here, so the required actual GitHub matrix remains the authoritative remaining check.
 
-Known failures / blockers: none for T0. The local worktree is intentionally not the GitHub default branch yet; T0/T1 batch PR is deferred until CI is added and validated.
+Known failures / blockers: none. The CI workflow has not yet run on GitHub.
 
-Next exact action: execute T1. Check the official GitHub `actions/checkout` and `actions/setup-python` sources for current compatible release commit SHAs, review `.github/workflows` and README, then add the least-privilege offline CI matrix specified in the plan. Run all matrix-equivalent commands locally before considering the batch PR.
+Next exact action: complete the read-only code review, commit the T1 workflow, push `codex/post-v3-integration`, create/update its PR against `codex/repo-doctor-v1`, then inspect all three jobs with `gh pr checks` and record their URLs.
 
 Live authorization scope and requests consumed: user requested T0–T8; zero DeepSeek live API requests. T7 remains gated on preparing and reviewing the exact upload contexts, model, request limit, and cost budget.
 

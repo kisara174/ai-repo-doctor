@@ -210,9 +210,9 @@ python3 tools/evaluate_baseline.py --repos-root "$BASELINE_CHECKOUTS" --manifest
 **文件：** 新建 .github/workflows/ci.yml；修改 README.md 的开发验证说明。
 **选择：** Ubuntu，Python 3.11、3.12、3.13，三个版本跑相同命令。仅 pull_request、push、workflow_dispatch；无 secrets，无 pull_request_target。
 
-- [ ] 执行者查阅 GitHub 官方 actions/checkout、actions/setup-python README，选择兼容版本并记录 tag 对应的完整提交 SHA。主代理批准后将 workflow uses 固定为这些 SHA；不能填臆造 SHA。网络失败时停止这一任务。
-- [ ] workflow 顶层 permissions: contents: read；timeout-minutes: 10；strategy.fail-fast: false；matrix.python: ['3.11', '3.12', '3.13']。
-- [ ] checkout 设置 persist-credentials: false；setup-python 使用 matrix.python；不安装目标仓库依赖，不运行 live 评估。步骤执行以下实际命令：
+- [x] 执行者查阅 GitHub 官方 actions/checkout、actions/setup-python README，选择兼容版本并记录 tag 对应的完整提交 SHA。主代理批准后将 workflow uses 固定为这些 SHA；不能填臆造 SHA。网络失败时停止这一任务。2026-09-24 核验的 v7 pins：checkout `3d3c42e5aac5ba805825da76410c181273ba90b1`，setup-python `5fda3b95a4ea91299a34e894583c3862153e4b97`；来源见 `docs/integration-notes.md`。
+- [x] workflow 顶层 `permissions: contents: read`；job `timeout-minutes: 10`；`strategy.fail-fast: false`；matrix Python `['3.11', '3.12', '3.13']`。GitHub workflow schema 将 `timeout-minutes` 定义为 job 属性，因此放在 `jobs.test`，不能放 workflow root。
+- [x] checkout 设置 persist-credentials: false；setup-python 使用 matrix.python；不安装目标仓库依赖，不运行 live 评估。步骤执行以下实际命令：
 
 ~~~bash
 python -m unittest discover -s tests -v
