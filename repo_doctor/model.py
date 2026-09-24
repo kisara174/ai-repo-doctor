@@ -33,6 +33,7 @@ class Symbol:
     local_bindings: frozenset[str] = frozenset()
     local_constructors: tuple[tuple[str, LocalConstructor], ...] = ()
     returns_self: bool = False
+    is_async: bool = False
 
 
 @dataclass(frozen=True, slots=True)

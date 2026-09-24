@@ -64,7 +64,7 @@ def _local_constructors(
         scope_nodes.append((current, guarded))
         if isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
             continue
-        child_guarded = guarded or isinstance(current, conditional)
+        child_guarded = guarded or isinstance(current, conditional) or isinstance(current, (ast.With, ast.AsyncWith))
         pending.extend((child, child_guarded) for child in reversed(list(ast.iter_child_nodes(current))))
 
     writes: dict[str, list[LocalConstructor | None]] = defaultdict(list)
@@ -79,6 +79,12 @@ def _local_constructors(
             if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
                 writes[child.id].append(None)
                 recognized_stores.add(id(child))
+
+    def add_nested_nonlocal_writes(scope: ast.AST) -> None:
+        for descendant in ast.walk(scope):
+            if isinstance(descendant, ast.Nonlocal):
+                for name in descendant.names:
+                    writes[name].append(None)
 
     arguments = node.args
     for argument in (*arguments.posonlyargs, *arguments.args, *arguments.kwonlyargs):
@@ -127,6 +133,7 @@ def _local_constructors(
                     writes[bound].append(None)
         elif isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             writes[current.name].append(None)
+            add_nested_nonlocal_writes(current)
         elif isinstance(current, ast.ExceptHandler) and current.name:
             writes[current.name].append(None)
         elif isinstance(current, (ast.Global, ast.Nonlocal)):
@@ -203,6 +210,7 @@ class _Extractor(ast.NodeVisitor):
                 local_bindings=local_bindings,
                 local_constructors=local_constructors,
                 returns_self=returns_self,
+                is_async=isinstance(node, ast.AsyncFunctionDef),
             )
         )
         self._names.append(node.name)

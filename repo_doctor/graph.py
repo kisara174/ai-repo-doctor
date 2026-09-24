@@ -123,7 +123,15 @@ def _resolve_class_expression(
         return None
     if constructor.context_method:
         enter = index.symbols.get(f"{symbol_id}.{constructor.context_method}")
-        if enter is None or not enter.returns_self:
+        is_async_context = constructor.context_method == "__aenter__"
+        exit_method = "__aexit__" if is_async_context else "__exit__"
+        exit_symbol = index.symbols.get(f"{symbol_id}.{exit_method}")
+        if (
+            enter is None
+            or not enter.returns_self
+            or enter.is_async != is_async_context
+            or exit_symbol is None
+        ):
             return None
     return symbol_id
 

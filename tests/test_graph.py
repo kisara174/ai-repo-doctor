@@ -61,6 +61,7 @@ class GraphTests(unittest.TestCase):
             (root / "pkg" / "sessions.py").write_text(
                 "class Session:\n"
                 "    def __enter__(self):\n        return self\n"
+                "    def __exit__(self, exc_type, exc, tb):\n        return False\n"
                 "    def request(self):\n        return 1\n",
                 encoding="utf-8",
             )
@@ -264,6 +265,7 @@ class GraphTests(unittest.TestCase):
                 "class Wrapper:\n"
                 "    def __enter__(self):\n        return self\n"
                 "    async def __aenter__(self):\n        return Inner()\n"
+                "    async def __aexit__(self, exc_type, exc, tb):\n        return False\n"
                 "    def send(self):\n        pass\n\n"
                 "async def run():\n"
                 "    async with Wrapper() as client:\n"
@@ -281,6 +283,7 @@ class GraphTests(unittest.TestCase):
             (root / "app.py").write_text(
                 "class Client:\n"
                 "    async def __aenter__(self):\n        return self\n"
+                "    async def __aexit__(self, exc_type, exc, tb):\n        return False\n"
                 "    def send(self):\n        pass\n\n"
                 "async def run():\n"
                 "    async with Client() as client:\n"
@@ -291,6 +294,116 @@ class GraphTests(unittest.TestCase):
             index = build_index(root)
 
         self.assertIn("app.py::Client.send", [edge.callee for edge in index.call_edges])
+
+    def test_sync_with_rejects_async_enter_method(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n"
+                "    async def __enter__(self):\n        return self\n"
+                "    def __exit__(self, exc_type, exc, tb):\n        return False\n"
+                "    def send(self):\n        pass\n\n"
+                "def run():\n"
+                "    with Client() as client:\n"
+                "        client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertNotIn("app.py::Client.send", [edge.callee for edge in index.call_edges])
+
+    def test_async_with_rejects_sync_aenter_method(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n"
+                "    def __aenter__(self):\n        return self\n"
+                "    async def __aexit__(self, exc_type, exc, tb):\n        return False\n"
+                "    def send(self):\n        pass\n\n"
+                "async def run():\n"
+                "    async with Client() as client:\n"
+                "        client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertNotIn("app.py::Client.send", [edge.callee for edge in index.call_edges])
+
+    def test_context_manager_requires_matching_exit_method(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n"
+                "    def __enter__(self):\n        return self\n"
+                "    def send(self):\n        pass\n\n"
+                "def run():\n"
+                "    with Client() as client:\n"
+                "        client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertNotIn("app.py::Client.send", [edge.callee for edge in index.call_edges])
+
+    def test_async_context_manager_requires_matching_aexit_method(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n"
+                "    async def __aenter__(self):\n        return self\n"
+                "    def send(self):\n        pass\n\n"
+                "async def run():\n"
+                "    async with Client() as client:\n"
+                "        client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertNotIn("app.py::Client.send", [edge.callee for edge in index.call_edges])
+
+    def test_with_body_assignment_is_not_assumed_unconditional(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n    def send(self):\n        pass\n\n"
+                "class Suppress:\n"
+                "    def __enter__(self):\n        return self\n"
+                "    def __exit__(self, exc_type, exc, tb):\n        return True\n\n"
+                "def run():\n"
+                "    with Suppress():\n"
+                "        raise ValueError()\n"
+                "        client = Client()\n"
+                "    client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertNotIn("app.py::Client.send", [edge.callee for edge in index.call_edges])
+
+    def test_nonlocal_rebinding_invalidates_outer_constructor(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n    def send(self):\n        pass\n\n"
+                "class Other:\n    def send(self):\n        pass\n\n"
+                "def run():\n"
+                "    client = Client()\n"
+                "    def replace():\n"
+                "        nonlocal client\n"
+                "        client = Other()\n"
+                "    replace()\n"
+                "    client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertNotIn("app.py::Client.send", [edge.callee for edge in index.call_edges])
 
     def test_shadowed_constructor_name_remains_unresolved(self):
         with tempfile.TemporaryDirectory() as directory:
