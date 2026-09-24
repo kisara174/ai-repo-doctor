@@ -2,10 +2,12 @@
 
 import hashlib
 import json
+import subprocess
 import tempfile
 import unittest
 from copy import deepcopy
 from pathlib import Path
+from unittest.mock import patch
 
 from tools import evaluate_baseline
 
@@ -426,6 +428,174 @@ class ProbeRelationsTests(unittest.TestCase):
             evaluate_baseline._score(*projected["overload_signature"]),
             {"tp": 0, "fp": 1, "fn": 1, "precision": 0.0, "recall": 0.0},
         )
+
+
+class SnapshotTests(unittest.TestCase):
+    def _git(self, root: Path, *args: str) -> str:
+        return subprocess.run(
+            ["git", *args], cwd=root, capture_output=True, text=True, check=True
+        ).stdout.strip()
+
+    def test_snapshot_requires_exact_commit_and_clean_worktree(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "repo"
+            root.mkdir()
+            self._git(root, "init", "-q")
+            self._git(root, "config", "user.name", "Baseline Test")
+            self._git(root, "config", "user.email", "baseline@example.invalid")
+            source = root / "app.py"
+            source.write_text("def run():\n    return 1\n", encoding="utf-8")
+            self._git(root, "add", "app.py")
+            self._git(root, "commit", "-qm", "Fixture")
+            commit = self._git(root, "rev-parse", "HEAD")
+
+            validate = getattr(evaluate_baseline, "validate_snapshot", None)
+            self.assertTrue(callable(validate), "Git snapshot validation must be implemented")
+            self.assertIsNone(validate(root, commit))
+            with self.assertRaises(evaluate_baseline.EvaluationError):
+                validate(root, "f" * 40)
+            source.write_text("def run():\n    return 2\n", encoding="utf-8")
+            with self.assertRaises(evaluate_baseline.EvaluationError):
+                validate(root, commit)
+            source.write_text("def run():\n    return 1\n", encoding="utf-8")
+            (root / "new.py").write_text("value = 1\n", encoding="utf-8")
+            with self.assertRaises(evaluate_baseline.EvaluationError):
+                validate(root, commit)
+
+    def test_scanner_subprocess_does_not_execute_target_code(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "repo"
+            root.mkdir()
+            marker = Path(directory) / "executed.txt"
+            (root / "app.py").write_text(
+                "from pathlib import Path\n"
+                f"Path({str(marker)!r}).write_text('executed')\n"
+                "def run():\n    return 1\n",
+                encoding="utf-8",
+            )
+            scan_repository = getattr(evaluate_baseline, "scan_repository", None)
+            self.assertTrue(callable(scan_repository), "CLI scanner wrapper must be implemented")
+
+            scan, elapsed = scan_repository(Path(__file__).resolve().parents[1], root)
+            self.assertEqual(scan["schema_version"], 2)
+            self.assertEqual(scan["stats"]["python_files"], 1)
+            self.assertGreaterEqual(elapsed, 0)
+            self.assertFalse(marker.exists())
+
+    def test_scan_digest_is_independent_of_json_key_order(self):
+        digest = getattr(evaluate_baseline, "canonical_scan_digest", None)
+        self.assertTrue(callable(digest), "canonical scan hashing must be implemented")
+        first = {"schema_version": 2, "stats": {"python_files": 1}, "calls": []}
+        reordered = {"calls": [], "stats": {"python_files": 1}, "schema_version": 2}
+        changed = {"schema_version": 2, "stats": {"python_files": 2}, "calls": []}
+        self.assertEqual(digest(first), digest(reordered))
+        self.assertNotEqual(digest(first), digest(changed))
+
+    def test_repeated_scans_require_identical_hashes(self):
+        scan = {"schema_version": 2, "stats": {"python_files": 1}}
+        changed = {"schema_version": 2, "stats": {"python_files": 2}}
+        entry = {"id": "fixture", "commit": "0" * 40, "probes": []}
+        with patch.object(evaluate_baseline, "scan_repository",
+                          side_effect=[(scan, 0.1), (changed, 0.2)]) as scanner:
+            with self.assertRaisesRegex(evaluate_baseline.EvaluationError, "unstable"):
+                evaluate_baseline.evaluate_snapshot(entry, Path("/tmp/repo"),
+                                                    Path("/tmp/project"), 2)
+        self.assertEqual(scanner.call_count, 2)
+
+        with patch.object(evaluate_baseline, "scan_repository",
+                          side_effect=[(scan, 0.1), (deepcopy(scan), 0.2)]):
+            result = evaluate_baseline.evaluate_snapshot(
+                entry, Path("/tmp/repo"), Path("/tmp/project"), 2
+            )
+        self.assertEqual(result["scan"], scan)
+        self.assertEqual(result["durations_seconds"], [0.1, 0.2])
+        self.assertEqual(result["scan_hashes"],
+                         [evaluate_baseline.canonical_scan_digest(scan)] * 2)
+
+    def test_repeated_scans_reject_nonpositive_count(self):
+        with patch.object(evaluate_baseline, "scan_repository") as scanner:
+            with self.assertRaises(evaluate_baseline.EvaluationError):
+                evaluate_baseline.evaluate_snapshot(
+                    {"id": "fixture"}, Path("/tmp/repo"), Path("/tmp/project"), 0
+                )
+            scanner.assert_not_called()
+
+    def test_repeated_scans_reject_ambiguous_call_probe(self):
+        entry = {"id": "fixture", "probes": [{
+            "id": "call-1", "kind": "call", "caller": "app.py::run",
+            "expression": "helper", "expected_target": "app.py::helper",
+            "evidence": {"file": "app.py", "start_line": 2},
+        }]}
+        scan = {"calls": [
+            {"file": "app.py", "caller": "app.py::run", "line": 2,
+             "expression": "helper"},
+            {"file": "app.py", "caller": "app.py::run", "line": 2,
+             "expression": "other"},
+        ]}
+        with patch.object(evaluate_baseline, "scan_repository", return_value=(scan, 0.1)):
+            with self.assertRaisesRegex(evaluate_baseline.EvaluationError, "call-1"):
+                evaluate_baseline.evaluate_snapshot(entry, Path("/tmp/repo"),
+                                                    Path("/tmp/project"), 1)
+
+    def test_preflight_checks_every_repo_and_evidence_before_scanning(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            entries = []
+            for repo_id in ("first", "second"):
+                repo = root / repo_id
+                repo.mkdir()
+                self._git(repo, "init", "-q")
+                self._git(repo, "config", "user.name", "Baseline Test")
+                self._git(repo, "config", "user.email", "baseline@example.invalid")
+                source = repo / "app.py"
+                source.write_text("def run():\n    return 1\n", encoding="utf-8")
+                self._git(repo, "add", "app.py")
+                self._git(repo, "commit", "-qm", "Fixture")
+                entries.append({
+                    "id": repo_id,
+                    "https_url": f"https://example.com/{repo_id}.git",
+                    "commit": self._git(repo, "rev-parse", "HEAD"),
+                    "probes": [{
+                        "id": f"{repo_id}-call", "kind": "call",
+                        "evidence": {"file": "app.py", "start_line": 1, "end_line": 2,
+                                     "sha256": evaluate_baseline.source_fingerprint(source, 1, 2)},
+                        "rationale": "A source anchored fixture probe.",
+                        "caller": "app.py::run", "expression": "helper",
+                        "expected_target": "app.py::helper",
+                    }],
+                })
+            manifest = {"schema_version": 1, "dataset_id": "baseline-v1",
+                        "repositories": entries}
+            self.assertEqual(
+                evaluate_baseline.preflight_repositories(manifest, root),
+                {repo_id: root / repo_id for repo_id in ("first", "second")},
+            )
+            entries[1]["probes"][0]["evidence"]["sha256"] = "f" * 64
+            with self.assertRaises(evaluate_baseline.EvaluationError):
+                evaluate_baseline.preflight_repositories(manifest, root)
+            entries[1]["probes"][0]["evidence"]["sha256"] = \
+                evaluate_baseline.source_fingerprint(root / "second" / "app.py", 1, 2)
+            entries[1]["commit"] = "f" * 40
+            with self.assertRaises(evaluate_baseline.EvaluationError):
+                evaluate_baseline.preflight_repositories(manifest, root)
+
+    def test_scanner_rejects_nonzero_and_wrong_schema(self):
+        from subprocess import CompletedProcess
+
+        repo = Path("/tmp/target")
+        project = Path("/tmp/project")
+        with patch.object(evaluate_baseline.subprocess, "run",
+                          return_value=CompletedProcess([], 4, "", "failure")) as run:
+            with self.assertRaises(evaluate_baseline.EvaluationError):
+                evaluate_baseline.scan_repository(project, repo)
+            args, kwargs = run.call_args
+            self.assertEqual(args[0], [evaluate_baseline.sys.executable, "-m",
+                                       "repo_doctor", "scan", str(repo), "--json"])
+            self.assertFalse(kwargs["shell"])
+        with patch.object(evaluate_baseline.subprocess, "run",
+                          return_value=CompletedProcess([], 0, '{"schema_version": 1}', "")):
+            with self.assertRaises(evaluate_baseline.EvaluationError):
+                evaluate_baseline.scan_repository(project, repo)
 
 
 if __name__ == "__main__":

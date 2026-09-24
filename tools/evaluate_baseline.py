@@ -5,6 +5,9 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import subprocess
+import sys
+import time
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit
 
@@ -91,6 +94,8 @@ def validate_manifest_data(manifest: dict[str, object]) -> None:
     for repo_value in repositories:
         repo = _mapping(repo_value, "repository")
         repo_id = _text(repo.get("id"), "repository.id")
+        if re.fullmatch(r"[a-z][a-z0-9_-]*", repo_id) is None:
+            raise EvaluationError(f"{repo_id}: repository ID is not a safe directory name")
         if repo_id in repo_ids:
             raise EvaluationError(f"duplicate repository ID: {repo_id}")
         repo_ids.add(repo_id)
@@ -266,3 +271,111 @@ def _probe_relations(
         }
 
     raise EvaluationError(f"{probe_id}: unsupported probe kind {kind}")
+
+
+def _git_read(repo: Path, *args: str) -> str:
+    try:
+        result = subprocess.run(
+            ["git", *args], cwd=repo, capture_output=True, text=True, check=False
+        )
+    except OSError as exc:
+        raise EvaluationError(f"cannot run Git in {repo}: {exc}") from exc
+    if result.returncode != 0:
+        raise EvaluationError(f"Git check failed in {repo}: {result.stderr.strip()}")
+    return result.stdout.strip()
+
+
+def validate_snapshot(repo: Path, expected_commit: str) -> None:
+    """Require a clean Git checkout rooted at the expected immutable commit."""
+    try:
+        root = repo.resolve(strict=True)
+    except OSError as exc:
+        raise EvaluationError(f"repository checkout is absent: {repo}") from exc
+    if not root.is_dir():
+        raise EvaluationError(f"repository checkout is not a directory: {repo}")
+    git_root = Path(_git_read(root, "rev-parse", "--show-toplevel")).resolve()
+    if git_root != root:
+        raise EvaluationError(f"repository path is not the Git checkout root: {repo}")
+    actual_commit = _git_read(root, "rev-parse", "HEAD")
+    if actual_commit != expected_commit:
+        raise EvaluationError(
+            f"repository {repo} is at {actual_commit}, expected {expected_commit}"
+        )
+    status = _git_read(root, "status", "--porcelain", "--untracked-files=all")
+    if status:
+        raise EvaluationError(f"repository checkout has tracked/untracked changes: {repo}")
+
+
+def preflight_repositories(
+    manifest: dict[str, object], repos_root: Path
+) -> dict[str, Path]:
+    """Validate every source and checkout before starting any scanner process."""
+    validate_manifest_data(manifest)
+    roots: dict[str, Path] = {}
+    for entry in manifest["repositories"]:
+        repo_id = entry["id"]
+        repo = repos_root / repo_id
+        validate_snapshot(repo, entry["commit"])
+        for probe in entry["probes"]:
+            validate_evidence(repo, probe)
+        roots[repo_id] = repo
+    return roots
+
+
+def scan_repository(project_root: Path, repo: Path) -> tuple[dict[str, object], float]:
+    """Run the actual read-only Repo Doctor scan CLI and time its wall clock."""
+    command = [sys.executable, "-m", "repo_doctor", "scan", str(repo), "--json"]
+    started = time.perf_counter()
+    try:
+        result = subprocess.run(
+            command, cwd=project_root, capture_output=True, text=True,
+            shell=False, check=False,
+        )
+    except OSError as exc:
+        raise EvaluationError(f"cannot start Repo Doctor scan for {repo}: {exc}") from exc
+    elapsed = time.perf_counter() - started
+    if result.returncode != 0:
+        raise EvaluationError(
+            f"Repo Doctor scan failed for {repo} (exit {result.returncode}): "
+            f"{result.stderr.strip()}"
+        )
+    try:
+        scan = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise EvaluationError(f"Repo Doctor scan returned invalid JSON for {repo}: {exc}") from exc
+    if not isinstance(scan, dict) or type(scan.get("schema_version")) is not int \
+            or scan["schema_version"] != 2:
+        raise EvaluationError(f"Repo Doctor scan schema is not version 2 for {repo}")
+    if not isinstance(scan.get("stats"), dict) or any(
+        not isinstance(scan.get(key), list)
+        for key in ("calls", "call_edges", "semantic_edges", "symbols", "ambiguous_symbols")
+    ):
+        raise EvaluationError(f"Repo Doctor scan output lacks required arrays for {repo}")
+    return scan, elapsed
+
+
+def canonical_scan_digest(scan: dict[str, object]) -> str:
+    """Hash the complete scan JSON without depending on mapping key order."""
+    encoded = json.dumps(scan, ensure_ascii=False, sort_keys=True,
+                         separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def evaluate_snapshot(
+    repo_entry: dict[str, object], repo: Path, project_root: Path, runs: int
+) -> dict[str, object]:
+    """Repeat a repository scan and reject changes in its complete JSON output."""
+    if type(runs) is not int or runs < 1:
+        raise EvaluationError("runs must be a positive integer")
+    scans = [scan_repository(project_root, repo) for _ in range(runs)]
+    hashes = [canonical_scan_digest(scan) for scan, _ in scans]
+    if len(set(hashes)) != 1:
+        raise EvaluationError(f"{repo_entry['id']}: unstable scan output across runs")
+    for probe in repo_entry.get("probes", []):
+        if probe["kind"] == "call":
+            _probe_relations(probe, scans[0][0])
+    return {
+        "scan": scans[0][0],
+        "durations_seconds": [elapsed for _, elapsed in scans],
+        "scan_hashes": hashes,
+    }
