@@ -40,3 +40,22 @@ Precision 与 recall **只适用于这里人工标注的 probe**，不能推断�
 报告按调用、重导出、命令注册、overload 归并、overload 签名分别计数。JSON 保留每个 probe 的预期、预测和 TP/FP/FN；Markdown 展示汇总和不匹配 ID。`stats` 中的 unresolved 数量仅为规模背景，不进入准确率分母。没有探针的类别显示 `not_sampled`，零分母显示 `null`。
 
 耗时是同一 Python 解释器启动真实 `repo_doctor scan --json` 命令的完整墙钟时间。报告记录五次原始耗时、中位数、最小值、最大值、Python 与平台信息，适合在同一环境中做后续比较；没有控制操作系统文件缓存，不应跨机器直接比较绝对耗时。
+
+## 独立挑战集 challenge-v1
+
+challenge-v1 的案例先依据固定 commit 的源码结构审阅和选择，再检查 Repo Doctor 的预测。它是独立且刻意更难的挑战集，共 15 个 probe，覆盖调用、重导出、命令注册和 overload。`baseline-v1` 及其指标和报告仍是历史基线；不得与 challenge-v1 的指标合并。
+
+动态导入、运行时属性查找，以及接收者驱动的嵌套调用标为 unresolved，因为当前的单目标关系形式无法声称存在唯一的本地被调用目标。
+
+从仓库根目录复用前文准备好的固定 checkout 目录运行：
+
+```bash
+python3 tools/evaluate_baseline.py \
+  --manifest evaluation/challenge-v1.json \
+  --repos-root "$BASELINE_CHECKOUTS" \
+  --runs 5 \
+  --json-out evaluation/results/challenge-v1.json \
+  --markdown-out evaluation/results/challenge-v1.md
+```
+
+结果只属于 `challenge-v1`，应逐条根据其源码证据解释。
