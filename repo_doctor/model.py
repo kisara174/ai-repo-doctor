@@ -28,6 +28,16 @@ class DecoratorRef:
 
 
 @dataclass(frozen=True, slots=True)
+class CommandRegistrationCall:
+    file: str
+    line: int
+    receiver: str
+    callback: str
+    caller: str | None = None
+    class_owner: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class OverloadSignature:
     start_line: int
     end_line: int
@@ -52,6 +62,7 @@ class Symbol:
     is_overload: bool = False
     overload_signature: OverloadSignature | None = None
     overloads: tuple[OverloadSignature, ...] = ()
+    base_expressions: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,6 +104,7 @@ class ParsedFile:
     calls: list[CallSite]
     module_bindings: set[str] = field(default_factory=set)
     error: ParseError | None = None
+    registration_calls: list[CommandRegistrationCall] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,4 +155,5 @@ class RepoIndex:
     import_edges: list[ImportEdge] = field(default_factory=list)
     call_edges: list[CallEdge] = field(default_factory=list)
     semantic_edges: list[SemanticEdge] = field(default_factory=list)
+    registration_calls: list[CommandRegistrationCall] = field(default_factory=list)
     import_cycles: list[list[str]] = field(default_factory=list)

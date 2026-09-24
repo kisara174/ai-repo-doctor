@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .model import (
     CallSite,
+    CommandRegistrationCall,
     DecoratorRef,
     FileRecord,
     ImportRef,
@@ -330,10 +331,12 @@ class _Extractor(ast.NodeVisitor):
         self.symbols: list[Symbol] = []
         self.imports: list[ImportRef] = []
         self.calls: list[CallSite] = []
+        self.registration_calls: list[CommandRegistrationCall] = []
         self.module_bindings: set[str] = set()
         self._names: list[str] = []
         self._ids: list[str] = []
         self._kinds: list[str] = []
+        self._instance_methods: list[bool] = []
 
     def _add_symbol(self, node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef, kind: str) -> None:
         qualname = ".".join([*self._names, node.name])
@@ -351,6 +354,25 @@ class _Extractor(ast.NodeVisitor):
             isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
             and any(item.recognized == "typing.overload" for item in decorator_refs)
         )
+        is_instance_method = False
+        if kind == "method" and isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            positional = (*node.args.posonlyargs, *node.args.args)
+            non_instance_decorator = any(
+                (
+                    isinstance(item, ast.Name)
+                    and item.id in {"staticmethod", "classmethod"}
+                )
+                or (
+                    isinstance(item, ast.Attribute)
+                    and item.attr in {"staticmethod", "classmethod"}
+                )
+                for item in node.decorator_list
+            )
+            is_instance_method = (
+                bool(positional)
+                and positional[0].arg == "self"
+                and not non_instance_decorator
+            )
         overload_signature = _overload_signature(node) if is_overload else None
         local_bindings = _bindings(node) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) else frozenset()
         local_constructors = _local_constructors(node) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) else ()
@@ -377,13 +399,20 @@ class _Extractor(ast.NodeVisitor):
                 decorators=decorator_refs,
                 is_overload=is_overload,
                 overload_signature=overload_signature,
+                base_expressions=(
+                    tuple(ast.unparse(base) for base in node.bases)
+                    if isinstance(node, ast.ClassDef)
+                    else ()
+                ),
             )
         )
         self._names.append(node.name)
         self._ids.append(symbol_id)
         self._kinds.append(kind)
+        self._instance_methods.append(is_instance_method)
         for child in node.body:
             self.visit(child)
+        self._instance_methods.pop()
         self._names.pop()
         self._ids.pop()
         self._kinds.pop()
@@ -444,8 +473,48 @@ class _Extractor(ast.NodeVisitor):
             )
 
     def visit_Call(self, node: ast.Call) -> None:
+        func = node.func
+        if (
+            isinstance(func, ast.Attribute)
+            and func.attr == "add_command"
+            and isinstance(func.value, ast.Name)
+            and len(node.args) == 1
+            and isinstance(node.args[0], ast.Name)
+            and not node.keywords
+            and (
+                not self._ids
+                or (
+                    self._kinds[-1] == "method"
+                    and (func.value.id != "self" or self._instance_methods[-1])
+                )
+            )
+        ):
+            class_owner = next(
+                (
+                    symbol_id
+                    for symbol_id, kind in reversed(list(zip(self._ids, self._kinds)))
+                    if kind == "class"
+                ),
+                None,
+            )
+            caller = self._ids[-1] if self._ids else None
+            if func.value.id != "self" or (
+                caller is not None
+                and class_owner is not None
+                and self._instance_methods[-1]
+            ):
+                self.registration_calls.append(
+                    CommandRegistrationCall(
+                        file=self.file,
+                        line=node.lineno,
+                        receiver=func.value.id,
+                        callback=node.args[0].id,
+                        caller=caller,
+                        class_owner=class_owner,
+                    )
+                )
+
         if self._ids and self._kinds[-1] in {"function", "method"}:
-            func = node.func
             name = func.id if isinstance(func, ast.Name) else func.attr if isinstance(func, ast.Attribute) else ""
             receiver = func.value.id if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name) else None
             self.calls.append(
@@ -486,7 +555,13 @@ def parse_python_file(
     except (SyntaxError, UnicodeError, OSError, ValueError) as exc:
         if "file" not in locals():
             file = FileRecord(relative_path, 0, 0, False)
-        return ParsedFile(file, [], [], [], error=ParseError(relative_path, getattr(exc, "lineno", None) or 1, str(exc)))
+        return ParsedFile(
+            file,
+            [],
+            [],
+            [],
+            error=ParseError(relative_path, getattr(exc, "lineno", None) or 1, str(exc)),
+        )
     module_import_ids = {
         id(node) for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))
     }
@@ -498,4 +573,11 @@ def parse_python_file(
         overload_function_aliases,
     )
     extractor.visit(tree)
-    return ParsedFile(file, extractor.symbols, extractor.imports, extractor.calls, extractor.module_bindings)
+    return ParsedFile(
+        file,
+        extractor.symbols,
+        extractor.imports,
+        extractor.calls,
+        extractor.module_bindings,
+        registration_calls=extractor.registration_calls,
+    )
