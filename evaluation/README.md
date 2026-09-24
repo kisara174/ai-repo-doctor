@@ -60,4 +60,23 @@ python3 tools/evaluate_baseline.py \
 
 结果只属于 `challenge-v1`，应逐条根据其源码证据解释。
 
-本轮三仓库各运行五次，且每个仓库的五个规范化扫描哈希一致。报告发现两条源码确认的命令注册漏报：Click 的 `examples/completion/completion.py:56` 通过 `cli.add_command(group)` 将 `group` 加入 `cli`；Flask 的 `src/flask/cli.py:594` 通过 `self.add_command(run_command)` 将 `run_command` 加入 `FlaskGroup`。当前关系解析识别 `.command()` / `.group()` 装饰器注册，不识别显式 `.add_command(...)`，因此这两条边没有出现在预测中。它们是分析器当前注册关系模型的已知缺口。除这两条漏报外，其余正向探针均匹配；挑战集记录的未解析调用没有产生错误的本地目标，所有采样关系均为零误报。
+本轮在加入显式 `add_command` 解析后，三仓库各运行五次，每个仓库的五个规范化扫描哈希一致。此前发现的两条源码确认关系现均匹配：Click 的 `examples/completion/completion.py:56` 通过 `cli.add_command(group)` 将子组加入 `cli`；Flask 的 `src/flask/cli.py:594` 通过 `self.add_command(run_command)` 将命令加入 `FlaskGroup`。Click 的三个命令注册探针与 Flask 的一个命令注册探针全部匹配，未出现采样误报或漏报；其余挑战探针也全部匹配。`baseline-v1` 的五次评估另写入临时文件，其逐仓库关系指标与冻结报告一致；原始 baseline manifest 与报告文件保持不变。精确数据与重复运行哈希见 `results/challenge-v1.json` 和 `results/challenge-v1.md`。
+
+## 显式注册边界集 challenge-v2
+
+`challenge-v2` 保留 challenge-v1 的 15 个探针，并增加四个来自相同固定源码快照的负向注册探针：Click 内部装饰器中运行时创建的 `cmd`，Flask 插件入口动态加载命令时的多参数调用，以及 Flask 教程中无法静态解析的 `app.cli` 接收者。负向探针只记录调用位置、理由和未解析说明，不要求标注不存在的父/回调符号。challenge-v1 清单保持不变；其结果报告已针对更新后的分析器单独重跑，运行 challenge-v2 不会覆盖它们。
+
+对类实例接收者，分析器还会检查本地可解析的基类链：若类链绑定了 `add_command`、重载了属性查找方法，或含有未解析基类，就不把该调用推断成 Click 注册边。
+
+从仓库根目录运行：
+
+```bash
+python3 tools/evaluate_baseline.py \
+  --manifest evaluation/challenge-v2.json \
+  --repos-root "$BASELINE_CHECKOUTS" \
+  --runs 5 \
+  --json-out evaluation/results/challenge-v2.json \
+  --markdown-out evaluation/results/challenge-v2.md
+```
+
+本轮五次评估中，19 个探针全部匹配，每个仓库的五个规范化扫描哈希一致。Click 的三个注册正例与 Flask 的一个注册正例均命中；新增四个动态或属性接收者负例均未产生误报。challenge-v1 的既有报告未覆盖写，五次复评的指标和扫描哈希与已提交结果一致。另行运行的 baseline-v1 指标与冻结报告一致；冻结文件保持不变。详细结果见 `results/challenge-v2.json` 和 `results/challenge-v2.md`。
