@@ -214,7 +214,7 @@ git commit -m "feat: scope findings to submitted context"
 - `--json` writes only the result JSON to stdout. The preflight upload summary goes to stderr and lists selected repository-relative files/ranges and line/byte totals, but not source contents.
 - Return 1 when at least one finding is rejected; return 0 when the request succeeds and all findings are accepted or the model reports no findings.
 
-- [ ] **Step 1: Write in-process CLI tests with a mocked client**
+- [x] **Step 1: Write in-process CLI tests with a mocked client**
 
 Extend `tests/test_cli.py` with `io.StringIO`, `contextlib.redirect_stdout`, `contextlib.redirect_stderr`, `os.environ`, and `unittest.mock.patch`. Call `repo_doctor.cli.main([...])` against a temporary repository; do not call the live API.
 
@@ -227,13 +227,13 @@ Add tests asserting:
 5. A mocked `DeepSeekError` returns 2 with no API key in stderr; a mocked valid response containing one rejected finding returns 1 and reports accepted/rejected results.
 6. Existing `scan --json`, `context`, `impact`, and `validate` calls continue to work without `DEEPSEEK_API_KEY` and do not call the mocked API client.
 
-- [ ] **Step 2: Run the focused tests and confirm the new command is missing**
+- [x] **Step 2: Run the focused tests and confirm the new command is missing**
 
 Run: `python3 -m unittest tests.test_cli -v`
 
 Expected: new `diagnose` tests FAIL because the parser and dispatch branch do not exist; existing CLI tests remain PASS.
 
-- [ ] **Step 3: Add parser and dispatch**
+- [x] **Step 3: Add parser and dispatch**
 
 Add the `diagnose` subparser with `path`, `symbol`, `--max-lines`, `--model`, and `--json`. In the dispatch branch, validate the range 1–120, build the local index and context, call `validate_context_budget(context)`, then resolve the key and model. If the key is absent, raise a safe local error before calling `complete_json`. Print the selected-file summary to stderr, build prompts, call `complete_json` once, and pass `result.payload` through `validate_diagnosis_payload`.
 
@@ -250,7 +250,7 @@ diagnose.add_argument("--model")
 diagnose.add_argument("--json", action="store_true")
 ```
 
-- [ ] **Step 4: Add text and JSON result rendering**
+- [x] **Step 4: Add text and JSON result rendering**
 
 In JSON mode, print exactly one JSON object to stdout with `schema_version: 1`, `provider: "deepseek"`, the provider-reported `model`, and the accepted/rejected arrays. In text mode, list accepted and rejected titles with rejection reasons and print: `Evidence checks confirm source grounding only; they do not prove the diagnosis is correct.` Preserve current exit-code handling for all existing commands.
 
@@ -266,7 +266,7 @@ The JSON result keys are fixed:
 }
 ```
 
-- [ ] **Step 5: Run focused and full tests**
+- [x] **Step 5: Run focused and full tests**
 
 Run: `python3 -m unittest tests.test_cli -v`
 
@@ -276,7 +276,7 @@ Run: `python3 -m unittest discover -s tests -q`
 
 Expected: the full suite PASS with no API Key and no network access.
 
-- [ ] **Step 6: Commit the CLI unit**
+- [x] **Step 6: Commit the CLI unit**
 
 ```bash
 git add repo_doctor/cli.py tests/test_cli.py
