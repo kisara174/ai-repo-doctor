@@ -165,6 +165,27 @@ class ManifestTests(unittest.TestCase):
             with self.assertRaises(evaluate_baseline.EvaluationError):
                 evaluate_baseline.load_manifest(path)
 
+    def test_published_manifest_has_fixed_pins_and_minimum_probe_coverage(self):
+        path = Path(__file__).resolve().parents[1] / "evaluation/baseline-v1.json"
+        manifest = evaluate_baseline.load_manifest(path)
+        evaluate_baseline.validate_baseline_pins(manifest)
+        self.assertEqual([entry["id"] for entry in manifest["repositories"]],
+                         ["click", "requests", "flask"])
+        for entry in manifest["repositories"]:
+            probes = entry["probes"]
+            calls = [probe for probe in probes if probe["kind"] == "call"]
+            self.assertGreaterEqual(sum("expected_target" in probe for probe in calls), 6)
+            self.assertGreaterEqual(sum("unresolved_reason" in probe for probe in calls), 2)
+            self.assertGreaterEqual(sum(probe["kind"] == "reexport"
+                                        and "expected_target" in probe for probe in probes), 4)
+            self.assertGreaterEqual(sum(probe["kind"] == "overload"
+                                        and probe["expected_state"] == "resolved"
+                                        for probe in probes), 3)
+        registrations = [probe for probe in manifest["repositories"][0]["probes"]
+                         if probe["kind"] == "command_registration"]
+        self.assertGreaterEqual(sum(probe["expect_edge"] for probe in registrations), 5)
+        self.assertGreaterEqual(sum(not probe["expect_edge"] for probe in registrations), 5)
+
 
 class MetricTests(unittest.TestCase):
     def test_incorrect_target_counts_as_false_positive_and_false_negative(self):
