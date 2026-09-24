@@ -91,3 +91,10 @@
 - [x] Check the spec requirements against shipped CLI behavior and tests.
 - [x] Run `python3 -m unittest discover -s tests -v`, `python3 -m compileall -q repo_doctor`, command help, and representative `scan/context/validate` smoke checks.
 - [x] Inspect `git diff --check` and the full change list; report remaining static-analysis limits honestly.
+
+## Evaluation follow-up: local instance method calls
+
+- [x] Run the CLI on a shallow clone of `psf/requests` and inspect `Session.request` relationships against source.
+- [x] Add conservative resolution for local method calls when a unique local class constructor is established by a simple assignment or `with ... as` binding.
+- [x] Keep ambiguous, shadowed, or reassigned instance bindings unresolved; add regression coverage for each case.
+- [x] Re-run the Requests scan and confirm the `requests.api.request -> Session.request` edge and its public API callers are present.

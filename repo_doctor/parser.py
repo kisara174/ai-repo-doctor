@@ -1,6 +1,7 @@
 """Extract Python structure without importing or executing scanned code."""
 
 import ast
+from collections import defaultdict
 from pathlib import Path
 
 from .model import CallSite, FileRecord, ImportRef, ParsedFile, ParseError, Symbol
@@ -26,6 +27,88 @@ def _bindings(node: ast.FunctionDef | ast.AsyncFunctionDef) -> frozenset[str]:
     return frozenset(names)
 
 
+def _constructor_expression(value: ast.expr) -> str | None:
+    if not isinstance(value, ast.Call):
+        return None
+    func = value.func
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
+        return f"{func.value.id}.{func.attr}"
+    return None
+
+
+def _local_constructors(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[tuple[str, str], ...]:
+    """Find local names bound only to one simple class-constructor expression."""
+    scope_nodes: list[ast.AST] = []
+    pending = list(reversed(node.body))
+    while pending:
+        current = pending.pop()
+        scope_nodes.append(current)
+        if isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+            continue
+        pending.extend(reversed(list(ast.iter_child_nodes(current))))
+
+    writes: dict[str, list[str | None]] = defaultdict(list)
+    recognized_stores: set[int] = set()
+
+    def bind_target(target: ast.expr, constructor: str | None) -> None:
+        if isinstance(target, ast.Name):
+            writes[target.id].append(constructor)
+            recognized_stores.add(id(target))
+            return
+        for child in ast.walk(target):
+            if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
+                writes[child.id].append(None)
+                recognized_stores.add(id(child))
+
+    arguments = node.args
+    for argument in (*arguments.posonlyargs, *arguments.args, *arguments.kwonlyargs):
+        writes[argument.arg].append(None)
+    if arguments.vararg:
+        writes[arguments.vararg.arg].append(None)
+    if arguments.kwarg:
+        writes[arguments.kwarg.arg].append(None)
+
+    for current in scope_nodes:
+        if isinstance(current, ast.Assign):
+            constructor = _constructor_expression(current.value)
+            for target in current.targets:
+                bind_target(target, constructor)
+        elif isinstance(current, ast.AnnAssign):
+            bind_target(current.target, _constructor_expression(current.value) if current.value else None)
+        elif isinstance(current, ast.NamedExpr):
+            bind_target(current.target, _constructor_expression(current.value))
+        elif isinstance(current, (ast.With, ast.AsyncWith)):
+            for item in current.items:
+                if item.optional_vars is not None:
+                    bind_target(item.optional_vars, _constructor_expression(item.context_expr))
+        elif isinstance(current, (ast.Import, ast.ImportFrom)):
+            for alias in current.names:
+                if alias.name != "*":
+                    bound = alias.asname or (alias.name.split(".", 1)[0] if isinstance(current, ast.Import) else alias.name)
+                    writes[bound].append(None)
+        elif isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            writes[current.name].append(None)
+        elif isinstance(current, ast.ExceptHandler) and current.name:
+            writes[current.name].append(None)
+        elif isinstance(current, (ast.Global, ast.Nonlocal)):
+            for name in current.names:
+                writes[name].append(None)
+
+    for current in scope_nodes:
+        if isinstance(current, ast.Name) and isinstance(current.ctx, (ast.Store, ast.Del)) and id(current) not in recognized_stores:
+            writes[current.id].append(None)
+
+    return tuple(
+        sorted(
+            (name, values[0])
+            for name, values in writes.items()
+            if values and values[0] is not None and all(value == values[0] for value in values)
+        )
+    )
+
+
 class _Extractor(ast.NodeVisitor):
     def __init__(self, file: str):
         self.file = file
@@ -43,6 +126,7 @@ class _Extractor(ast.NodeVisitor):
         decorators = [item.lineno for item in node.decorator_list]
         start_line = min([node.lineno, *decorators])
         local_bindings = _bindings(node) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) else frozenset()
+        local_constructors = _local_constructors(node) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) else ()
         self.symbols.append(
             Symbol(
                 id=symbol_id,
@@ -54,6 +138,7 @@ class _Extractor(ast.NodeVisitor):
                 end_line=node.end_lineno or node.lineno,
                 parent=self._ids[-1] if self._ids else None,
                 local_bindings=local_bindings,
+                local_constructors=local_constructors,
             )
         )
         self._names.append(node.name)

@@ -84,6 +84,37 @@ def _unique_alias(
     return next(iter(targets)) if len(targets) == 1 else None
 
 
+def _resolve_class_expression(
+    expression: str,
+    file: str,
+    caller: Symbol,
+    index: RepoIndex,
+    aliases: dict[tuple[str, str | None, str], set[tuple[str, str]]],
+) -> str | None:
+    parts = expression.split(".")
+    if parts[0] in caller.local_bindings:
+        return None
+    if len(parts) == 1:
+        alias_key = (file, None, parts[0])
+        alias = _unique_alias(aliases, file, None, parts[0])
+        if alias_key in aliases:
+            if alias is None or alias[0] != "symbol":
+                return None
+            symbol_id = alias[1]
+        else:
+            symbol_id = f"{file}::{parts[0]}"
+    elif len(parts) == 2:
+        alias_key = (file, None, parts[0])
+        alias = _unique_alias(aliases, file, None, parts[0])
+        if alias_key not in aliases or alias is None or alias[0] != "module":
+            return None
+        symbol_id = f"{alias[1]}::{parts[1]}"
+    else:
+        return None
+    symbol = index.symbols.get(symbol_id)
+    return symbol_id if symbol is not None and symbol.kind == "class" else None
+
+
 def _resolve_call(
     call: CallSite,
     index: RepoIndex,
@@ -116,9 +147,13 @@ def _resolve_call(
     if receiver == "self" and caller.kind == "method" and caller.parent:
         target = f"{caller.parent}.{call.name}"
         return target if target in index.symbols else None
-    if receiver in index.module_bindings.get(caller.file, set()):
-        return None
     if receiver in caller.local_bindings:
+        constructor = dict(caller.local_constructors).get(receiver)
+        class_id = _resolve_class_expression(constructor, caller.file, caller, index, aliases) if constructor else None
+        target = f"{class_id}.{call.name}" if class_id else None
+        symbol = index.symbols.get(target) if target else None
+        return target if symbol is not None and symbol.kind == "method" else None
+    if receiver in index.module_bindings.get(caller.file, set()):
         return None
     alias = _unique_alias(aliases, caller.file, None, receiver)
     if (caller.file, None, receiver) in aliases and alias is None:

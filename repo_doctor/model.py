@@ -23,6 +23,7 @@ class Symbol:
     end_line: int
     parent: str | None
     local_bindings: frozenset[str] = frozenset()
+    local_constructors: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

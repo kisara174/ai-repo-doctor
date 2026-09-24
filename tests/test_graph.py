@@ -6,6 +6,98 @@ from repo_doctor.index import build_index
 
 
 class GraphTests(unittest.TestCase):
+    def test_resolves_method_call_on_locally_constructed_instance(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n"
+                "    def send(self):\n        return 1\n"
+                "\ndef run():\n"
+                "    client = Client()\n"
+                "    return client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertIn(
+            ("app.py::run", "app.py::Client.send"),
+            [(edge.caller, edge.callee) for edge in index.call_edges],
+        )
+
+    def test_resolves_instance_created_by_imported_module_context_manager(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "pkg").mkdir()
+            (root / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+            (root / "pkg" / "sessions.py").write_text(
+                "class Session:\n"
+                "    def request(self):\n        return 1\n",
+                encoding="utf-8",
+            )
+            (root / "pkg" / "api.py").write_text(
+                "from . import sessions\n\n"
+                "def request():\n"
+                "    with sessions.Session() as session:\n"
+                "        return session.request()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertIn(
+            ("pkg/api.py::request", "pkg/sessions.py::Session.request"),
+            [(edge.caller, edge.callee) for edge in index.call_edges],
+        )
+
+    def test_ambiguous_local_instance_types_remain_unresolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class First:\n    def send(self):\n        pass\n\n"
+                "class Second:\n    def send(self):\n        pass\n\n"
+                "def run(flag):\n"
+                "    if flag:\n        client = First()\n"
+                "    else:\n        client = Second()\n"
+                "    client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(any(edge.callee.endswith(("First.send", "Second.send")) for edge in index.call_edges))
+
+    def test_reassigned_local_instance_remains_unresolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n    def send(self):\n        pass\n\n"
+                "def run():\n"
+                "    client = Client()\n"
+                "    client = None\n"
+                "    client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(any(edge.callee == "app.py::Client.send" for edge in index.call_edges))
+
+    def test_shadowed_constructor_name_remains_unresolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n    def send(self):\n        pass\n\n"
+                "def run(Client):\n"
+                "    client = Client()\n"
+                "    client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(any(edge.callee == "app.py::Client.send" for edge in index.call_edges))
+
     def test_resolves_relative_imports_aliases_and_self_methods(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
