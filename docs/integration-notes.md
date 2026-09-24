@@ -45,4 +45,12 @@
 - GitHub 的[安全使用指南](https://docs.github.com/en/actions/reference/security/secure-use)建议将 Actions 固定到完整 commit SHA；[workflow 权限文档](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#permissions)说明顶层 `permissions` 可缩小 `GITHUB_TOKEN` 范围，指定权限后未列出的权限设为 `none`。同一参考把 `timeout-minutes` 定义在 job 层级，因此配置于 `jobs.test`。
 - 原始 action 文档：[checkout README](https://github.com/actions/checkout)，[setup-python README](https://github.com/actions/setup-python)。
 
-以上提交用于只读 Python CI。提交 `8457984` 的实现满足 T1 本地配置要求；GitHub 上的三版本运行仍待 PR 创建后验证。
+以上提交用于只读 Python CI。工作流及本地验证在提交 `8457984` 中，read-only review 无 findings。分支 `codex/post-v3-integration` 已推送；PR [#6](https://github.com/kisara174/ai-repo-doctor/pull/6) 目标为实际默认分支 `codex/repo-doctor-v1`。
+
+GitHub Actions 在被检查的 head `dd34f2cb1a74379ccbfb275cd1daf6bae73dd240` 上通过。push run `36006602740` 的三项 job URL：
+
+- Python 3.11：[job 107656247231](https://github.com/kisara174/ai-repo-doctor/actions/runs/36006602740/job/107656247231)
+- Python 3.12：[job 107656247589](https://github.com/kisara174/ai-repo-doctor/actions/runs/36006602740/job/107656247589)
+- Python 3.13：[job 107656248817](https://github.com/kisara174/ai-repo-doctor/actions/runs/36006602740/job/107656248817)
+
+`gh pr checks 6` 还确认了 pull_request run `36006656104` 的三个版本均通过。没有配置 secrets；测试和评估均未发起 DeepSeek 请求。PR 仍保持 open，未执行合并。

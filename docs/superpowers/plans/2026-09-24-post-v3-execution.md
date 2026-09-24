@@ -221,8 +221,8 @@ python -m repo_doctor --help
 python -m repo_doctor diagnose --help
 ~~~
 
-- [ ] 在功能分支提交 ci 文件，推送当前已获授权的 PR；若无推送授权，交付本地 diff 待主代理发布。
-- [ ] 使用 gh pr checks 检查三项真实结果，记录各 job URL。不可用本机单版本通过替代矩阵通过。失败由主代理分类，不盲目降级版本或跳测试。
+- [x] 在功能分支提交 ci 文件，推送当前已获授权的 PR；若无推送授权，交付本地 diff 待主代理发布。提交 `8457984` 已进入 PR #6，base 为 `codex/repo-doctor-v1`。
+- [x] 使用 gh pr checks 检查三项真实结果，记录各 job URL。不可用本机单版本通过替代矩阵通过。失败由主代理分类，不盲目降级版本或跳测试。push 和 pull_request 两个 run 的 3.11–3.13 jobs 均通过；job URLs 见 `docs/integration-notes.md`。
 
 **验收：** 三个版本的 GitHub job 均通过，无密钥配置。暂不自动修改分支保护。
 **提交：** ci: run offline tests on supported Python versions。
