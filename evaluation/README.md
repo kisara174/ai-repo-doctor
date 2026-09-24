@@ -59,3 +59,5 @@ python3 tools/evaluate_baseline.py \
 ```
 
 结果只属于 `challenge-v1`，应逐条根据其源码证据解释。
+
+本轮三仓库各运行五次，且每个仓库的五个规范化扫描哈希一致。报告发现两条源码确认的命令注册漏报：Click 的 `examples/completion/completion.py:56` 通过 `cli.add_command(group)` 将 `group` 加入 `cli`；Flask 的 `src/flask/cli.py:594` 通过 `self.add_command(run_command)` 将 `run_command` 加入 `FlaskGroup`。当前关系解析识别 `.command()` / `.group()` 装饰器注册，不识别显式 `.add_command(...)`，因此这两条边没有出现在预测中。它们是分析器当前注册关系模型的已知缺口。除这两条漏报外，其余正向探针均匹配；挑战集记录的未解析调用没有产生错误的本地目标，所有采样关系均为零误报。
