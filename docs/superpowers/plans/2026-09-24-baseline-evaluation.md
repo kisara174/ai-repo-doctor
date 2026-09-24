@@ -55,7 +55,7 @@
 - `validate_evidence(repo_root: Path, probe: dict[str, object]) -> None` resolves the probe's repository-relative file under `repo_root`, rejects symlinks resolving outside the checkout, and raises `EvaluationError` when the selected source hash differs.
 - Raise `EvaluationError` with the repository/probe ID and failed field when an input is malformed, a path escapes the checkout, or a fingerprint differs.
 
-- [ ] **Step 1: Add a passing test for a valid in-memory manifest and line fingerprint**
+- [x] **Step 1: Add a passing test for a valid in-memory manifest and line fingerprint**
 
 ```python
 source = "first\r\nselected one\r\nselected two\r\nlast\r\n"
@@ -65,13 +65,13 @@ expected_hash = hashlib.sha256(expected_text.encode("utf-8")).hexdigest()
 
 Write `source` to a temporary file, assert `source_fingerprint(path, 2, 3) == expected_hash`, and assert a valid manifest with one resolved call probe passes `validate_manifest_data()`.
 
-- [ ] **Step 2: Run the focused tests and verify the new imports fail**
+- [x] **Step 2: Run the focused tests and verify the new imports fail**
 
 Run: `python3 -m unittest tests.test_evaluation.ManifestTests -v`
 
 Expected: FAIL because `tools.evaluate_baseline` and its validation functions do not exist yet.
 
-- [ ] **Step 3: Add the evaluator module, error type, JSON loader, schema checks, and fingerprint function**
+- [x] **Step 3: Add the evaluator module, error type, JSON loader, schema checks, and fingerprint function**
 
 Implement a safe-path check with `PurePosixPath`: reject absolute paths, empty components, and any `..` component. Require `1 <= start_line <= end_line <= len(lines)` before hashing. Normalize only selected source line endings as specified; do not hash surrounding source.
 
@@ -80,11 +80,11 @@ text = "\n".join(lines[start_line - 1 : end_line])
 return hashlib.sha256(text.encode("utf-8")).hexdigest()
 ```
 
-- [ ] **Step 4: Add rejection tests for malformed schema, duplicate IDs, path traversal, and stale hashes**
+- [x] **Step 4: Add rejection tests for malformed schema, duplicate IDs, path traversal, and stale hashes**
 
 Test `schema_version == 2`, duplicate probe IDs, `../../outside.py`, reversed line ranges, a missing required call selector, both `expected_target` and `unresolved_reason` set, neither set, and a source edit after hashing. Each case must raise `EvaluationError` with a message containing the probe ID or field name.
 
-- [ ] **Step 5: Run manifest tests and commit**
+- [x] **Step 5: Run manifest tests and commit**
 
 Run: `python3 -m unittest tests.test_evaluation.ManifestTests -v`
 
@@ -112,7 +112,7 @@ git commit -m "Add baseline evaluation input validation"
 - Overload resolution predicts `(symbol_id, symbol_id)` only when the ID appears in `symbols[]` and not in `ambiguous_symbols`. Signature relations are `(symbol_id, signature_text)` from that symbol's ordered `overloads` list.
 - Keep the probe ID in each relation tuple through scoring and serialization so two probes cannot double count one another.
 
-- [ ] **Step 1: Add a unit test proving an incorrect target is both FP and FN**
+- [x] **Step 1: Add a unit test proving an incorrect target is both FP and FN**
 
 ```python
 expected = {("probe-1", "call", "caller", "pkg.py::wanted")}
@@ -122,13 +122,13 @@ result = _score(expected, predicted)
 
 Assert `tp == 0`, `fp == 1`, `fn == 1`, `precision == 0.0`, and `recall == 0.0`.
 
-- [ ] **Step 2: Run the focused metric test and confirm it fails**
+- [x] **Step 2: Run the focused metric test and confirm it fails**
 
 Run: `python3 -m unittest tests.test_evaluation.MetricTests.test_wrong_target_is_false_positive_and_false_negative -v`
 
 Expected: FAIL because `_score` does not exist.
 
-- [ ] **Step 3: Implement set scoring and call/re-export/registration relation projection**
+- [x] **Step 3: Implement set scoring and call/re-export/registration relation projection**
 
 Use `expected & predicted`, `predicted - expected`, and `expected - predicted` for TP, FP, and FN. Compute each ratio only when its denominator is nonzero; otherwise return `None`. Keep each relation family under its own metric key.
 
@@ -137,15 +137,15 @@ precision = tp / (tp + fp) if tp + fp else None
 recall = tp / (tp + fn) if tp + fn else None
 ```
 
-- [ ] **Step 4: Add overload projection and same-line call ambiguity tests**
+- [x] **Step 4: Add overload projection and same-line call ambiguity tests**
 
 Test a resolved symbol with two signatures, an ambiguous symbol with no canonical implementation, and a wrong signature. Build two `calls[]` records with the same caller and line but different expressions and assert `_probe_relations()` rejects the probe even when the manifest expression matches one of them.
 
-- [ ] **Step 5: Test empty denominators and negative probes**
+- [x] **Step 5: Test empty denominators and negative probes**
 
 Assert `_score(set(), set())` serializes both metrics as `None`; an expected-empty registration probe with one predicted endpoint has `fp == 1`; a correct unresolved call with no predicted edge has no FP or FN.
 
-- [ ] **Step 6: Run focused tests and commit**
+- [x] **Step 6: Run focused tests and commit**
 
 Run: `python3 -m unittest tests.test_evaluation.MetricTests -v`
 
@@ -171,17 +171,17 @@ git commit -m "Score annotated repository probes"
 - `evaluate_snapshot(repo_entry: dict[str, object], repo: Path, project_root: Path, runs: int) -> dict[str, object]` runs all scans, requires one repeated digest, and returns all durations and the digest list.
 - Before the first scanner subprocess, preflight all three repository SHAs/clean states, evidence paths/fingerprints, and manifest-level selector uniqueness. After each scan, verify that every call probe selects exactly one `calls[]` record and that its expression matches before scoring that repository. No report paths are opened during preflight or scanning.
 
-- [ ] **Step 1: Add temporary-Git-repository tests for exact commit and cleanliness**
+- [x] **Step 1: Add temporary-Git-repository tests for exact commit and cleanliness**
 
 Create a temporary Git repo with `git init`, configure a local test author, commit one file, and record `HEAD`. Assert that exact SHA passes; a different SHA, a modified tracked file, and an untracked file each raise `EvaluationError`.
 
-- [ ] **Step 2: Run the snapshot tests and confirm they fail**
+- [x] **Step 2: Run the snapshot tests and confirm they fail**
 
 Run: `python3 -m unittest tests.test_evaluation.SnapshotTests -v`
 
 Expected: FAIL because `validate_snapshot()` does not exist.
 
-- [ ] **Step 3: Add read-only snapshot preflight and the safe CLI subprocess wrapper**
+- [x] **Step 3: Add read-only snapshot preflight and the safe CLI subprocess wrapper**
 
 Pass subprocess arguments as lists and set `shell=False`. Do not call `git clone`, `git fetch`, pip, `importlib`, `runpy`, or any command inside a target checkout. Resolve every evidence path under `repo.resolve()` and reject a resolved path outside that directory.
 
@@ -190,15 +190,15 @@ command = [sys.executable, "-m", "repo_doctor", "scan", str(repo), "--json"]
 completed = subprocess.run(command, cwd=project_root, capture_output=True, text=True, check=False)
 ```
 
-- [ ] **Step 4: Add timing, canonical scan hashes, and repeated-run checks**
+- [x] **Step 4: Add timing, canonical scan hashes, and repeated-run checks**
 
 Reject `runs < 1`. For each target, retain every elapsed duration and every scan digest; raise before report rendering if any digest differs. Include the scan JSON `stats` for repository size context, but do not use unresolved-call totals or unannotated graph edges in precision/recall.
 
-- [ ] **Step 5: Add tests for schema mismatch, nonzero CLI exit, unstable hashes, and target code non-execution**
+- [x] **Step 5: Add tests for schema mismatch, nonzero CLI exit, unstable hashes, and target code non-execution**
 
 Use a target file whose top-level code would create a marker file if executed. Run the real Repo Doctor CLI wrapper against the temporary target and assert the marker does not exist and the checkout remains clean. Inject a fake subprocess result in the nonzero-exit and changing-hash tests; verify the invocation uses an argument list and does not set `shell=True`.
 
-- [ ] **Step 6: Run snapshot and evaluator tests and commit**
+- [x] **Step 6: Run snapshot and evaluator tests and commit**
 
 Run: `python3 -m unittest tests.test_evaluation.SnapshotTests -v`
 
@@ -224,25 +224,25 @@ git commit -m "Run baseline scans on pinned clean snapshots"
 - Report JSON and Markdown are fully rendered in memory after all preflight/scans pass. Write both to temporary sibling paths, close them successfully, and only then replace destination files. Reject identical output paths. On earlier failure, existing outputs are unchanged.
 - `main(argv: list[str] | None = None) -> int` returns 0 on complete success and 2 on evaluation/input/output failure with a concise stderr message.
 
-- [ ] **Step 1: Add a report aggregation test with two probes and separate relation metrics**
+- [x] **Step 1: Add a report aggregation test with two probes and separate relation metrics**
 
 Build one call probe with one TP and one registration negative probe with one FP. Assert report categories remain separate and each has its own `tp`, `fp`, `fn`, precision, recall, positive/negative probe counts, and full per-probe details.
 
-- [ ] **Step 2: Run the focused report test and confirm it fails**
+- [x] **Step 2: Run the focused report test and confirm it fails**
 
 Run: `python3 -m unittest tests.test_evaluation.ReportTests.test_report_keeps_relation_families_separate -v`
 
 Expected: FAIL because `build_report()` does not exist.
 
-- [ ] **Step 3: Implement stable report aggregation and Markdown rendering**
+- [x] **Step 3: Implement stable report aggregation and Markdown rendering**
 
 Serialize relation tuples as JSON arrays in deterministic sorted order. Render missing ratios as `—`, escape table delimiters in free text, and list only probe IDs with FP or FN in the Markdown mismatch summary. Keep complete probe detail in JSON.
 
-- [ ] **Step 4: Add CLI parsing and failure-preserving output writes**
+- [x] **Step 4: Add CLI parsing and failure-preserving output writes**
 
 Test default manifest and run count, rejection of `--runs 0`, identical output paths, and pre-existing report files remaining byte-for-byte unchanged when preflight fails. Stage rendered content in memory and write both temporary siblings before replacing destinations. If either replacement fails, remove any newly installed destination and restore every previous file from its backup before returning an error.
 
-- [ ] **Step 5: Run evaluator tests and commit**
+- [x] **Step 5: Run evaluator tests and commit**
 
 Run: `python3 -m unittest tests.test_evaluation.ReportTests -v`
 
@@ -270,7 +270,7 @@ git commit -m "Render reproducible baseline reports"
 - Include a source-backed ambiguous overload negative where a snapshot supports one; otherwise exercise that negative only in the synthetic unit fixture and do not label the real repository as having such a sample.
 - README acquisition commands use ordinary `git clone` followed by `git checkout --detach <pinned SHA>`; these network operations are explicitly setup-only and are never called by the evaluator.
 
-- [ ] **Step 1: Inventory scan candidates from the existing pinned scan JSON and source files**
+- [x] **Step 1: Inventory scan candidates from the existing pinned scan JSON and source files**
 
 For each snapshot, list resolved `calls[]`/`call_edges[]` pairs, `reexport` semantic edges, and symbols with nonempty `overloads`. Inspect the exact source lines in the checkout before selecting a probe. For unresolved calls, inspect the call expression and its local scope to ensure the expected-unresolved label is supported by visible source evidence. The existing fixed checkouts are `/tmp/ai-repo-doctor-v2-click`, `/tmp/ai-repo-doctor-v2-requests`, and `/tmp/ai-repo-doctor-baseline-flask`.
 
@@ -278,15 +278,15 @@ Run: `python3 -m unittest tests.test_evaluation.ManifestTests -v`
 
 Expected: existing manifest contract tests pass before adding the real dataset.
 
-- [ ] **Step 2: Write the real manifest with evidence hashes and minimum category coverage**
+- [x] **Step 2: Write the real manifest with evidence hashes and minimum category coverage**
 
 Use unique descriptive IDs such as `click-call-001`, `requests-reexport-001`, and `flask-overload-001`. For each probe, hash only its inclusive evidence lines with `source_fingerprint()`. Use one call probe per unique `(file, caller, line)`; if multiple `calls[]` records share that site, choose another site rather than guessing an expression-to-edge association.
 
-- [ ] **Step 3: Add manifest structure and coverage tests**
+- [x] **Step 3: Add manifest structure and coverage tests**
 
 Assert repository IDs and commit SHAs match the approved list, probe IDs and selectors are unique, all four kinds appear, each per-repository minimum is met, and Click has five positive and five negative command-registration probes. These structural unit tests load only the manifest. Source fingerprints are checked by the evaluator against the supplied clean snapshots during Task 6, so ordinary unit tests do not require network access or clones.
 
-- [ ] **Step 4: Write reproduction instructions**
+- [x] **Step 4: Write reproduction instructions**
 
 Document the checkout directory layout `click/`, `requests/`, `flask/`; the pinned URLs and SHAs; these concrete setup commands; the evaluator invocation; the five-run default; output paths; and the limits of sampled precision/recall and timing comparisons.
 
@@ -309,7 +309,7 @@ python3 tools/evaluate_baseline.py \
   --markdown-out evaluation/results/v2-baseline.md
 ```
 
-- [ ] **Step 5: Run contract tests, inspect every probe against source, and commit data/docs**
+- [x] **Step 5: Run contract tests, inspect every probe against source, and commit data/docs**
 
 Run: `python3 -m unittest tests.test_evaluation.ManifestTests -v`
 
@@ -334,25 +334,25 @@ git commit -m "Add pinned baseline evaluation probes"
 - Output paths are the two checked-in `evaluation/results/` files.
 - Initial report contains exactly 5 durations and 5 identical scan summary hashes per repository; every category has either sampled metrics or an explicit `not_sampled` marker.
 
-- [ ] **Step 1: Confirm all target checkouts match the pins and are clean**
+- [x] **Step 1: Confirm all target checkouts match the pins and are clean**
 
 Run `git -C <repo> rev-parse HEAD` and `git -C <repo> status --porcelain --untracked-files=all` for each checkout. Expected SHAs are Click `06b2a678741131fd577ce170e23e5ca0aeba0309`, Requests `611c6162cbc4ac2020a2f91c7cfa4f3abf9bbb60`, and Flask `d73fa1cdcbd8b1465c151db8924ba58b1dd14e35`; each status output is empty.
 
-- [ ] **Step 2: Run the complete standard-library unit suite**
+- [x] **Step 2: Run the complete standard-library unit suite**
 
 Run: `python3 -m unittest discover -s tests -v`
 
 Expected: all existing Repo Doctor tests and evaluation unit tests pass without network access or external package installation.
 
-- [ ] **Step 3: Run the actual five-scan-per-repository baseline**
+- [x] **Step 3: Run the actual five-scan-per-repository baseline**
 
 Run the README command from the Repo Doctor checkout using the three clean snapshots. Expected: exit 0, one JSON report and one Markdown report, 15 total scan durations, five equal hashes per repository, and no target checkout changes.
 
-- [ ] **Step 4: Review the report against every annotation**
+- [x] **Step 4: Review the report against every annotation**
 
 For each repository and relation type, compare JSON TP/FP/FN with the corresponding probe details. Confirm unresolved-call totals and unannotated edges appear only as context, null metrics appear where denominators are zero, and every Markdown mismatch ID has a matching JSON probe record.
 
-- [ ] **Step 5: Commit the generated baseline artifacts**
+- [x] **Step 5: Commit the generated baseline artifacts**
 
 ```bash
 git add evaluation/results/v2-baseline.json evaluation/results/v2-baseline.md
