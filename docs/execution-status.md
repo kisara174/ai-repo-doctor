@@ -8,7 +8,7 @@ Integrated source commit: `ac263823ebee51e3b2ffff80d979b587f8f463a3`; T0 trackin
 
 Completed task IDs: T0.
 
-Current task: T1. The offline CI workflow and README instructions are implemented locally; full SHA pins and minimal token permissions have been reviewed. T1 remains incomplete until the branch is pushed and all three GitHub matrix jobs pass.
+Current task: T1. The offline CI workflow and README instructions are implemented in commit `8457984`; full SHA pins and minimal token permissions have been reviewed. A read-only reviewer found no issues. T1 remains incomplete until the branch is pushed and all three GitHub matrix jobs pass.
 
 Changed areas: merge commits `830586e` and `ac263823`; README integration and development commands; T0/T1 plan progress; `docs/integration-notes.md`; `.github/workflows/ci.yml`; this status file. The original workspace `/Users/kisara/Documents/ChatGPT/AI Repo Doctor` remains untouched, including its four untracked V3 planning/specification files.
 
@@ -24,7 +24,7 @@ Validation and actual outcomes:
 
 Known failures / blockers: none. The CI workflow has not yet run on GitHub.
 
-Next exact action: complete the read-only code review, commit the T1 workflow, push `codex/post-v3-integration`, create/update its PR against `codex/repo-doctor-v1`, then inspect all three jobs with `gh pr checks` and record their URLs.
+Next exact action: push `codex/post-v3-integration`, create/update its PR against `codex/repo-doctor-v1`, then inspect all three jobs with `gh pr checks` and record their URLs. The read-only reviewer reported no findings; only the real 3.11–3.13 matrix remains before T1 acceptance.
 
 Live authorization scope and requests consumed: user requested T0–T8; zero DeepSeek live API requests. T7 remains gated on preparing and reviewing the exact upload contexts, model, request limit, and cost budget.
 

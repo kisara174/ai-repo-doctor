@@ -41,8 +41,8 @@
 核查日期：2026-09-24。官方 README 当前展示 checkout v7 和 setup-python v7；远端 `v7` refs 解析为下列完整提交 SHA，并在各自 GitHub 提交页确认属于官方 action 仓库：
 
 - `actions/checkout` v7：`3d3c42e5aac5ba805825da76410c181273ba90b1`（[提交](https://github.com/actions/checkout/commit/3d3c42e5aac5ba805825da76410c181273ba90b1)）。
-- `actions/setup-python` v7：`5fda3b95a4ea91299a34e894583c3862153e4b97`（[提交](https://github.com/actions/setup-python/commit/5fda3b95a4ea91299a34e894583c3862153e4b97)）。
+- `actions/setup-python` v7.0.0：`5fda3b95a4ea91299a34e894583c3862153e4b97`（[v7.0.0 release](https://github.com/actions/setup-python/releases/tag/v7.0.0)，[提交](https://github.com/actions/setup-python/commit/5fda3b95a4ea91299a34e894583c3862153e4b97)）。
 - GitHub 的[安全使用指南](https://docs.github.com/en/actions/reference/security/secure-use)建议将 Actions 固定到完整 commit SHA；[workflow 权限文档](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#permissions)说明顶层 `permissions` 可缩小 `GITHUB_TOKEN` 范围，指定权限后未列出的权限设为 `none`。同一参考把 `timeout-minutes` 定义在 job 层级，因此配置于 `jobs.test`。
 - 原始 action 文档：[checkout README](https://github.com/actions/checkout)，[setup-python README](https://github.com/actions/setup-python)。
 
-以上提交用于计划中的只读 Python CI。实际 workflow 和本地验证结果在完成 T1 后记录。
+以上提交用于只读 Python CI。提交 `8457984` 的实现满足 T1 本地配置要求；GitHub 上的三版本运行仍待 PR 创建后验证。
