@@ -261,6 +261,58 @@ class ClickSemanticTests(unittest.TestCase):
             ],
         )
 
+    def test_explicit_registration_does_not_assume_overridden_add_command(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "import click\n"
+                "@click.command()\n"
+                "def leaf():\n"
+                "    pass\n"
+                "class BaseGroup(click.Group):\n"
+                "    def add_command(self, command, name=None):\n"
+                "        self.last_command = command\n"
+                "class AppGroup(BaseGroup):\n"
+                "    def install(self):\n"
+                "        self.add_command(leaf)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        registration_edges = [
+            (edge.kind, edge.source_symbol, edge.target_symbol)
+            for edge in index.semantic_edges
+            if edge.kind == "command_registration"
+        ]
+        self.assertEqual(registration_edges, [])
+
+    def test_explicit_registration_does_not_assume_class_attribute_override(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "import click\n"
+                "@click.command()\n"
+                "def leaf():\n"
+                "    pass\n"
+                "def ignore_command(self, command, name=None):\n"
+                "    self.last_command = command\n"
+                "class AppGroup(click.Group):\n"
+                "    add_command = ignore_command\n"
+                "    def install(self):\n"
+                "        self.add_command(leaf)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        registration_edges = [
+            (edge.kind, edge.source_symbol, edge.target_symbol)
+            for edge in index.semantic_edges
+            if edge.kind == "command_registration"
+        ]
+        self.assertEqual(registration_edges, [])
+
     def test_explicit_registration_accepts_decorator_registered_subgroup_callback(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -44,6 +44,90 @@ def _bindings(node: ast.FunctionDef | ast.AsyncFunctionDef) -> frozenset[str]:
     return frozenset(names)
 
 
+def _class_bindings(node: ast.ClassDef) -> frozenset[str]:
+    bindings: set[str] = set()
+
+    class ClassBindingVisitor(ast.NodeVisitor):
+        def visit_Name(self, current: ast.Name) -> None:
+            if isinstance(current.ctx, (ast.Store, ast.Del)):
+                bindings.add(current.id)
+
+        def visit_FunctionDef(self, current: ast.FunctionDef) -> None:
+            bindings.add(current.name)
+            for expression in current.decorator_list:
+                self.visit(expression)
+            for expression in (*current.args.defaults, *current.args.kw_defaults):
+                if expression is not None:
+                    self.visit(expression)
+            for argument in (
+                *current.args.posonlyargs,
+                *current.args.args,
+                *current.args.kwonlyargs,
+                *([current.args.vararg] if current.args.vararg else []),
+                *([current.args.kwarg] if current.args.kwarg else []),
+            ):
+                if argument.annotation is not None:
+                    self.visit(argument.annotation)
+            if current.returns is not None:
+                self.visit(current.returns)
+
+        def visit_AsyncFunctionDef(self, current: ast.AsyncFunctionDef) -> None:
+            self.visit_FunctionDef(current)
+
+        def visit_Lambda(self, current: ast.Lambda) -> None:
+            for expression in (*current.args.defaults, *current.args.kw_defaults):
+                if expression is not None:
+                    self.visit(expression)
+
+        def visit_ClassDef(self, current: ast.ClassDef) -> None:
+            bindings.add(current.name)
+            for expression in (*current.decorator_list, *current.bases):
+                self.visit(expression)
+            for keyword in current.keywords:
+                self.visit(keyword.value)
+
+        def visit_Import(self, current: ast.Import) -> None:
+            bindings.update(
+                alias.asname or alias.name.split(".", 1)[0]
+                for alias in current.names
+            )
+
+        def visit_ImportFrom(self, current: ast.ImportFrom) -> None:
+            bindings.update(
+                alias.asname or alias.name
+                for alias in current.names
+                if alias.name != "*"
+            )
+
+        def visit_ExceptHandler(self, current: ast.ExceptHandler) -> None:
+            if current.name is not None:
+                bindings.add(current.name)
+            if current.type is not None:
+                self.visit(current.type)
+            for statement in current.body:
+                self.visit(statement)
+
+        def visit_MatchAs(self, current: ast.MatchAs) -> None:
+            if current.name is not None:
+                bindings.add(current.name)
+            if current.pattern is not None:
+                self.visit(current.pattern)
+
+        def visit_MatchStar(self, current: ast.MatchStar) -> None:
+            if current.name is not None:
+                bindings.add(current.name)
+
+        def visit_MatchMapping(self, current: ast.MatchMapping) -> None:
+            if current.rest is not None:
+                bindings.add(current.rest)
+            self.generic_visit(current)
+
+    visitor = ClassBindingVisitor()
+    for statement in node.body:
+        visitor.visit(statement)
+    return frozenset(bindings)
+
+
 def _reassigned_parameters(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> frozenset[str]:
@@ -544,6 +628,9 @@ class _Extractor(ast.NodeVisitor):
                     tuple(ast.unparse(base) for base in node.bases)
                     if isinstance(node, ast.ClassDef)
                     else ()
+                ),
+                class_bindings=(
+                    _class_bindings(node) if isinstance(node, ast.ClassDef) else frozenset()
                 ),
                 reassigned_parameters=(
                     _reassigned_parameters(node)

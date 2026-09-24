@@ -63,6 +63,7 @@ class Symbol:
     overload_signature: OverloadSignature | None = None
     overloads: tuple[OverloadSignature, ...] = ()
     base_expressions: tuple[str, ...] = ()
+    class_bindings: frozenset[str] = frozenset()
     reassigned_parameters: frozenset[str] = frozenset()
 
 

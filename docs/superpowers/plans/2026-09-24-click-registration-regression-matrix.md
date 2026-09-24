@@ -2,7 +2,7 @@
 
 **Goal:** Protect conservative `add_command` inference with behavior tests and an expanded source-backed challenge set.
 
-**Scope:** Continue on `codex/explicit-add-command-registration`. Keep `challenge-v1` and all `baseline-v1` files unchanged. Do not import or execute target repositories or install their dependencies.
+**Scope:** Continue on `codex/explicit-add-command-registration`. Keep the `challenge-v1` manifest and all `baseline-v1` files unchanged; regenerate challenge-v1 reports for the updated analyzer. Do not import or execute target repositories or install their dependencies.
 
 ## Task 1: Add semantic behavior tests before production changes
 
@@ -19,6 +19,7 @@
 
 - [x] Preserve enough internal source metadata to distinguish the method's `self` parameter from a later assignment or deletion of `self`.
 - [x] Reject explicit registration when that receiver parameter is rebound in the containing method.
+- [x] Reject class-based registration when any class in the locally understood chain binds `add_command`, overrides `__getattr__` / `__getattribute__`, or has an unresolved base.
 - [x] Run the relevant semantic tests after each minimal fix; keep public JSON unchanged.
 
 ## Task 3: Support versioned negative registration probes
@@ -33,7 +34,7 @@
 
 **Files:** `evaluation/challenge-v2.json`, `evaluation/README.md`
 
-- [x] Copy the reviewed challenge-v1 probes without changing challenge-v1.
+- [x] Reuse the reviewed challenge-v1 probes without changing its manifest.
 - [x] Add source-fingerprinted positives or negatives for the additional explicit-registration boundaries identified in Click and Flask source.
 - [x] Run five scans per repository into `evaluation/results/challenge-v2.json` and `.md`.
 - [x] Confirm all hashes are stable and inspect every TP, FP, and FN.
@@ -42,6 +43,6 @@
 
 - [x] Run the full `unittest` suite.
 - [x] Run challenge-v1 and challenge-v2 five-run evaluations; write baseline-v1 comparison output only under `/tmp`.
-- [x] Confirm frozen baseline hashes and challenge-v1 report hashes remain unchanged.
+- [x] Confirm frozen baseline files and the challenge-v1 manifest remain unchanged; regenerate the challenge-v1 report against the updated analyzer and verify it with a fresh five-run evaluation.
 - [x] Review the complete diff and update this plan.
 - [x] Push the updated PR branch.

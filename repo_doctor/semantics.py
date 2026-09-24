@@ -169,6 +169,71 @@ def _class_inherits_click_group(
     return False
 
 
+def _class_has_unsafe_add_command_dispatch(
+    index: RepoIndex,
+    symbol_id: str,
+    module_aliases: dict[tuple[str, str], str],
+    group_aliases: set[tuple[str, str]],
+    visiting: set[str] | None = None,
+) -> bool:
+    """Return whether a local class chain can override Click Group dispatch."""
+    symbol = index.symbols.get(symbol_id)
+    if symbol is None or symbol.kind != "class" or symbol.parent is not None:
+        return True
+
+    seen = set() if visiting is None else set(visiting)
+    if symbol_id in seen:
+        return True
+    seen.add(symbol_id)
+
+    for method_name in ("add_command", "__getattribute__", "__getattr__"):
+        method_id = f"{symbol_id}.{method_name}"
+        if (
+            method_name in symbol.class_bindings
+            or method_id in index.symbols
+            or method_id in index.ambiguous_symbols
+        ):
+            return True
+
+    for expression in symbol.base_expressions:
+        try:
+            base = ast.parse(expression, mode="eval").body
+        except SyntaxError:
+            return True
+
+        if isinstance(base, ast.Name):
+            if (symbol.file, base.id) in group_aliases:
+                continue
+            if base.id == "object" and not _has_module_binding_conflict(
+                index, symbol.file, base.id
+            ):
+                continue
+            local_base_id = f"{symbol.file}::{base.id}"
+            if local_base_id in index.ambiguous_symbols:
+                return True
+            local_base = index.symbols.get(local_base_id)
+            if (
+                local_base is None
+                or local_base.kind != "class"
+                or _class_has_unsafe_add_command_dispatch(
+                    index, local_base_id, module_aliases, group_aliases, seen
+                )
+            ):
+                return True
+        elif (
+            isinstance(base, ast.Attribute)
+            and isinstance(base.value, ast.Name)
+            and base.attr == "Group"
+            and module_aliases.get((symbol.file, base.value.id)) == "click"
+            and _click_group_class_is_available(index)
+        ):
+            continue
+        else:
+            return True
+
+    return False
+
+
 def _parent_scope_shadows(index: RepoIndex, symbol: Symbol, name: str) -> bool:
     parent_id = symbol.parent
     while parent_id is not None:
@@ -390,6 +455,9 @@ def _explicit_registration_edges(
             class_symbol = index.symbols.get(class_owner)
             if (
                 class_symbol is None
+                or _class_has_unsafe_add_command_dispatch(
+                    index, class_owner, module_aliases, group_aliases
+                )
                 or not _class_inherits_click_group(
                     index,
                     class_owner,
