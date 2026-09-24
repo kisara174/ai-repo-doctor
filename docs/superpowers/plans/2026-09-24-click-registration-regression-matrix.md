@@ -35,12 +35,13 @@
 
 - [x] Copy the reviewed challenge-v1 probes without changing challenge-v1.
 - [x] Add source-fingerprinted positives or negatives for the additional explicit-registration boundaries identified in Click and Flask source.
-- [ ] Run five scans per repository into `evaluation/results/challenge-v2.json` and `.md`.
-- [ ] Confirm all hashes are stable and inspect every TP, FP, and FN.
+- [x] Run five scans per repository into `evaluation/results/challenge-v2.json` and `.md`.
+- [x] Confirm all hashes are stable and inspect every TP, FP, and FN.
 
 ## Task 5: Final regression review
 
 - [x] Run the full `unittest` suite.
-- [ ] Run challenge-v1 and challenge-v2 five-run evaluations; write baseline-v1 comparison output only under `/tmp`.
-- [ ] Confirm frozen baseline hashes and challenge-v1 report hashes remain unchanged.
-- [ ] Review the complete diff, update this plan, and push the PR branch.
+- [x] Run challenge-v1 and challenge-v2 five-run evaluations; write baseline-v1 comparison output only under `/tmp`.
+- [x] Confirm frozen baseline hashes and challenge-v1 report hashes remain unchanged.
+- [x] Review the complete diff and update this plan.
+- [ ] Push the updated PR branch.

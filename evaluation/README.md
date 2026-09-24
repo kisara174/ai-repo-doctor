@@ -76,3 +76,5 @@ python3 tools/evaluate_baseline.py \
   --json-out evaluation/results/challenge-v2.json \
   --markdown-out evaluation/results/challenge-v2.md
 ```
+
+本轮五次评估中，19 个探针全部匹配，每个仓库的五个规范化扫描哈希一致。Click 的三个注册正例与 Flask 的一个注册正例均命中；新增四个动态或属性接收者负例均未产生误报。challenge-v1 的既有报告未覆盖写，五次复评的指标和扫描哈希与已提交结果一致。另行运行的 baseline-v1 指标与冻结报告一致；冻结文件保持不变。详细结果见 `results/challenge-v2.json` 和 `results/challenge-v2.md`。
