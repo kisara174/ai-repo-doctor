@@ -2,11 +2,20 @@
 
 import argparse
 import json
+import os
 import sys
 from dataclasses import asdict
 from pathlib import Path
 
 from .context import build_context, build_impact
+from .deepseek import DeepSeekError, complete_json
+from .diagnosis import (
+    DEFAULT_MODEL,
+    MAX_CONTEXT_LINES,
+    build_diagnosis_prompts,
+    validate_context_budget,
+    validate_diagnosis_payload,
+)
 from .evidence import validate_findings
 from .index import build_index
 from .model import RepoIndex, Symbol
@@ -140,6 +149,32 @@ def _print_validation(payload: dict) -> None:
     print("Acceptance checks source grounding only; it does not prove the diagnosis is correct.")
 
 
+def _print_upload_summary(context: dict, line_count: int, byte_count: int) -> None:
+    print(
+        f"Sending {line_count} source lines ({byte_count} bytes) to DeepSeek API for diagnosis:",
+        file=sys.stderr,
+    )
+    for block in context["blocks"]:
+        print(
+            f"  {block['file']}:{block['start_line']}-{block['end_line']}",
+            file=sys.stderr,
+        )
+
+
+def _print_diagnosis(payload: dict) -> None:
+    print(f"DeepSeek diagnosis ({payload['model']})")
+    print(f"Accepted: {len(payload['accepted'])}  Rejected: {len(payload['rejected'])}")
+    for entry in payload["accepted"]:
+        print(f"  ACCEPTED [{entry['index']}] {entry['finding']['title']}")
+    for entry in payload["rejected"]:
+        finding = entry["finding"]
+        title = finding.get("title", "(untitled)") if isinstance(finding, dict) else "(invalid finding)"
+        print(f"  REJECTED [{entry['index']}] {title}")
+        for reason in entry["reasons"]:
+            print(f"    - {reason}")
+    print("Evidence checks confirm source grounding only; they do not prove the diagnosis is correct.")
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="repo-doctor", description="Evidence-first analysis of a local Python repository")
     subcommands = parser.add_subparsers(dest="command", required=True)
@@ -160,12 +195,33 @@ def _parser() -> argparse.ArgumentParser:
     validate.add_argument("path", type=Path)
     validate.add_argument("findings", type=Path)
     validate.add_argument("--json", action="store_true")
+    diagnose = subcommands.add_parser(
+        "diagnose",
+        help="Send bounded source context to DeepSeek for diagnosis",
+        description=(
+            "This explicit command sends only selected source context and evidence "
+            "metadata to DeepSeek; it does not upload the full repository."
+        ),
+        epilog=(
+            "Requires DEEPSEEK_API_KEY. Optionally set DEEPSEEK_MODEL or pass --model. "
+            "At most 120 lines and 64 KiB of source text are sent. Inspect with the "
+            "context command first because selected code may contain secrets. Other "
+            "commands remain offline."
+        ),
+    )
+    diagnose.add_argument("path", type=Path)
+    diagnose.add_argument("symbol")
+    diagnose.add_argument("--max-lines", type=int, default=MAX_CONTEXT_LINES)
+    diagnose.add_argument("--model")
+    diagnose.add_argument("--json", action="store_true")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
+        if args.command == "diagnose" and not 1 <= args.max_lines <= MAX_CONTEXT_LINES:
+            raise ValueError(f"--max-lines must be from 1 through {MAX_CONTEXT_LINES}")
         index = build_index(args.path)
         if args.command == "scan":
             payload = _scan_data(index)
@@ -176,15 +232,40 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "impact":
             payload = build_impact(index, args.symbol, args.depth)
             printer = _print_impact
-        else:
+        elif args.command == "validate":
             with args.findings.open("r", encoding="utf-8") as stream:
                 payload = validate_findings(index, json.load(stream))
             printer = _print_validation
+        else:
+            context = build_context(index, args.symbol, args.max_lines)
+            line_count, byte_count = validate_context_budget(context)
+            api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+            if not api_key:
+                raise ValueError("DEEPSEEK_API_KEY is required for diagnose")
+            model = args.model or os.environ.get("DEEPSEEK_MODEL") or DEFAULT_MODEL
+            model = model.strip() or DEFAULT_MODEL
+            _print_upload_summary(context, line_count, byte_count)
+            system_prompt, user_prompt = build_diagnosis_prompts(context)
+            result = complete_json(
+                system_prompt,
+                user_prompt,
+                api_key=api_key,
+                model=model,
+            )
+            report = validate_diagnosis_payload(index, result.payload, context)
+            payload = {
+                "schema_version": report["schema_version"],
+                "provider": "deepseek",
+                "model": result.model,
+                "accepted": report["accepted"],
+                "rejected": report["rejected"],
+            }
+            printer = _print_diagnosis
         if args.json:
             _print_json(payload)
         else:
             printer(payload)
-        return 1 if args.command == "validate" and payload["rejected"] else 0
-    except (ValueError, OSError, json.JSONDecodeError) as exc:
+        return 1 if args.command in {"validate", "diagnose"} and payload["rejected"] else 0
+    except (DeepSeekError, ValueError, OSError, json.JSONDecodeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
