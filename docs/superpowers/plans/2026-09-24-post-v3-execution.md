@@ -232,12 +232,12 @@ python -m repo_doctor diagnose --help
 **文件：** evaluation/diagnosis/manifest-v1.json、README.md；不修改旧 baseline/challenge。
 **任务性质：** 外部事实和缺陷判断，不委派受限执行器。
 
-- [ ] 在已有公开 Click、Requests、Flask 中优先寻找 4 个有明确修复提交和公开讨论的普通逻辑缺陷；不足再选其它公开 Python 项目，记录选择理由。不选需要运行外部服务才能理解或依赖秘密数据的问题。
-- [ ] 每个缺陷收集修复前、修复后两个快照，构成 8 个 case；另选 2 个有明确契约、未标注目标缺陷的 control。至少覆盖 2 个仓库；不要凭空制造“已知缺陷”。
-- [ ] 每个案例必须能在 120 行/64 KiB 内呈现理解根因所需的上下文。符号和必要语义无法包含时更换案例，不放宽 V3 限额。
-- [ ] 所有样本由主代理先读源码和上游修复说明，再写 ground_truth。**冻结标签后才看模型结果。** 找不到足够可确认案例时交付候选清单并停止，不让简单模型补造。
-- [ ] 单独 checkout 每个 commit；只读源码，记录完整 SHA、许可证标识、永久链接和 fingerprint。README 记录样本是定向选择、可能存在公开数据记忆偏差。
-- [ ] 文件冻结后记录 manifest 文件字节 SHA-256；版本后续改变必须成为 manifest-v2.json，不能覆盖 v1。
+- [x] 在已有公开 Click、Requests、Flask 中优先寻找 4 个有明确修复提交和公开讨论的普通逻辑缺陷；不足再选其它公开 Python 项目，记录选择理由。不选需要运行外部服务才能理解或依赖秘密数据的问题。已确认 Click #3084/#3152、Click #1921/#2006、Requests #6628/#6629、Requests #7432/#7433；四项均可从源码和上游 issue/PR 静态理解，未运行外部服务。
+- [x] 每个缺陷收集修复前、修复后两个快照，构成 8 个 case；另选 2 个有明确契约、未标注目标缺陷的 control。至少覆盖 2 个仓库；不要凭空制造“已知缺陷”。Click 与 Requests 各贡献两个真实 bug/fixed 对；另有 IntRange clamp 与 HTTPBasicAuth 两个有文档/源码契约的 control。
+- [x] 每个案例必须能在 120 行/64 KiB 内呈现理解根因所需的上下文。符号和必要语义无法包含时更换案例，不放宽 V3 限额。AI Repo Doctor 静态 scanner 在全部 10 个案例唯一解析目标符号，parse_errors=0；目标块均覆盖指纹范围，准备上下文不超过 120 行、5,132 bytes。
+- [x] 所有样本由主代理先读源码和上游修复说明，再写 ground_truth。**冻结标签后才看模型结果。** 找不到足够可确认案例时交付候选清单并停止，不让简单模型补造。完成逐项源码、上游 issue/PR 和回归测试复核；没有查看模型结果或发起 live 请求。
+- [x] 单独 checkout 每个 commit；只读源码，记录完整 SHA、许可证标识、永久链接和 fingerprint。README 记录样本是定向选择、可能存在公开数据记忆偏差。8 个不同 SHA 各有独立干净 checkout；Click 为 BSD-3-Clause、Requests 为 Apache-2.0；逐 case 写入精确代码 permalink 与经独立复核的 source fingerprint。
+- [x] 文件冻结后记录 manifest 文件字节 SHA-256；版本后续改变必须成为 manifest-v2.json，不能覆盖 v1。`evaluation/diagnosis/manifest-v1.json` 为 17,139 bytes，SHA-256 `f76bbe7a4daa4933b0be2db0552a740a7147ddc8923ed7ed91bc04bdfc78f31f`，并记入数据集 README 和执行状态。
 
 **验收：** 10 个唯一 case，4 对 bug/fixed、2 个 control；每个 case 审核状态 approved，路径/指纹/符号可验证。
 **交付前 gate：** 主代理审完真实标签；较简单模型只可按已批准表格机械录入，不能自行定性。
