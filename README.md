@@ -99,6 +99,10 @@ python3 -m repo_doctor impact /path/to/python-repo 'app/services/user.py::UserSe
 - 上下文预算以源码行数计算；片段被截断时会标记。每次命令重新扫描当前工作树，不保留旧索引。
 - 自动生成或应用补丁、执行目标仓库测试，以及跨多个目标符号的整体审查不在当前范围内。
 
+## 诊断评估
+
+本项目的固定样本评估状态与限制见[诊断评估报告](docs/evaluations/2026-09-25-diagnosis-v1.md)。该报告当前记录离线基础设施完成、真实模型结果待授权运行。
+
 详细设计见 [V2 设计文档](docs/superpowers/specs/2026-09-24-repo-doctor-v2-design.md) 和 [V3 设计文档](docs/superpowers/specs/2026-09-24-repo-doctor-v3-design.md)。
 
 ## 开发验证
