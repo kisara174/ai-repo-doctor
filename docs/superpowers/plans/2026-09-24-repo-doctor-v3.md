@@ -48,7 +48,7 @@
 - `complete_json(system_prompt: str, user_prompt: str, *, api_key: str, model: str, timeout: float = 60.0) -> DeepSeekResult` sends exactly one request and returns the provider model plus parsed JSON object.
 - `complete_json` accepts a top-level JSON object only. The diagnosis layer validates its `findings` member in Task 2.
 
-- [ ] **Step 1: Write transport tests with a fake HTTP response**
+- [x] **Step 1: Write transport tests with a fake HTTP response**
 
 Add a `FakeResponse` helper to `tests/test_deepseek.py` whose `read()` returns UTF-8 JSON bytes. Patch `urllib.request.urlopen`; never contact DeepSeek from a test.
 
@@ -68,13 +68,13 @@ Assert `complete_json` returns `DeepSeekResult("deepseek-flash", {"findings": []
 
 Add separate failing tests for HTTP 401, URL/timeout failure, invalid API-envelope JSON, missing `choices`, empty message content, malformed model JSON, a non-object model result, and `finish_reason == "length"`. For HTTP and URL errors, assert `str(exception)` does not contain `test-secret`. For an HTTP error, assert `urlopen` was called exactly once.
 
-- [ ] **Step 2: Run the focused tests and verify the missing implementation fails**
+- [x] **Step 2: Run the focused tests and verify the missing implementation fails**
 
 Run: `python3 -m unittest tests.test_deepseek -v`
 
 Expected: FAIL because `repo_doctor.deepseek` does not yet exist.
 
-- [ ] **Step 3: Implement the fixed-endpoint client**
+- [x] **Step 3: Implement the fixed-endpoint client**
 
 Implement the request with `urllib.request.Request`, UTF-8 JSON, `Content-Type: application/json`, and the Bearer authorization header. Use the exact body fields from Step 1. Catch `urllib.error.HTTPError`, `urllib.error.URLError`, `TimeoutError`, API-envelope parse failures, and malformed model content; raise concise `DeepSeekError` messages without response bodies or headers. Treat `finish_reason == "length"`, empty content, missing model, missing choice, or a non-object JSON response as errors. Do not add a retry loop.
 
@@ -99,7 +99,7 @@ request = urllib.request.Request(
 )
 ```
 
-- [ ] **Step 4: Run focused and full tests**
+- [x] **Step 4: Run focused and full tests**
 
 Run: `python3 -m unittest tests.test_deepseek -v`
 
@@ -109,10 +109,10 @@ Run: `python3 -m unittest discover -s tests -q`
 
 Expected: all existing tests and the new transport tests PASS.
 
-- [ ] **Step 5: Commit the transport unit**
+- [x] **Step 5: Commit the transport unit**
 
 ```bash
-git add repo_doctor/deepseek.py tests/test_deepseek.py
+git add repo_doctor/deepseek.py tests/test_deepseek.py docs/superpowers/plans/2026-09-24-repo-doctor-v3.md
 git diff --cached --check
 git commit -m "feat: add DeepSeek JSON client"
 ```
