@@ -331,6 +331,42 @@ class GraphTests(unittest.TestCase):
 
         self.assertNotIn("app.py::Client.send", [edge.callee for edge in index.call_edges])
 
+    def test_sync_with_rejects_enter_method_with_required_argument(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n"
+                "    def __enter__(self, required):\n        return self\n"
+                "    def __exit__(self, exc_type, exc, tb):\n        return False\n"
+                "    def send(self):\n        pass\n\n"
+                "def run():\n"
+                "    with Client() as client:\n"
+                "        client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertNotIn("app.py::Client.send", [edge.callee for edge in index.call_edges])
+
+    def test_async_with_rejects_aenter_method_with_required_keyword_argument(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n"
+                "    async def __aenter__(self, *, required):\n        return self\n"
+                "    async def __aexit__(self, exc_type, exc, tb):\n        return False\n"
+                "    def send(self):\n        pass\n\n"
+                "async def run():\n"
+                "    async with Client() as client:\n"
+                "        client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertNotIn("app.py::Client.send", [edge.callee for edge in index.call_edges])
+
     def test_context_manager_requires_matching_exit_method(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

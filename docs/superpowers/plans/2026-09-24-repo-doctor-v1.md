@@ -95,6 +95,6 @@
 ## Evaluation follow-up: local instance method calls
 
 - [x] Run the CLI on a shallow clone of `psf/requests` and inspect `Session.request` relationships against source.
-- [x] Add conservative resolution for local method calls when one unconditional simple assignment precedes the call, or a correctly typed context manager's `__enter__` / `__aenter__` is proven to return `self` and its matching exit method exists.
+- [x] Add conservative resolution for local method calls when one unconditional simple assignment precedes the call, or a correctly typed context manager's `__enter__` / `__aenter__` has a directly proven `return self`, accepts the protocol call without extra required arguments, and its matching exit method exists.
 - [x] Keep ambiguous, shadowed, conditionally assigned, `with`-body-assigned, nonlocal-rebound, or reassigned instance bindings unresolved; add regression coverage for each case.
 - [x] Re-run the Requests scan and confirm the `requests.api.request -> Session.request` edge and its public API callers are present.

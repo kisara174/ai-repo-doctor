@@ -160,7 +160,13 @@ def _local_constructors(
 
 
 def _returns_self(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
-    if node.decorator_list or not node.args.args or node.args.args[0].arg != "self":
+    positional = [*node.args.posonlyargs, *node.args.args]
+    if node.decorator_list or not positional or positional[0].arg != "self":
+        return False
+    required_positionals = len(positional) - len(node.args.defaults)
+    if any(index < required_positionals for index in range(1, len(positional))):
+        return False
+    if any(default is None for default in node.args.kw_defaults):
         return False
     body = node.body
     if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant) and isinstance(body[0].value.value, str):
