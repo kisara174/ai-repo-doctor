@@ -22,13 +22,15 @@ def _symbol_data(symbol: Symbol) -> dict:
         "start_line": symbol.start_line,
         "end_line": symbol.end_line,
         "parent": symbol.parent,
+        "decorators": [asdict(item) for item in symbol.decorators],
+        "overloads": [asdict(item) for item in symbol.overloads],
     }
 
 
 def _scan_data(index: RepoIndex) -> dict:
     symbols = sorted(index.symbols.values(), key=lambda item: item.id)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "root": str(index.root),
         "scan_mode": index.scan_mode,
         "stats": {
@@ -61,6 +63,7 @@ def _scan_data(index: RepoIndex) -> dict:
         ],
         "import_edges": [asdict(item) for item in index.import_edges],
         "call_edges": [asdict(item) for item in index.call_edges],
+        "semantic_edges": [asdict(item) for item in index.semantic_edges],
         "import_cycles": index.import_cycles,
         "parse_errors": [asdict(item) for item in index.parse_errors],
     }
@@ -76,6 +79,10 @@ def _print_scan(payload: dict) -> None:
     print(f"Python files: {stats['python_files']}  Lines: {stats['python_lines']}  Code lines: {stats['code_lines']}")
     print(f"Classes: {stats['classes']}  Functions: {stats['functions']}  Methods: {stats['methods']}")
     print(f"Local imports: {stats['local_import_edges']}  Resolved calls: {stats['resolved_calls']}  Unresolved calls: {stats['unresolved_calls']}")
+    semantic_edges = payload["semantic_edges"]
+    reexports = sum(edge["kind"] == "reexport" for edge in semantic_edges)
+    registrations = sum(edge["kind"] == "command_registration" for edge in semantic_edges)
+    print(f"Semantic relationships: {len(semantic_edges)}  Re-exports: {reexports}  Command registrations: {registrations}")
     if payload["scan_mode"] == "walk":
         print("Scan mode: directory walk (Git ignore rules unavailable)")
     if payload["import_cycles"]:
@@ -110,6 +117,16 @@ def _print_context(payload: dict) -> None:
         print("\nStatic call edges:")
         for edge in payload["call_evidence"]:
             print(f"  {edge['file']}:{edge['line']}  {edge['caller']} -> {edge['callee']}")
+            for hop in edge["via_reexports"]:
+                print(f"    via re-export {hop['name']} at {hop['file']}:{hop['line']}")
+    if payload["semantic_evidence"]:
+        print("\nSemantic relationships:")
+        for edge in payload["semantic_evidence"]:
+            if edge["kind"] == "reexport":
+                description = f"re-export {edge['exported_name']} -> {edge['target_symbol']}"
+            else:
+                description = f"{edge['source_symbol']} -> {edge['target_symbol']} ({edge['kind']})"
+            print(f"  {description} at {edge['evidence_file']}:{edge['line']}")
     if payload["omitted_symbols"]:
         print(f"\n{payload['omitted_symbols']} related symbols omitted by the source-line budget.")
 
@@ -124,6 +141,15 @@ def _print_impact(payload: dict) -> None:
     for path in payload["module_importers"]:
         print(f"  {path}")
     if not payload["module_importers"]:
+        print("  None found.")
+    print("Semantic relationships:")
+    for edge in payload["semantic_relations"]:
+        if edge["kind"] == "reexport":
+            description = f"re-export {edge['exported_name']} -> {edge['target_symbol']}"
+        else:
+            description = f"{edge['source_symbol']} -> {edge['target_symbol']}"
+        print(f"  {edge['direction']}: {description} at {edge['evidence_file']}:{edge['line']}")
+    if not payload["semantic_relations"]:
         print("  None found.")
     print("These are static references, not proof of runtime use or test coverage.")
 
