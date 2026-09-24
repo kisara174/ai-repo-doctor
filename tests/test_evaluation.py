@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -596,6 +597,98 @@ class SnapshotTests(unittest.TestCase):
                           return_value=CompletedProcess([], 0, '{"schema_version": 1}', "")):
             with self.assertRaises(evaluate_baseline.EvaluationError):
                 evaluate_baseline.scan_repository(project, repo)
+
+
+class ReportTests(unittest.TestCase):
+    def test_report_keeps_relation_families_separate(self):
+        entry = {"id": "fixture", "https_url": "https://example.com/repo.git",
+                 "commit": "a" * 40, "probes": [
+                     {"id": "call-1", "kind": "call", "caller": "app.py::run",
+                      "expression": "helper", "expected_target": "app.py::helper",
+                      "rationale": "The helper call resolves locally.",
+                      "evidence": {"file": "app.py", "start_line": 2}},
+                     {"id": "registration-1", "kind": "command_registration",
+                      "parent_symbol": "app.py::group", "callback_symbol": "app.py::run",
+                      "expect_edge": False,
+                      "rationale": "This decorator does not register a command.",
+                      "evidence": {"file": "app.py", "start_line": 3}},
+                 ]}
+        scan = {"stats": {"python_files": 1, "unresolved_calls": 23},
+                "calls": [{"file": "app.py", "caller": "app.py::run", "line": 2,
+                           "expression": "helper"}],
+                "call_edges": [{"caller": "app.py::run", "line": 2,
+                                "callee": "app.py::helper"}],
+                "semantic_edges": [{"kind": "command_registration", "evidence_file": "app.py",
+                                    "line": 3, "source_symbol": "app.py::group",
+                                    "target_symbol": "app.py::run"}],
+                "symbols": [], "ambiguous_symbols": []}
+        manifest = {"schema_version": 1, "dataset_id": "baseline-v1",
+                    "repositories": [entry]}
+        results = [{"entry": entry, "scan": scan,
+                    "durations_seconds": [0.1, 0.2], "scan_hashes": ["abc", "abc"]}]
+        report = evaluate_baseline.build_report(manifest, results, "b" * 40, 2)
+        repository = report["repositories"][0]
+        self.assertEqual(report["schema_version"], 1)
+        self.assertEqual(repository["metrics"]["call"]["tp"], 1)
+        self.assertEqual(repository["metrics"]["call"]["fp"], 0)
+        self.assertEqual(repository["metrics"]["call"]["positive_probes"], 1)
+        self.assertEqual(repository["metrics"]["command_registration"]["fp"], 1)
+        self.assertEqual(repository["metrics"]["command_registration"]["negative_probes"], 1)
+        self.assertEqual(repository["metrics"]["reexport"]["status"], "not_sampled")
+        self.assertAlmostEqual(repository["timing"]["median_seconds"], 0.15)
+        self.assertEqual(repository["probes"][1]["relations"]["command_registration"][
+            "fp"], [["registration-1", "command_registration", "app.py::group",
+                     "app.py::run"]])
+        markdown = evaluate_baseline.render_markdown(report)
+        self.assertIn("registration-1", markdown)
+        self.assertIn("not_sampled", markdown)
+
+    def test_cli_rejects_invalid_runs_and_preserves_outputs_on_preflight_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            json_out = root / "report.json"
+            markdown_out = root / "report.md"
+            json_out.write_text("old JSON", encoding="utf-8")
+            markdown_out.write_text("old Markdown", encoding="utf-8")
+            args = ["--repos-root", str(root / "missing"), "--json-out", str(json_out),
+                    "--markdown-out", str(markdown_out)]
+            with patch.object(evaluate_baseline, "scan_repository") as scanner:
+                self.assertEqual(evaluate_baseline.main([*args, "--runs", "0"]), 2)
+                self.assertEqual(evaluate_baseline.main(args), 2)
+                scanner.assert_not_called()
+            self.assertEqual(json_out.read_text(encoding="utf-8"), "old JSON")
+            self.assertEqual(markdown_out.read_text(encoding="utf-8"), "old Markdown")
+            self.assertEqual(evaluate_baseline.main([
+                "--repos-root", str(root), "--json-out", str(json_out),
+                "--markdown-out", str(json_out),
+            ]), 2)
+
+    def test_two_report_replacement_rolls_back_first_on_second_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first = root / "result.json"
+            second = root / "result.md"
+            first.write_text("old JSON", encoding="utf-8")
+            second.write_text("old Markdown", encoding="utf-8")
+            replace = os.replace
+            count = 0
+
+            def fail_second(source, destination):
+                nonlocal count
+                count += 1
+                if count == 2:
+                    raise OSError("simulated second-output failure")
+                return replace(source, destination)
+
+            with patch.object(evaluate_baseline.os, "replace", side_effect=fail_second):
+                with self.assertRaises(OSError):
+                    evaluate_baseline._write_reports([
+                        (first, "new JSON"), (second, "new Markdown")
+                    ])
+            self.assertEqual(first.read_text(encoding="utf-8"), "old JSON")
+            self.assertEqual(second.read_text(encoding="utf-8"), "old Markdown")
+            self.assertEqual(sorted(path.name for path in root.iterdir()),
+                             ["result.json", "result.md"])
 
 
 if __name__ == "__main__":

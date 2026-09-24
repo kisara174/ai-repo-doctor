@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
+import os
+import platform
 import re
+import shutil
+import statistics
 import subprocess
 import sys
+import tempfile
 import time
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit
 
@@ -379,3 +386,217 @@ def evaluate_snapshot(
         "durations_seconds": [elapsed for _, elapsed in scans],
         "scan_hashes": hashes,
     }
+
+
+_RELATION_FAMILIES = (
+    "call", "reexport", "command_registration", "overload_resolution", "overload_signature"
+)
+
+
+def build_report(
+    manifest: dict[str, object], results: list[dict[str, object]],
+    repo_doctor_commit: str, runs: int,
+) -> dict[str, object]:
+    """Score only annotated relationships, retaining each probe's full evidence."""
+    report: dict[str, object] = {
+        "schema_version": 1,
+        "dataset_id": manifest["dataset_id"],
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "repo_doctor_commit": repo_doctor_commit,
+        "python_version": sys.version,
+        "platform": platform.platform(),
+        "architecture": platform.machine(),
+        "runs": runs,
+        "repositories": [],
+    }
+    for result in results:
+        entry = result["entry"]
+        scan = result["scan"]
+        durations = result["durations_seconds"]
+        families = {name: {"expected": set(), "predicted": set(),
+                           "positive_probes": 0, "negative_probes": 0}
+                    for name in _RELATION_FAMILIES}
+        probe_details = []
+        for probe in entry["probes"]:
+            relations = _probe_relations(probe, scan)
+            relation_details = {}
+            for name, (expected, predicted) in relations.items():
+                family = families[name]
+                family["expected"].update(expected)
+                family["predicted"].update(predicted)
+                family["positive_probes" if expected else "negative_probes"] += 1
+                relation_details[name] = {
+                    "expected": [list(item) for item in sorted(expected)],
+                    "predicted": [list(item) for item in sorted(predicted)],
+                    "tp": [list(item) for item in sorted(expected & predicted)],
+                    "fp": [list(item) for item in sorted(predicted - expected)],
+                    "fn": [list(item) for item in sorted(expected - predicted)],
+                }
+            probe_details.append({
+                "id": probe["id"], "kind": probe["kind"],
+                "evidence": probe["evidence"], "rationale": probe["rationale"],
+                "relations": relation_details,
+            })
+        metrics = {}
+        for name, family in families.items():
+            count = family["positive_probes"] + family["negative_probes"]
+            metrics[name] = ({
+                "status": "sampled", "positive_probes": family["positive_probes"],
+                "negative_probes": family["negative_probes"],
+                **_score(family["expected"], family["predicted"]),
+            } if count else {"status": "not_sampled", "positive_probes": 0,
+                             "negative_probes": 0, "tp": 0, "fp": 0, "fn": 0,
+                             "precision": None, "recall": None})
+        report["repositories"].append({
+            "id": entry["id"], "https_url": entry["https_url"],
+            "commit": entry["commit"], "stats": scan["stats"],
+            "timing": {
+                "runs_seconds": durations,
+                "median_seconds": statistics.median(durations),
+                "minimum_seconds": min(durations),
+                "maximum_seconds": max(durations),
+            },
+            "scan_hashes": result["scan_hashes"],
+            "metrics": metrics, "probes": probe_details,
+        })
+    return report
+
+
+def render_markdown(report: dict[str, object]) -> str:
+    """Show sampled metrics, mismatches, and timing without hiding empty ratios."""
+    def cell(value: object) -> str:
+        if value is None:
+            return "—"
+        if isinstance(value, float):
+            return f"{value:.3f}"
+        return str(value).replace("|", "\\|").replace("\n", " ")
+
+    lines = ["# AI Repo Doctor V2 baseline", "",
+             f"Dataset: `{report['dataset_id']}`  ",
+             f"Generated: `{report['generated_at_utc']}`  ",
+             f"Analyzer commit: `{report['repo_doctor_commit']}`  ",
+             f"Python: `{cell(report['python_version'])}`  ",
+             f"Platform: `{cell(report['platform'])}` / `{cell(report['architecture'])}`", "",
+             "Precision and recall below cover only the manually annotated probes,",
+             "not every relation in a repository. Timing is comparable within the",
+             "same environment; filesystem cache state is not controlled.", ""]
+    for repo in report["repositories"]:
+        lines.extend([
+            f"## {repo['id']}", "",
+            f"Source: {repo['https_url']} at `{repo['commit']}`", "",
+            "| Relation | Status | Positive probes | Negative probes | TP | FP | FN | Precision | Recall |",
+            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        ])
+        for name in _RELATION_FAMILIES:
+            item = repo["metrics"][name]
+            fields = [name, item["status"], item["positive_probes"],
+                      item["negative_probes"], item["tp"], item["fp"], item["fn"],
+                      item["precision"], item["recall"]]
+            lines.append("| " + " | ".join(cell(field) for field in fields) + " |")
+        timing = repo["timing"]
+        durations = ", ".join(cell(value) for value in timing["runs_seconds"])
+        mismatches = [probe["id"] for probe in repo["probes"]
+                      if any(values["fp"] or values["fn"]
+                             for values in probe["relations"].values())]
+        lines.extend(["", f"Scan seconds: {durations}",
+                      f"Median {cell(timing['median_seconds'])}; "
+                      f"minimum {cell(timing['minimum_seconds'])}; "
+                      f"maximum {cell(timing['maximum_seconds'])}.",
+                      f"Mismatched probes: {', '.join(mismatches) if mismatches else 'none'}.",
+                      f"Scanner stats: `{json.dumps(repo['stats'], ensure_ascii=False, sort_keys=True)}`",
+                      ""])
+    return "\n".join(lines)
+
+
+_BASELINE_PINS = {
+    "click": ("https://github.com/pallets/click.git",
+              "06b2a678741131fd577ce170e23e5ca0aeba0309"),
+    "requests": ("https://github.com/psf/requests.git",
+                 "611c6162cbc4ac2020a2f91c7cfa4f3abf9bbb60"),
+    "flask": ("https://github.com/pallets/flask.git",
+              "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35"),
+}
+
+
+def validate_baseline_pins(manifest: dict[str, object]) -> None:
+    """Keep this published baseline tied to the three approved snapshots."""
+    actual = {entry["id"]: (entry["https_url"], entry["commit"])
+              for entry in manifest["repositories"]}
+    if actual != _BASELINE_PINS:
+        raise EvaluationError("baseline-v1 repository URLs or commits differ from approved pins")
+
+
+def _write_reports(outputs: list[tuple[Path, str]]) -> None:
+    """Stage both reports and restore earlier destinations on a replace failure."""
+    staged: dict[Path, Path] = {}
+    backups: dict[Path, Path] = {}
+    installed: list[Path] = []
+    try:
+        for destination, content in outputs:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=destination.parent,
+                prefix=f".{destination.name}.", delete=False,
+            ) as handle:
+                staged[destination] = Path(handle.name)
+                handle.write(content)
+        for destination, _ in outputs:
+            if destination.exists():
+                with tempfile.NamedTemporaryFile(
+                    dir=destination.parent, prefix=f".{destination.name}.backup.",
+                    delete=False,
+                ) as handle:
+                    backups[destination] = Path(handle.name)
+                shutil.copyfile(destination, backups[destination])
+        for destination, _ in outputs:
+            os.replace(staged[destination], destination)
+            installed.append(destination)
+    except OSError:
+        for destination in reversed(installed):
+            if destination in backups:
+                os.replace(backups[destination], destination)
+            else:
+                destination.unlink(missing_ok=True)
+        raise
+    finally:
+        for temporary in [*staged.values(), *backups.values()]:
+            temporary.unlink(missing_ok=True)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Evaluate pinned Repo Doctor probes")
+    parser.add_argument("--repos-root", type=Path, required=True)
+    parser.add_argument("--manifest", type=Path,
+                        default=Path(__file__).resolve().parents[1] / "evaluation/baseline-v1.json")
+    parser.add_argument("--runs", type=int, default=5)
+    parser.add_argument("--json-out", type=Path, required=True)
+    parser.add_argument("--markdown-out", type=Path, required=True)
+    args = parser.parse_args(argv)
+    try:
+        if args.runs < 1:
+            raise EvaluationError("runs must be positive")
+        if args.json_out.resolve() == args.markdown_out.resolve():
+            raise EvaluationError("JSON and Markdown output paths must differ")
+        manifest = load_manifest(args.manifest)
+        validate_baseline_pins(manifest)
+        roots = preflight_repositories(manifest, args.repos_root)
+        project_root = Path(__file__).resolve().parents[1]
+        results = []
+        for entry in manifest["repositories"]:
+            results.append({"entry": entry, **evaluate_snapshot(
+                entry, roots[entry["id"]], project_root, args.runs
+            )})
+        report = build_report(manifest, results, _git_read(project_root, "rev-parse", "HEAD"),
+                              args.runs)
+        _write_reports([
+            (args.json_out, json.dumps(report, ensure_ascii=False, indent=2) + "\n"),
+            (args.markdown_out, render_markdown(report)),
+        ])
+    except (EvaluationError, OSError) as exc:
+        print(f"baseline evaluation failed: {exc}", file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
