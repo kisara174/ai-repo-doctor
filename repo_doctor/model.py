@@ -103,10 +103,29 @@ class ImportEdge:
 
 
 @dataclass(frozen=True, slots=True)
+class ExportHop:
+    file: str
+    name: str
+    line: int
+
+
+@dataclass(frozen=True, slots=True)
+class SemanticEdge:
+    kind: str
+    target_symbol: str
+    evidence_file: str
+    line: int
+    source_symbol: str | None = None
+    source_file: str | None = None
+    exported_name: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class CallEdge:
     caller: str
     callee: str
     line: int
+    via_reexports: tuple[ExportHop, ...] = ()
 
 
 @dataclass(slots=True)
@@ -123,4 +142,5 @@ class RepoIndex:
     parse_errors: list[ParseError] = field(default_factory=list)
     import_edges: list[ImportEdge] = field(default_factory=list)
     call_edges: list[CallEdge] = field(default_factory=list)
+    semantic_edges: list[SemanticEdge] = field(default_factory=list)
     import_cycles: list[list[str]] = field(default_factory=list)

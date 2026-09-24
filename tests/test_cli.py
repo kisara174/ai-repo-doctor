@@ -36,7 +36,10 @@ class CliTests(unittest.TestCase):
         self.assertEqual(report["schema_version"], 1)
         self.assertEqual(report["stats"]["python_files"], 2)
         self.assertIn("a.py::target", [item["id"] for item in report["symbols"]])
-        self.assertEqual(report["call_edges"], [{"caller": "b.py::run", "callee": "a.py::target", "line": 4}])
+        self.assertEqual(
+            report["call_edges"],
+            [{"caller": "b.py::run", "callee": "a.py::target", "line": 4, "via_reexports": []}],
+        )
 
     def test_context_text_contains_numbered_source_and_prompt_contract(self):
         with tempfile.TemporaryDirectory() as directory:
