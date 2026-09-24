@@ -17,6 +17,7 @@ class DeepSeekError(Exception):
 class DeepSeekResult:
     model: str
     payload: dict
+    usage: dict[str, int | None] | None = None
 
 
 def complete_json(
@@ -89,4 +90,12 @@ def complete_json(
     if not isinstance(payload, dict):
         raise DeepSeekError("DeepSeek response content must be a JSON object")
 
-    return DeepSeekResult(response_model, payload)
+    usage_envelope = envelope.get("usage")
+    usage = None
+    if isinstance(usage_envelope, dict):
+        usage = {}
+        for field in ("prompt_tokens", "completion_tokens", "total_tokens"):
+            value = usage_envelope.get(field)
+            usage[field] = value if type(value) is int and value >= 0 else None
+
+    return DeepSeekResult(response_model, payload, usage)

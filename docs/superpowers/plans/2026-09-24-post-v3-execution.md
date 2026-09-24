@@ -283,9 +283,9 @@ git diff --check
 **文件：** repo_doctor/deepseek.py、tests/test_deepseek.py。
 **接口：** DeepSeekResult 保持前两个位置参数 model、payload，末尾新增 usage: dict[str, int | None] | None = None。旧 DeepSeekResult(model, payload) 构造必须继续有效；不改变 diagnose JSON 顶层字段。
 
-- [ ] 先写测试：有效 usage 原样提取三个允许字段；缺失 usage 为 None；负数、bool、字符串值分别转为 null；额外字段不透传。未给 usage 的既有成功测试仍通过。
-- [ ] 最小解析：只从 API envelope 的 usage 字典提取白名单字段；合法值必须 type(value) is int 且 value>=0。不增加 raw envelope 保存。
-- [ ] 全部 transport 测试必须 mock URL；检查原 timeout、错误脱敏、单次请求等测试继续通过。
+- [x] 先写测试：有效 usage 原样提取三个允许字段；缺失 usage 为 None；负数、bool、字符串值分别转为 null；额外字段不透传。未给 usage 的既有成功测试仍通过。新测试先因 DeepSeekResult 不接受 usage 而失败，再完成实现。
+- [x] 最小解析：只从 API envelope 的 usage 字典提取白名单字段；合法值必须 type(value) is int 且 value>=0。不增加 raw envelope 保存。
+- [x] 全部 transport 测试必须 mock URL；检查原 timeout、错误脱敏、单次请求等测试继续通过。
 
 ~~~bash
 python3 -m unittest tests.test_deepseek tests.test_cli -v

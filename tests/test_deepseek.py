@@ -30,9 +30,8 @@ class DeepSeekTests(unittest.TestCase):
             model="deepseek-flash",
         )
 
-    def fake_api_response(self, content, finish_reason="stop"):
-        return FakeResponse(
-            {
+    def fake_api_response(self, content, finish_reason="stop", usage=None, include_usage=True):
+        envelope = {
                 "id": "completion-id",
                 "object": "chat.completion",
                 "created": 1710000000,
@@ -58,7 +57,11 @@ class DeepSeekTests(unittest.TestCase):
                     "completion_tokens_details": {"reasoning_tokens": 0},
                 },
             }
-        )
+        if usage is not None:
+            envelope["usage"] = usage
+        elif not include_usage:
+            envelope.pop("usage")
+        return FakeResponse(envelope)
 
     def test_complete_json_sends_one_non_streaming_json_request(self):
         response = self.fake_api_response('{"findings": []}')
@@ -71,7 +74,10 @@ class DeepSeekTests(unittest.TestCase):
                 model="deepseek-flash",
             )
 
-        self.assertEqual(result, DeepSeekResult("deepseek-flash", {"findings": []}))
+        self.assertEqual(result, DeepSeekResult(
+            "deepseek-flash", {"findings": []},
+            {"prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5},
+        ))
         urlopen.assert_called_once()
         request = urlopen.call_args.args[0]
         self.assertEqual(request.full_url, "https://api.deepseek.com/chat/completions")
@@ -86,6 +92,37 @@ class DeepSeekTests(unittest.TestCase):
         self.assertIs(body["stream"], False)
         self.assertEqual(body["max_tokens"], 4096)
         self.assertEqual(body["response_format"], {"type": "json_object"})
+
+    def test_missing_usage_remains_none(self):
+        with patch("urllib.request.urlopen", return_value=self.fake_api_response(
+            '{"findings": []}', include_usage=False
+        )):
+            result = self.call_client()
+
+        self.assertIsNone(result.usage)
+
+    def test_invalid_usage_values_become_null_and_extra_fields_are_omitted(self):
+        response = self.fake_api_response(
+            '{"findings": []}',
+            usage={
+                "prompt_tokens": -1,
+                "completion_tokens": True,
+                "total_tokens": "5",
+                "reasoning_tokens": 8,
+            },
+        )
+        with patch("urllib.request.urlopen", return_value=response):
+            result = self.call_client()
+
+        self.assertEqual(result.usage, {
+            "prompt_tokens": None,
+            "completion_tokens": None,
+            "total_tokens": None,
+        })
+
+    def test_old_two_argument_result_construction_keeps_usage_optional(self):
+        result = DeepSeekResult("deepseek-flash", {"findings": []})
+        self.assertIsNone(result.usage)
 
     def test_http_error_is_sanitized_and_not_retried(self):
         response_body = io.BytesIO(b"test-secret")
