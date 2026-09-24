@@ -130,7 +130,7 @@ git commit -m "feat: add DeepSeek JSON client"
 - `validate_context_budget(context: dict) -> tuple[int, int]` returns those counts and raises `ValueError` if the context exceeds 120 lines or 64 KiB.
 - `validate_diagnosis_payload(index: RepoIndex, payload: dict, context: dict) -> dict` requires a list in `payload["findings"]`, invokes `validate_findings`, and rejects otherwise-valid evidence unless every evidence range and quote lies inside a submitted context block.
 
-- [ ] **Step 1: Write prompt, budget, response-shape, and evidence-scope tests**
+- [x] **Step 1: Write prompt, budget, response-shape, and evidence-scope tests**
 
 Build a temporary repository like the existing evidence tests, with `app.py` containing `unsafe()` at lines 1–2 and a second function at lines 4–5. Build the index and context for `app.py::unsafe` with a two-line budget.
 
@@ -143,13 +143,13 @@ Add tests asserting:
 5. A finding quoting the real but unselected second function is rejected with a reason naming the submitted-context scope; repository-grounded evidence alone is insufficient.
 6. An evidence range extending beyond a selected block and a payload whose `findings` value is missing or not a list are rejected as specified (invalid top-level response shape raises `ValueError`; invalid evidence becomes a rejected finding).
 
-- [ ] **Step 2: Run the focused tests and verify they fail**
+- [x] **Step 2: Run the focused tests and verify they fail**
 
 Run: `python3 -m unittest tests.test_diagnosis -v`
 
 Expected: FAIL because `repo_doctor.diagnosis` does not yet exist.
 
-- [ ] **Step 3: Implement prompt and budget helpers**
+- [x] **Step 3: Implement prompt and budget helpers**
 
 Build the user prompt from an allowlist of context fields rather than serializing an arbitrary caller dictionary. Represent each source line with its original number and text. Include the exact response envelope example `{"findings": []}` in the system prompt. Count only submitted source lines and their UTF-8 bytes; raise before the API call if line count exceeds 120 or source text exceeds `64 * 1024` bytes.
 
@@ -170,7 +170,7 @@ The system prompt requires this response envelope and the finding fields already
 {"findings": [{"title": "...", "category": "...", "confidence": 0.0, "evidence": [{"file": "...", "start_line": 1, "end_line": 1, "quote": "..."}], "reasoning": "...", "impact": "...", "suggested_fix": "..."}]}
 ```
 
-- [ ] **Step 4: Implement the context-scoped finding gate**
+- [x] **Step 4: Implement the context-scoped finding gate**
 
 Require `payload` to be a dictionary containing a list-valued `findings`. Pass that list to `validate_findings(index, findings)`. For each otherwise-accepted evidence item, require its file to match a submitted block, its full line interval to be inside that block, and its quote to occur in the submitted block lines for that interval. Move failures from `accepted` to `rejected`, preserving the existing `index` and `finding` and adding a clear scope reason. Leave existing `validate_findings` behavior and the `validate` CLI contract unchanged.
 
@@ -181,7 +181,7 @@ def context_scope_errors(finding: dict, blocks: list[dict]) -> list[str]:
     """Return reasons when evidence falls outside the exact submitted lines."""
 ```
 
-- [ ] **Step 5: Run focused and full tests**
+- [x] **Step 5: Run focused and full tests**
 
 Run: `python3 -m unittest tests.test_diagnosis -v`
 
@@ -191,10 +191,10 @@ Run: `python3 -m unittest discover -s tests -q`
 
 Expected: all existing and new tests PASS.
 
-- [ ] **Step 6: Commit the diagnosis unit**
+- [x] **Step 6: Commit the diagnosis unit**
 
 ```bash
-git add repo_doctor/diagnosis.py tests/test_diagnosis.py
+git add repo_doctor/diagnosis.py tests/test_diagnosis.py docs/superpowers/plans/2026-09-24-repo-doctor-v3.md
 git diff --cached --check
 git commit -m "feat: scope findings to submitted context"
 ```
