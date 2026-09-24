@@ -46,3 +46,10 @@
 - [x] Confirm frozen baseline files and the challenge-v1 manifest remain unchanged; regenerate the challenge-v1 report against the updated analyzer and verify it with a fresh five-run evaluation.
 - [x] Review the complete diff and update this plan.
 - [x] Push the updated PR branch.
+
+## Post-integration review follow-up
+
+- [x] Preserve source columns for direct `.add_command` attribute assignments/deletions and explicit calls; use source order within a line.
+- [x] Keep prior module-level and same-scope rebindings from becoming Click edges, while preserving a call that precedes a later module-level rebind.
+- [x] Keep module-level registration unresolved when a previously defined helper can mutate the global group, or a method can rebind `self.add_command`.
+- [x] Verify each boundary with a regression test, then run the full suite and read-only code review.

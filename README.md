@@ -74,7 +74,7 @@ python3 -m repo_doctor context /path/to/python-repo 'app/services/user.py::UserS
 python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::UserService.create'
 ```
 
-`diagnose` 只发送所选的、有上限的源码片段，以及仓库相对路径、行号、关系标签和静态调用证据；不会发送整个仓库、绝对仓库路径或未选中的源码。每次请求最多包含 120 行和 64 KiB 源码文本。发出请求前，命令会在标准错误中显示将发送的文件、行范围和大小，不会在提示中重复源码。
+`diagnose` 只发送所选的、有上限的源码片段，以及仓库相对路径、行号、关系标签和静态调用证据；不会发送整个仓库、绝对仓库路径或未选中的源码。每次请求最多包含 120 行和 64 KiB 源码文本，完整序列化后的 HTTP 请求体另有 256 KiB 上限，超出会在联网前失败。客户端拒绝所有重定向，只连接固定的 DeepSeek endpoint。发出请求前，命令会在标准错误中显示将发送的文件、行范围和源码大小，不会在提示中重复源码。
 
 源码片段可能含有密钥或其他敏感内容。调用前请用 `context` 查看实际选中的代码；发现不应上传的内容时，不要运行 `diagnose`。Repo Doctor 不保存请求、源码或模型响应。API Key 仅从 `DEEPSEEK_API_KEY` 读取，不作为命令参数，也不会写入报告。
 

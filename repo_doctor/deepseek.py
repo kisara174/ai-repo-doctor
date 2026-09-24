@@ -7,6 +7,14 @@ from dataclasses import dataclass
 
 
 API_URL = "https://api.deepseek.com/chat/completions"
+MAX_REQUEST_BYTES = 256 * 1024
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Reject redirects so credentials stay scoped to the fixed endpoint."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 class DeepSeekError(Exception):
@@ -38,9 +46,12 @@ def complete_json(
         "max_tokens": 4096,
         "response_format": {"type": "json_object"},
     }
+    request_body = json.dumps(request_data, ensure_ascii=False).encode("utf-8")
+    if len(request_body) > MAX_REQUEST_BYTES:
+        raise DeepSeekError("DeepSeek API request exceeds 256 KiB limit")
     request = urllib.request.Request(
         API_URL,
-        data=json.dumps(request_data, ensure_ascii=False).encode("utf-8"),
+        data=request_body,
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}",
@@ -49,7 +60,8 @@ def complete_json(
     )
 
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        opener = urllib.request.build_opener(_NoRedirectHandler())
+        with opener.open(request, timeout=timeout) as response:
             response_body = response.read()
     except urllib.error.HTTPError as exc:
         exc.close()

@@ -25,6 +25,7 @@ def build_index(root: Path) -> RepoIndex:
         index.imports.extend(parsed.imports)
         index.calls.extend(parsed.calls)
         index.registration_calls.extend(parsed.registration_calls)
+        index.attribute_rebindings.extend(parsed.attribute_rebindings)
         index.module_bindings[path] = parsed.module_bindings
         if parsed.error:
             index.parse_errors.append(parsed.error)

@@ -229,6 +229,167 @@ class ClickSemanticTests(unittest.TestCase):
             ],
         )
 
+    def test_explicit_registration_rejects_rebound_add_command_attribute(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "import click\n"
+                "@click.group()\n"
+                "def cli():\n"
+                "    pass\n"
+                "@click.command()\n"
+                "def leaf():\n"
+                "    pass\n"
+                "def custom_add_command(command):\n"
+                "    pass\n"
+                "cli.add_command = custom_add_command\n"
+                "cli.add_command(leaf)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(
+            any(
+                edge.kind == "command_registration" and edge.line == 11
+                for edge in index.semantic_edges
+            )
+        )
+
+    def test_explicit_registration_rejects_same_line_module_rebind(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "import click\n"
+                "@click.group()\n"
+                "def cli():\n"
+                "    pass\n"
+                "@click.command()\n"
+                "def leaf():\n"
+                "    pass\n"
+                "def custom_add_command(command):\n"
+                "    pass\n"
+                "cli.add_command = custom_add_command; cli.add_command(leaf)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(
+            any(
+                edge.kind == "command_registration" and edge.line == 10
+                for edge in index.semantic_edges
+            )
+        )
+
+    def test_explicit_registration_before_later_rebind_remains_valid(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "import click\n"
+                "@click.group()\n"
+                "def cli():\n"
+                "    pass\n"
+                "@click.command()\n"
+                "def leaf():\n"
+                "    pass\n"
+                "def custom_add_command(command):\n"
+                "    pass\n"
+                "cli.add_command(leaf); cli.add_command = custom_add_command\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertIn(
+            ("app.py::cli", "app.py::leaf", 10),
+            [
+                (edge.source_symbol, edge.target_symbol, edge.line)
+                for edge in index.semantic_edges
+                if edge.kind == "command_registration"
+            ],
+        )
+
+    def test_module_registration_rejects_prior_helper_rebinding_global_group(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "import click\n"
+                "@click.group()\n"
+                "def cli():\n"
+                "    pass\n"
+                "@click.command()\n"
+                "def leaf():\n"
+                "    pass\n"
+                "def custom_add_command(command):\n"
+                "    pass\n"
+                "def patch_group():\n"
+                "    cli.add_command = custom_add_command\n"
+                "patch_group()\n"
+                "cli.add_command(leaf)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(
+            any(
+                edge.kind == "command_registration" and edge.line == 13
+                for edge in index.semantic_edges
+            )
+        )
+
+    def test_explicit_registration_rejects_instance_method_rebind(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "import click\n"
+                "@click.command()\n"
+                "def leaf():\n"
+                "    pass\n"
+                "def custom_add_command(command):\n"
+                "    pass\n"
+                "class App(click.Group):\n"
+                "    def install(self):\n"
+                "        self.add_command = custom_add_command\n"
+                "        self.add_command(leaf)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(
+            any(
+                edge.kind == "command_registration" and edge.line == 10
+                for edge in index.semantic_edges
+            )
+        )
+
+    def test_explicit_registration_rejects_same_line_instance_method_rebind(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "import click\n"
+                "@click.command()\n"
+                "def leaf():\n"
+                "    pass\n"
+                "def custom_add_command(command):\n"
+                "    pass\n"
+                "class App(click.Group):\n"
+                "    def install(self):\n"
+                "        self.add_command = custom_add_command; self.add_command(leaf)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(
+            any(
+                edge.kind == "command_registration" and edge.line == 9
+                for edge in index.semantic_edges
+            )
+        )
+
     def test_explicit_registration_accepts_imported_group_alias_and_local_base_chain(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

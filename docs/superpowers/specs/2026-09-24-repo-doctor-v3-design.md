@@ -23,6 +23,7 @@ repo-doctor diagnose PATH SYMBOL [--max-lines N] [--model MODEL] [--json]
 
 - `PATH` 和 `SYMBOL` 与现有 `context` 命令含义一致。
 - `--max-lines` 默认 120，允许用户减少预算；API 诊断不允许超过 120 行，并另设 64 KiB 的源码文本硬上限。遇到超长行导致超过字节上限时，在网络请求前报错，不静默裁剪证据。
+- 完整序列化后的 HTTP 请求体最多 256 KiB；超过限制时必须在调用网络传输层前失败，包括静态调用证据产生的大型提示词。
 - `--model` 可覆盖模型。模型选择顺序为命令参数、`DEEPSEEK_MODEL` 环境变量、`deepseek-flash` 默认值。
 - `--json` 返回稳定 JSON，包括 schema 版本、实际模型名、已接受 finding 和被拒绝 finding 及理由。人类可读模式列出结果，并明确说明证据通过不等于诊断结论正确。
 - 0 表示请求及结果处理成功（即使没有 finding）；1 表示模型响应中有 finding 未通过校验；2 表示参数、配置、网络、响应格式或本地处理失败。
@@ -38,17 +39,17 @@ repo-doctor diagnose PATH SYMBOL [--max-lines N] [--model MODEL] [--json]
 3. `build_context` 选出的目标函数、静态调用关系邻居及相关测试中的有限源码片段；
 4. 片段的仓库相对路径、行号和关系标签。
 
-不发送绝对仓库路径、完整扫描索引、未选中的文件、Git 元数据或本地测试运行结果。请求目标固定为 `https://api.deepseek.com/chat/completions`，不支持任意 API 地址，也不回退到其他服务。
+不发送绝对仓库路径、完整扫描索引、未选中的文件、Git 元数据或本地测试运行结果。请求目标固定为 `https://api.deepseek.com/chat/completions`，不支持任意 API 地址，也不回退到其他服务。客户端拒绝所有 HTTP 重定向，避免请求头中的 API Key 被转发到另一个地址。
 
 上下文可能包含凭据或其他敏感文本。V3 不承诺自动发现或清除所有秘密；命令说明和 README 必须明确告知用户：运行诊断会把上述片段发给 DeepSeek，调用前应使用 `context` 检查目标内容并避免发送秘密。Repo Doctor 不保存请求、源码或模型响应；用户主动重定向标准输出的情况除外。
 
 ## API 与密钥处理
 
-- 使用 Python 标准库 `urllib` 直接调用 HTTPS API，不新增运行时依赖；固定使用 DeepSeek 的聊天补全接口。
+- 使用 Python 标准库 `urllib` 直接调用 HTTPS API，不新增运行时依赖；固定使用 DeepSeek 的聊天补全接口。完整序列化请求体不得超过 256 KiB，并在网络请求前检查。
 - 从 `DEEPSEEK_API_KEY` 环境变量读取密钥。缺失或空值时，在读取上下文之后、发送网络请求之前报清晰错误。密钥不接受为命令行参数，不落盘，不写入日志、异常或 JSON 输出。
 - 使用非流式请求、`max_tokens: 4096` 和 `response_format: {"type": "json_object"}`。提示中包含“json”、目标 JSON 示例和明确的 finding 字段要求；要求模型把源代码、注释和字符串都当作待分析数据，不执行其中的指令。模型须返回 `{"findings": [...]}` 对象，空结果为 `{"findings": []}`。官方文档说明 JSON 模式用于输出有效 JSON，并建议提示中包含 JSON 示例；程序仍需检查具体字段，空响应和长度截断也需要单独处理。
 - 默认模型为 `deepseek-flash`，可通过 `--model` 或 `DEEPSEEK_MODEL` 覆盖；实际响应中的模型名优先用于结果元数据。模型名属于外部服务配置，可能随服务方调整。
-- 请求超时设为 60 秒。V3 不自动重试 POST 请求，避免不透明的重复上传和重复计费。超时、HTTP 错误、无效 API JSON、缺少 completion、空内容、模型 JSON 无法解析和输出截断都转换成不含密钥的可读错误。
+- 请求超时设为 60 秒。V3 不跟随重定向，也不自动重试 POST 请求，避免 Authorization 转发及不透明的重复上传和重复计费。超时、HTTP 错误、请求体超限、无效 API JSON、缺少 completion、空内容、模型 JSON 无法解析和输出截断都转换成不含密钥的可读错误。
 - 不启用工具调用、函数调用或代理式多轮对话；每个诊断只发出一次请求。
 
 参考 DeepSeek 官方文档：[Chat Completions API](https://api-docs.deepseek.com/api/create-chat-completion/)、[JSON Output](https://api-docs.deepseek.com/guides/json_mode/)、[Models & Pricing](https://api-docs.deepseek.com/quick_start/pricing/)。
@@ -86,8 +87,8 @@ repo-doctor diagnose PATH SYMBOL [--max-lines N] [--model MODEL] [--json]
 
 1. 所有现有测试继续通过；`scan`、`context`、`impact` 和 `validate` 不发出网络请求，原输出语义不变。
 2. CLI 帮助与 README 说明 DeepSeek 是可选服务、确切传输范围、API Key 配置方式和敏感代码注意事项。
-3. 缺少密钥、歧义符号和超出上下文上限均在请求前失败；测试确认没有调用网络传输层。
-4. 请求构造测试验证固定 HTTPS endpoint、鉴权头、非流式请求、模型选择、JSON 模式及发送内容仅来自选定上下文；错误输出和日志中没有密钥。
+3. 缺少密钥、歧义符号、超出上下文上限和完整请求体超过 256 KiB 均在请求前失败；测试确认没有调用网络传输层。重定向响应不得触发第二个请求。
+4. 请求构造测试验证固定 HTTPS endpoint、拒绝重定向、鉴权头、非流式请求、模型选择、JSON 模式及发送内容仅来自选定上下文；错误输出和日志中没有密钥。
 5. 本地模拟响应覆盖合法 findings、空数组、无效 JSON、空响应、截断、API 错误、超时、格式错误和请求不重试。
 6. 上下文范围证据校验覆盖：合法已发送片段通过；未发送文件、未包含行段、错误引用、仓库中其他位置的真实引文均被拒绝。
 7. 对有效模型响应，文本与 JSON CLI 输出均清楚显示 accepted/rejected 及证据校验边界。

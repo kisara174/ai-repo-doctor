@@ -2,14 +2,24 @@ import io
 import json
 import unittest
 import urllib.error
-from unittest.mock import patch
+import urllib.request
+from unittest.mock import Mock, patch
 
-from repo_doctor.deepseek import DeepSeekError, DeepSeekResult, complete_json
+from repo_doctor.deepseek import (
+    DeepSeekError,
+    DeepSeekResult,
+    _NoRedirectHandler,
+    complete_json,
+)
 
 
 class FakeResponse:
     def __init__(self, payload):
-        self.payload = payload if isinstance(payload, bytes) else json.dumps(payload).encode("utf-8")
+        self.payload = (
+            payload
+            if isinstance(payload, bytes)
+            else json.dumps(payload).encode("utf-8")
+        )
 
     def __enter__(self):
         return self
@@ -63,7 +73,7 @@ class DeepSeekTests(unittest.TestCase):
     def test_complete_json_sends_one_non_streaming_json_request(self):
         response = self.fake_api_response('{"findings": []}')
 
-        with patch("urllib.request.urlopen", return_value=response) as urlopen:
+        with patch("urllib.request.OpenerDirector.open", return_value=response) as open_request:
             result = complete_json(
                 "System prompt",
                 "User prompt",
@@ -72,10 +82,10 @@ class DeepSeekTests(unittest.TestCase):
             )
 
         self.assertEqual(result, DeepSeekResult("deepseek-flash", {"findings": []}))
-        urlopen.assert_called_once()
-        request = urlopen.call_args.args[0]
+        open_request.assert_called_once()
+        request = open_request.call_args.args[0]
         self.assertEqual(request.full_url, "https://api.deepseek.com/chat/completions")
-        self.assertEqual(urlopen.call_args.kwargs["timeout"], 60.0)
+        self.assertEqual(open_request.call_args.kwargs["timeout"], 60.0)
         self.assertEqual(request.get_header("Authorization"), "Bearer test-secret")
         body = json.loads(request.data.decode("utf-8"))
         self.assertEqual(body["model"], "deepseek-flash")
@@ -96,54 +106,112 @@ class DeepSeekTests(unittest.TestCase):
             hdrs=None,
             fp=response_body,
         )
-        with patch("urllib.request.urlopen", side_effect=failure) as urlopen:
+        with patch("urllib.request.OpenerDirector.open", side_effect=failure) as open_request:
             with self.assertRaisesRegex(DeepSeekError, "HTTP 401") as raised:
                 self.call_client()
 
-        urlopen.assert_called_once()
+        open_request.assert_called_once()
         self.assertNotIn("test-secret", str(raised.exception))
         self.assertTrue(response_body.closed)
 
+    def test_redirect_handler_refuses_redirects_and_client_installs_it(self):
+        request = urllib.request.Request(
+            "https://api.deepseek.com/chat/completions",
+            data=b"{}",
+            headers={"Authorization": "Bearer test-secret"},
+            method="POST",
+        )
+        with patch(
+            "urllib.request.build_opener", wraps=urllib.request.build_opener
+        ) as build_opener:
+            with patch(
+                "urllib.request.OpenerDirector.open",
+                return_value=self.fake_api_response('{"findings": []}'),
+            ) as open_request:
+                self.call_client()
+
+        build_opener.assert_called_once()
+        open_request.assert_called_once()
+        handler = build_opener.call_args.args[0]
+        self.assertIsInstance(handler, _NoRedirectHandler)
+        parent = Mock()
+        handler.parent = parent
+        self.assertIsNone(
+            handler.http_error_302(
+                request,
+                io.BytesIO(),
+                302,
+                "Found",
+                {"location": "https://attacker.example/collect"},
+            )
+        )
+        parent.open.assert_not_called()
+
+    def test_oversized_request_is_rejected_before_opening_transport(self):
+        with patch("urllib.request.OpenerDirector.open") as open_request:
+            open_request.return_value = self.fake_api_response('{"findings": []}')
+            with self.assertRaisesRegex(DeepSeekError, "request exceeds"):
+                complete_json(
+                    "System prompt",
+                    "x" * (300 * 1024),
+                    api_key="test-secret",
+                    model="deepseek-flash",
+                )
+
+        open_request.assert_not_called()
+
     def test_url_error_does_not_leak_its_reason(self):
-        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("test-secret")):
+        with patch(
+            "urllib.request.OpenerDirector.open",
+            side_effect=urllib.error.URLError("test-secret"),
+        ):
             with self.assertRaises(DeepSeekError) as raised:
                 self.call_client()
 
         self.assertNotIn("test-secret", str(raised.exception))
 
     def test_timeout_error_does_not_leak_its_message(self):
-        with patch("urllib.request.urlopen", side_effect=TimeoutError("test-secret")):
+        with patch("urllib.request.OpenerDirector.open", side_effect=TimeoutError("test-secret")):
             with self.assertRaisesRegex(DeepSeekError, "timed out") as raised:
                 self.call_client()
 
         self.assertNotIn("test-secret", str(raised.exception))
 
     def test_invalid_api_envelope_json_is_rejected(self):
-        with patch("urllib.request.urlopen", return_value=FakeResponse(b"not json")):
+        with patch("urllib.request.OpenerDirector.open", return_value=FakeResponse(b"not json")):
             with self.assertRaisesRegex(DeepSeekError, "invalid JSON"):
                 self.call_client()
 
     def test_missing_completion_is_rejected(self):
-        with patch("urllib.request.urlopen", return_value=FakeResponse({"model": "deepseek-flash", "choices": []})):
+        with patch(
+            "urllib.request.OpenerDirector.open",
+            return_value=FakeResponse({"model": "deepseek-flash", "choices": []}),
+        ):
             with self.assertRaisesRegex(DeepSeekError, "completion"):
                 self.call_client()
 
     def test_empty_message_content_is_rejected(self):
-        with patch("urllib.request.urlopen", return_value=self.fake_api_response("  ")):
+        with patch("urllib.request.OpenerDirector.open", return_value=self.fake_api_response("  ")):
             with self.assertRaisesRegex(DeepSeekError, "empty response"):
                 self.call_client()
 
     def test_malformed_model_json_is_rejected(self):
-        with patch("urllib.request.urlopen", return_value=self.fake_api_response("{broken")):
+        with patch(
+            "urllib.request.OpenerDirector.open",
+            return_value=self.fake_api_response("{broken"),
+        ):
             with self.assertRaisesRegex(DeepSeekError, "not valid JSON"):
                 self.call_client()
 
     def test_model_array_is_rejected(self):
-        with patch("urllib.request.urlopen", return_value=self.fake_api_response("[]")):
+        with patch("urllib.request.OpenerDirector.open", return_value=self.fake_api_response("[]")):
             with self.assertRaisesRegex(DeepSeekError, "must be a JSON object"):
                 self.call_client()
 
     def test_truncated_model_response_is_rejected(self):
-        with patch("urllib.request.urlopen", return_value=self.fake_api_response("{}", "length")):
+        with patch(
+            "urllib.request.OpenerDirector.open",
+            return_value=self.fake_api_response("{}", "length"),
+        ):
             with self.assertRaisesRegex(DeepSeekError, "truncated"):
                 self.call_client()
