@@ -89,8 +89,8 @@ def validate_manifest_data(manifest: dict[str, object]) -> None:
     root = _mapping(manifest, "manifest")
     if type(root.get("schema_version")) is not int or root["schema_version"] != 1:
         raise EvaluationError("manifest.schema_version must be 1")
-    if root.get("dataset_id") != "baseline-v1":
-        raise EvaluationError("manifest.dataset_id must be baseline-v1")
+    if root.get("dataset_id") not in ("baseline-v1", "challenge-v1"):
+        raise EvaluationError("manifest.dataset_id must be baseline-v1 or challenge-v1")
     repositories = root.get("repositories")
     if not isinstance(repositories, list) or not repositories:
         raise EvaluationError("manifest.repositories must be a nonempty list")
@@ -471,7 +471,9 @@ def render_markdown(report: dict[str, object]) -> str:
             return f"{value:.3f}"
         return str(value).replace("|", "\\|").replace("\n", " ")
 
-    lines = ["# AI Repo Doctor V2 baseline", "",
+    title = ("baseline" if report["dataset_id"] == "baseline-v1"
+             else "challenge evaluation")
+    lines = [f"# AI Repo Doctor V2 {title}", "",
              f"- Dataset: `{report['dataset_id']}`",
              f"- Generated: `{report['generated_at_utc']}`",
              f"- Analyzer commit: `{report['repo_doctor_commit']}`",
@@ -517,13 +519,29 @@ _BASELINE_PINS = {
               "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35"),
 }
 
+_DATASET_PINS = {
+    "baseline-v1": _BASELINE_PINS,
+    "challenge-v1": _BASELINE_PINS,
+}
 
-def validate_baseline_pins(manifest: dict[str, object]) -> None:
-    """Keep this published baseline tied to the three approved snapshots."""
+
+def validate_dataset_pins(manifest: dict[str, object]) -> None:
+    """Keep every published dataset tied to its approved repository snapshots."""
+    dataset_id = manifest["dataset_id"]
+    if not isinstance(dataset_id, str):
+        raise EvaluationError("manifest.dataset_id must be text")
+    expected = _DATASET_PINS.get(dataset_id)
+    if expected is None:
+        raise EvaluationError(f"unsupported dataset ID: {dataset_id}")
     actual = {entry["id"]: (entry["https_url"], entry["commit"])
               for entry in manifest["repositories"]}
-    if actual != _BASELINE_PINS:
-        raise EvaluationError("baseline-v1 repository URLs or commits differ from approved pins")
+    if actual != expected:
+        raise EvaluationError(f"{dataset_id} repository URLs or commits differ from approved pins")
+
+
+def validate_baseline_pins(manifest: dict[str, object]) -> None:
+    """Backward-compatible name for the original baseline pin validator."""
+    validate_dataset_pins(manifest)
 
 
 def _write_reports(outputs: list[tuple[Path, str]]) -> None:
@@ -578,7 +596,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.json_out.resolve() == args.markdown_out.resolve():
             raise EvaluationError("JSON and Markdown output paths must differ")
         manifest = load_manifest(args.manifest)
-        validate_baseline_pins(manifest)
+        validate_dataset_pins(manifest)
         roots = preflight_repositories(manifest, args.repos_root)
         project_root = Path(__file__).resolve().parents[1]
         results = []
