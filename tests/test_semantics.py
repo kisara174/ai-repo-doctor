@@ -182,6 +182,208 @@ class ClickSemanticTests(unittest.TestCase):
                     any(edge.kind == "command_registration" for edge in index.semantic_edges)
                 )
 
+    def test_reassigned_self_receiver_does_not_register_command(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "import click\n"
+                "@click.command()\n"
+                "def callback():\n"
+                "    pass\n"
+                "class App(click.Group):\n"
+                "    def install(self):\n"
+                "        self = object()\n"
+                "        self.add_command(callback)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(
+            any(edge.kind == "command_registration" for edge in index.semantic_edges)
+        )
+
+    def test_explicit_registration_accepts_click_module_alias(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "import click as c\n"
+                "@c.group()\n"
+                "def cli():\n"
+                "    pass\n"
+                "@c.command()\n"
+                "def leaf():\n"
+                "    pass\n"
+                "cli.add_command(leaf)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertIn(
+            ("app.py::cli", "app.py::leaf", "app.py", 8),
+            [
+                (edge.source_symbol, edge.target_symbol, edge.evidence_file, edge.line)
+                for edge in index.semantic_edges
+                if edge.kind == "command_registration"
+            ],
+        )
+
+    def test_explicit_registration_accepts_imported_group_alias_and_local_base_chain(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "from click import Group as ClickGroup\n"
+                "import click\n"
+                "@click.command()\n"
+                "def leaf():\n"
+                "    pass\n"
+                "class RootGroup(ClickGroup):\n"
+                "    pass\n"
+                "class IntermediateGroup(RootGroup):\n"
+                "    pass\n"
+                "class AppGroup(IntermediateGroup):\n"
+                "    def register(self):\n"
+                "        def helper(self):\n"
+                "            self = object()\n"
+                "        self.add_command(leaf)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertIn(
+            ("app.py::AppGroup", "app.py::leaf", "app.py", 14),
+            [
+                (edge.source_symbol, edge.target_symbol, edge.evidence_file, edge.line)
+                for edge in index.semantic_edges
+                if edge.kind == "command_registration"
+            ],
+        )
+
+    def test_explicit_registration_does_not_assume_overridden_add_command(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "import click\n"
+                "@click.command()\n"
+                "def leaf():\n"
+                "    pass\n"
+                "class BaseGroup(click.Group):\n"
+                "    def add_command(self, command, name=None):\n"
+                "        self.last_command = command\n"
+                "class AppGroup(BaseGroup):\n"
+                "    def install(self):\n"
+                "        self.add_command(leaf)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        registration_edges = [
+            (edge.kind, edge.source_symbol, edge.target_symbol)
+            for edge in index.semantic_edges
+            if edge.kind == "command_registration"
+        ]
+        self.assertEqual(registration_edges, [])
+
+    def test_explicit_registration_does_not_assume_class_attribute_override(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "import click\n"
+                "@click.command()\n"
+                "def leaf():\n"
+                "    pass\n"
+                "def ignore_command(self, command, name=None):\n"
+                "    self.last_command = command\n"
+                "class AppGroup(click.Group):\n"
+                "    add_command = ignore_command\n"
+                "    def install(self):\n"
+                "        self.add_command(leaf)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        registration_edges = [
+            (edge.kind, edge.source_symbol, edge.target_symbol)
+            for edge in index.semantic_edges
+            if edge.kind == "command_registration"
+        ]
+        self.assertEqual(registration_edges, [])
+
+    def test_explicit_registration_accepts_decorator_registered_subgroup_callback(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "import click\n"
+                "@click.group()\n"
+                "def cli():\n"
+                "    pass\n"
+                "@cli.group()\n"
+                "def nested():\n"
+                "    pass\n"
+                "cli.add_command(nested)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertIn(
+            ("app.py::cli", "app.py::nested", "app.py", 8),
+            [
+                (edge.source_symbol, edge.target_symbol, edge.evidence_file, edge.line)
+                for edge in index.semantic_edges
+                if edge.kind == "command_registration"
+            ],
+        )
+
+    def test_unproven_explicit_registration_near_misses_do_not_create_edges(self):
+        prefix = (
+            "import click\n"
+            "@click.group()\n"
+            "def cli():\n"
+            "    pass\n"
+            "@click.command()\n"
+            "def leaf():\n"
+            "    pass\n"
+        )
+        fixtures = {
+            "non-Click instance": prefix
+            + "class App:\n"
+            + "    def install(self):\n"
+            + "        self.add_command(leaf)\n",
+            "receiver rebound": prefix
+            + "cli = object()\n"
+            + "cli.add_command(leaf)\n",
+            "callback rebound": prefix
+            + "leaf = object()\n"
+            + "cli.add_command(leaf)\n",
+            "unknown receiver": prefix + "other.add_command(leaf)\n",
+            "attribute receiver": prefix + "app.cli.add_command(leaf)\n",
+            "dynamic callback arguments": prefix
+            + "class App(click.Group):\n"
+            + "    def install(self):\n"
+            + "        self.add_command(*commands)\n"
+            + "        self.add_command(cmd=leaf)\n",
+            "method-local callback shadow": prefix
+            + "class App(click.Group):\n"
+            + "    def install(self, leaf):\n"
+            + "        self.add_command(leaf)\n",
+        }
+
+        for case, source in fixtures.items():
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "app.py").write_text(source, encoding="utf-8")
+
+                index = build_index(root)
+
+                self.assertFalse(
+                    any(edge.kind == "command_registration" for edge in index.semantic_edges)
+                )
+
     def test_unknown_decorators_keep_generic_metadata(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
