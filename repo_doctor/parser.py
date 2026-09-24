@@ -5,6 +5,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from .model import (
+    AttributeRebinding,
     CallSite,
     CommandRegistrationCall,
     DecoratorRef,
@@ -557,6 +558,7 @@ class _Extractor(ast.NodeVisitor):
         self.imports: list[ImportRef] = []
         self.calls: list[CallSite] = []
         self.registration_calls: list[CommandRegistrationCall] = []
+        self.attribute_rebindings: list[AttributeRebinding] = []
         self.module_bindings: set[str] = set()
         self._names: list[str] = []
         self._ids: list[str] = []
@@ -709,6 +711,8 @@ class _Extractor(ast.NodeVisitor):
 
     def visit_Call(self, node: ast.Call) -> None:
         func = node.func
+        # Registration candidates are limited to module calls and direct
+        # methods, where the group or instance provenance is explicit.
         if (
             isinstance(func, ast.Attribute)
             and func.attr == "add_command"
@@ -742,6 +746,7 @@ class _Extractor(ast.NodeVisitor):
                     CommandRegistrationCall(
                         file=self.file,
                         line=node.lineno,
+                        column=node.col_offset,
                         receiver=func.value.id,
                         callback=node.args[0].id,
                         caller=caller,
@@ -760,6 +765,33 @@ class _Extractor(ast.NodeVisitor):
     def visit_Name(self, node: ast.Name) -> None:
         if not self._ids and isinstance(node.ctx, (ast.Store, ast.Del)):
             self.module_bindings.add(node.id)
+
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        if (
+            isinstance(node.ctx, (ast.Store, ast.Del))
+            and isinstance(node.value, ast.Name)
+            and node.attr == "add_command"
+        ):
+            class_owner = next(
+                (
+                    symbol_id
+                    for symbol_id, kind in reversed(list(zip(self._ids, self._kinds)))
+                    if kind == "class"
+                ),
+                None,
+            )
+            self.attribute_rebindings.append(
+                AttributeRebinding(
+                    file=self.file,
+                    line=node.lineno,
+                    column=node.col_offset,
+                    receiver=node.value.id,
+                    attribute=node.attr,
+                    owner=self._ids[-1] if self._ids else None,
+                    class_owner=class_owner,
+                )
+            )
+        self.generic_visit(node)
 
     def visit_Lambda(self, node: ast.Lambda) -> None:
         # Lambda bodies run later; attributing their calls to the enclosing
@@ -815,4 +847,5 @@ def parse_python_file(
         extractor.calls,
         extractor.module_bindings,
         registration_calls=extractor.registration_calls,
+        attribute_rebindings=extractor.attribute_rebindings,
     )

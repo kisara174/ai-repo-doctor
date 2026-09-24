@@ -17,6 +17,7 @@
 - Resolve model as `--model`, then `DEEPSEEK_MODEL`, then `deepseek-flash`.
 - Use non-streaming JSON mode, `max_tokens=4096`, and a 60-second timeout; do not retry a request.
 - `diagnose` accepts 1–120 context lines and at most 64 KiB of selected UTF-8 source text; reject over-budget input before opening a network request.
+- The complete serialized HTTP request body is limited to 256 KiB and checked before opening the network transport; reject redirects so the Authorization header remains scoped to the fixed endpoint.
 - `diagnose` sends only the target symbol, selected context blocks, repository-relative paths, line numbers, relation labels, and prompt; never send an absolute root, full index, or unselected source.
 - Findings must cite only line ranges and exact source quotes included in the request as well as pass the existing repository evidence checks.
 - Do not execute target repository code, tests, commands, model tools, or patches.
@@ -50,7 +51,7 @@
 
 - [x] **Step 1: Write transport tests with a fake HTTP response**
 
-Add a `FakeResponse` helper to `tests/test_deepseek.py` whose `read()` returns UTF-8 JSON bytes. Patch `urllib.request.urlopen`; never contact DeepSeek from a test.
+Add a `FakeResponse` helper to `tests/test_deepseek.py` whose `read()` returns UTF-8 JSON bytes. Patch `urllib.request.OpenerDirector.open`; never contact any network from a test. Verify the client installs the no-redirect handler and a simulated 302 does not call the opener again.
 
 Add a success test whose fake API response has this shape:
 
@@ -64,9 +65,9 @@ Add a success test whose fake API response has this shape:
 }
 ```
 
-Assert `complete_json` returns `DeepSeekResult("deepseek-flash", {"findings": []})`, calls `urlopen` exactly once with `https://api.deepseek.com/chat/completions` and timeout `60.0`, and sends a body with the requested model, `stream is False`, `max_tokens == 4096`, and `response_format == {"type": "json_object"}`. Assert the request carries `Authorization: Bearer test-secret`.
+Assert `complete_json` returns `DeepSeekResult("deepseek-flash", {"findings": []})`, calls the opener exactly once with `https://api.deepseek.com/chat/completions` and timeout `60.0`, and sends a body with the requested model, `stream is False`, `max_tokens == 4096`, and `response_format == {"type": "json_object"}`. Assert the request carries `Authorization: Bearer test-secret`. An oversized serialized request must fail before `OpenerDirector.open` is called.
 
-Add separate failing tests for HTTP 401, URL/timeout failure, invalid API-envelope JSON, missing `choices`, empty message content, malformed model JSON, a non-object model result, and `finish_reason == "length"`. For HTTP and URL errors, assert `str(exception)` does not contain `test-secret`. For an HTTP error, assert `urlopen` was called exactly once.
+Add separate failing tests for HTTP 401, URL/timeout failure, invalid API-envelope JSON, missing `choices`, empty message content, malformed model JSON, a non-object model result, and `finish_reason == "length"`. For HTTP and URL errors, assert `str(exception)` does not contain `test-secret`. For an HTTP error, assert the opener was called exactly once.
 
 - [x] **Step 2: Run the focused tests and verify the missing implementation fails**
 
@@ -338,7 +339,7 @@ git commit -m "docs: explain DeepSeek diagnosis data flow"
 ## Final Acceptance Checklist
 
 - [x] Existing offline commands work without credentials and make no HTTP calls.
-- [x] Missing credentials, invalid symbol, invalid line limit, and source over 64 KiB fail before the transport is called.
+- [x] Missing credentials, invalid symbol, invalid line limit, source over 64 KiB, and full request body over 256 KiB fail before the transport is called; redirects do not trigger a second request.
 - [x] DeepSeek transport targets only the official HTTPS endpoint, uses JSON mode, performs one non-streaming request, and does not retry.
 - [x] Model response must be a JSON object with a `findings` list; malformed and truncated responses fail safely.
 - [x] Every accepted finding passes repository grounding and submitted-context scope checks.

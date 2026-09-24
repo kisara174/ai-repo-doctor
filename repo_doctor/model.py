@@ -35,6 +35,18 @@ class CommandRegistrationCall:
     callback: str
     caller: str | None = None
     class_owner: str | None = None
+    column: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class AttributeRebinding:
+    file: str
+    line: int
+    column: int
+    receiver: str
+    attribute: str
+    owner: str | None = None
+    class_owner: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,6 +119,7 @@ class ParsedFile:
     module_bindings: set[str] = field(default_factory=set)
     error: ParseError | None = None
     registration_calls: list[CommandRegistrationCall] = field(default_factory=list)
+    attribute_rebindings: list[AttributeRebinding] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
@@ -158,4 +171,5 @@ class RepoIndex:
     call_edges: list[CallEdge] = field(default_factory=list)
     semantic_edges: list[SemanticEdge] = field(default_factory=list)
     registration_calls: list[CommandRegistrationCall] = field(default_factory=list)
+    attribute_rebindings: list[AttributeRebinding] = field(default_factory=list)
     import_cycles: list[list[str]] = field(default_factory=list)

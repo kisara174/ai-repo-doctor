@@ -84,7 +84,7 @@ class DiagnosisDataTests(unittest.TestCase):
         }
 
     def test_prepare_builds_context_without_labels_or_network(self):
-        with patch("urllib.request.urlopen") as urlopen:
+        with patch("urllib.request.OpenerDirector.open") as open_request:
             prepared = prepare_cases(self.manifest, self.repos_root, "test-model", 120)
 
         context = prepared["contexts"]["bug-01"]
@@ -112,7 +112,7 @@ class DiagnosisDataTests(unittest.TestCase):
             json.dumps(request, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest()
         self.assertEqual(prepared["plan"]["cases"][0]["request_sha256"], expected_request_hash)
-        urlopen.assert_not_called()
+        open_request.assert_not_called()
 
     def test_manifest_accepts_a_valid_local_fixture(self):
         validate_manifest(self.manifest)

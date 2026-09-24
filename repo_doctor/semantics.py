@@ -4,7 +4,14 @@ import ast
 from dataclasses import replace
 
 from .graph import _module_candidates, _resolve_export
-from .model import DecoratorRef, ImportRef, RepoIndex, SemanticEdge, Symbol
+from .model import (
+    CommandRegistrationCall,
+    DecoratorRef,
+    ImportRef,
+    RepoIndex,
+    SemanticEdge,
+    Symbol,
+)
 
 
 _CLICK_API_NAMES = {"group", "command"}
@@ -431,6 +438,8 @@ def _explicit_registration_edges(
 ) -> list[SemanticEdge]:
     edges = set()
     for registration in index.registration_calls:
+        if _registration_uses_rebound_add_command(index, registration):
+            continue
         caller = index.symbols.get(registration.caller) if registration.caller else None
         if caller is not None:
             if registration.callback in caller.local_bindings:
@@ -510,6 +519,42 @@ def _explicit_registration_edges(
             )
         )
     return list(edges)
+
+
+def _registration_uses_rebound_add_command(
+    index: RepoIndex, registration: CommandRegistrationCall
+) -> bool:
+    for rebinding in index.attribute_rebindings:
+        if (
+            rebinding.file != registration.file
+            or rebinding.receiver != registration.receiver
+            or rebinding.attribute != "add_command"
+        ):
+            continue
+        if registration.receiver == "self":
+            if rebinding.class_owner == registration.class_owner and (
+                rebinding.owner != registration.caller
+                or (rebinding.line, rebinding.column)
+                < (registration.line, registration.column)
+            ):
+                return True
+        elif (
+            (rebinding.line, rebinding.column)
+            < (registration.line, registration.column)
+            and rebinding.owner in {None, registration.caller}
+        ):
+            return True
+        elif registration.caller is None and rebinding.owner is not None:
+            owner = index.symbols.get(rebinding.owner)
+            if (
+                owner is not None
+                and registration.receiver not in owner.local_bindings
+                and owner.start_line < registration.line
+            ):
+                # A previously defined helper may mutate the module-level
+                # receiver before this call; module execution order is unknown.
+                return True
+    return False
 
 
 def resolve_semantic_edges(index: RepoIndex) -> None:

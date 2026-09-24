@@ -120,7 +120,7 @@ class DiagnosisEvaluationCliTests(unittest.TestCase):
             summary = {"state": "complete", "planned_calls": 1, "attempted_calls": 1}
             with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "TEST_SECRET_SENTINEL"}):
                 with patch("tools.evaluate_diagnosis.run_cases", return_value=summary) as run_cases:
-                    with patch("urllib.request.urlopen") as urlopen:
+                    with patch("urllib.request.OpenerDirector.open") as open_request:
                         code = main([
                             "run", "--plan-dir", str(plan_dir),
                             "--manifest", str(manifest_path),
@@ -135,7 +135,7 @@ class DiagnosisEvaluationCliTests(unittest.TestCase):
                 manifest_path.read_bytes()
             ).hexdigest())
             self.assertTrue(callable(run_cases.call_args.kwargs["client"]))
-            urlopen.assert_not_called()
+            open_request.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -52,7 +52,7 @@ Python AST 为函数定义暴露 `decorator_list`；Python typing 文档规定 o
 - 每个函数/方法在 `symbols[].decorators` 记录装饰器表达式、起始行号及可选的识别类型；未知装饰器只作为源码元数据，不自动视为调用边或行为结论。
 - 静态识别来自未遮蔽 `click` 导入的 `click.group`、`click.command` 及其明确导入/模块别名，例如 `import click as c`、`from click import group as cli_group`。若本地项目模块遮蔽 `click`，不启用该适配器。`@click.group()` 标记其回调符号为可识别的组；`@click.command()` 标记命令回调。
 - 仅当注册接收者能唯一解析为同一模块中的已识别组回调，并且绑定没有冲突或重赋值时，才识别 `@group.command(...)` 和 `@group.group(...)`。对每个回调建立方向为“父组 → 回调”的 `command_registration` 语义边，记录装饰器所在文件和行号。
-- 挑战集追加的显式注册形式使用 Click 的 `Group.add_command(cmd, name=None)` API。只识别恰好一个位置参数且该参数是同模块顶层、由已识别 `@click.command()` / `@click.group()` 修饰，或已通过上述可信装饰器注册边确认为子命令/子组的简单名称；接收者必须是已识别的组回调名称，或是未在当前方法中重绑定的 `self`，且该类沿同模块静态基类链最终继承自未遮蔽的 `click.Group`（支持模块别名及 `from click import Group` 别名）。对类接收者还要求已知基类均可静态检查，类链未绑定 `add_command`，也未覆盖 `__getattr__` 或 `__getattribute__`，以免把同名自定义行为当成 Click 注册。语义边记录 `add_command` 调用行。参数重绑定、局部遮蔽、动态接收者、关键字/展开参数、无法确认的跨模块基类和运行时实例方法修改继续不推断。
+- 挑战集追加的显式注册形式使用 Click 的 `Group.add_command(cmd, name=None)` API。只识别恰好一个位置参数且该参数是同模块顶层、由已识别 `@click.command()` / `@click.group()` 修饰，或已通过上述可信装饰器注册边确认为子命令/子组的简单名称；接收者必须是已识别的组回调名称，或是未在当前方法中重绑定的 `self`，且该类沿同模块静态基类链最终继承自未遮蔽的 `click.Group`（支持模块别名及 `from click import Group` 别名）。对类接收者还要求已知基类均可静态检查，类链未绑定 `add_command`，也未覆盖 `__getattr__` 或 `__getattribute__`，以免把同名自定义行为当成 Click 注册。语义边记录 `add_command` 调用行。若源码中可静态识别的直接赋值/删除在模块级组调用前重绑定 `.add_command`，或同类方法直接重绑定/删除 `self.add_command`，不推断 Click 注册；若更早定义的同模块辅助函数可能重绑定该模块级组，则因执行顺序不明也不推断。赋值与调用在同一行时按列偏移判断顺序；后续模块级赋值不会追溯取消前面的调用边。参数重绑定、局部遮蔽、动态接收者、关键字/展开参数、无法确认的跨模块基类和运行时实例方法修改继续不推断。
 - 不执行装饰器。任意第三方装饰器、动态创建或重绑定的组对象、反射注册、插件加载、工厂返回的组对象及静态信息不足的关系不建立注册边。
 
 ### 关系输出、上下文与影响
@@ -81,7 +81,7 @@ Python AST 为函数定义暴露 `decorator_list`；Python typing 文档规定 o
 6. Click 动态 `sub_ctx.command.invoke` 仍可以 unresolved 展示；验证输出不会将它计为已解析调用。
 7. 检查语义边的重复、冲突和误连；报告关系样例及 unresolved 限制，不把调用总量当作精确率指标。
 8. 固定挑战快照中的模块级 `cli.add_command(group)` 和已证明继承 Click `Group` 的类方法 `self.add_command(run_command)` 均产生 `command_registration` 边，证据行分别指向实际调用；未知接收者和动态回调名称仍不产生边。
-9. 对方法内重绑定后的 `self.add_command(...)` 不建立语义边；对同模块 `Group` 别名和多层继承仍能识别未重绑定的实例接收者。
+9. 对源码中可静态识别的直接重绑定后的 `self.add_command(...)` 和模块级 `group.add_command(...)` 不建立语义边；更早定义、可能修改模块级组的辅助函数也使该模块级关系保持 unresolved。赋值与调用同一行时按列偏移判断顺序，调用后的模块级重绑定不追溯取消已执行调用。对同模块 `Group` 别名和多层继承仍能识别未重绑定的实例接收者。
 
 ## 参考资料
 
