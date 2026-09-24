@@ -697,3 +697,79 @@ class GraphTests(unittest.TestCase):
         self.assertEqual(index.ambiguous_symbols, {"app.py::target"})
         self.assertNotIn("app.py::target", index.symbols)
         self.assertEqual(index.call_edges, [])
+
+    def test_overload_declarations_resolve_to_single_implementation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "from typing import overload\n\n"
+                "@overload\n"
+                "def target(value: int) -> int: ...\n\n"
+                "@overload\n"
+                "def target(value: str) -> str: ...\n\n"
+                "def target(value):\n"
+                "    return value\n\n"
+                "def caller():\n"
+                "    return target(1)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertIn("app.py::target", index.symbols)
+        symbol = index.symbols["app.py::target"]
+        self.assertFalse(symbol.is_overload)
+        self.assertEqual(
+            [(signature.start_line, signature.signature) for signature in symbol.overloads],
+            [
+                (3, "def target(value: int) -> int"),
+                (6, "def target(value: str) -> str"),
+            ],
+        )
+        self.assertEqual(index.ambiguous_symbols, set())
+        self.assertEqual(
+            [(edge.caller, edge.callee) for edge in index.call_edges],
+            [("app.py::caller", "app.py::target")],
+        )
+
+    def test_overload_only_definitions_remain_ambiguous(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "from typing import overload\n\n"
+                "@overload\n"
+                "def target(value: int) -> int: ...\n\n"
+                "@overload\n"
+                "def target(value: str) -> str: ...\n\n"
+                "def caller():\n"
+                "    return target(1)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index.ambiguous_symbols, {"app.py::target"})
+        self.assertNotIn("app.py::target", index.symbols)
+        self.assertEqual(index.call_edges, [])
+
+    def test_overloads_with_multiple_implementations_remain_ambiguous(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "from typing import overload\n\n"
+                "@overload\n"
+                "def target(value: int) -> int: ...\n\n"
+                "def target(value):\n"
+                "    return value\n\n"
+                "def target(value):\n"
+                "    return str(value)\n\n"
+                "def caller():\n"
+                "    return target(1)\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertEqual(index.ambiguous_symbols, {"app.py::target"})
+        self.assertNotIn("app.py::target", index.symbols)
+        self.assertEqual(index.call_edges, [])
