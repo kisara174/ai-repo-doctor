@@ -172,3 +172,97 @@ def load_manifest(path: Path) -> dict[str, object]:
         raise EvaluationError(f"cannot load manifest {path}: {exc}") from exc
     validate_manifest_data(data)
     return data
+
+
+def _score(
+    expected: set[tuple[str, ...]], predicted: set[tuple[str, ...]]
+) -> dict[str, int | float | None]:
+    """Score predicted relations against the expected relation set."""
+    tp = len(expected & predicted)
+    fp = len(predicted - expected)
+    fn = len(expected - predicted)
+    precision = tp / (tp + fp) if tp + fp else None
+    recall = tp / (tp + fn) if tp + fn else None
+    return {
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+        "precision": precision,
+        "recall": recall,
+    }
+
+
+def _probe_relations(
+    probe: dict[str, object], scan: dict[str, object]
+) -> dict[str, tuple[set[tuple[str, ...]], set[tuple[str, ...]]]]:
+    """Project one annotated source site to comparable relationship sets."""
+    probe_id = probe["id"]
+    kind = probe["kind"]
+    evidence = probe["evidence"]
+    file = evidence["file"]
+    line = evidence["start_line"]
+
+    if kind == "call":
+        caller = probe["caller"]
+        sites = [item for item in scan["calls"]
+                 if item["caller"] == caller and item["line"] == line]
+        if (len(sites) != 1 or sites[0]["file"] != file
+                or sites[0]["expression"] != probe["expression"]):
+            raise EvaluationError(f"{probe_id}: call probe does not select one exact call site")
+        expected = ({(probe_id, "call", caller, probe["expected_target"])}
+                    if probe.get("expected_target") is not None else set())
+        predicted = {
+            (probe_id, "call", caller, edge["callee"])
+            for edge in scan["call_edges"]
+            if edge["caller"] == caller and edge["line"] == line
+        }
+        return {"call": (expected, predicted)}
+
+    if kind == "reexport":
+        name = probe["exported_name"]
+        expected = ({(probe_id, "reexport", file, name, probe["expected_target"])}
+                    if probe.get("expected_target") is not None else set())
+        predicted = {
+            (probe_id, "reexport", edge["source_file"], name, edge["target_symbol"])
+            for edge in scan["semantic_edges"]
+            if (edge["kind"] == "reexport" and edge["evidence_file"] == file
+                and edge["line"] == line and edge["exported_name"] == name)
+        }
+        return {"reexport": (expected, predicted)}
+
+    if kind == "command_registration":
+        expected = ({(probe_id, "command_registration", probe["parent_symbol"],
+                      probe["callback_symbol"])} if probe["expect_edge"] else set())
+        predicted = {
+            (probe_id, "command_registration", edge["source_symbol"], edge["target_symbol"])
+            for edge in scan["semantic_edges"]
+            if (edge["kind"] == "command_registration"
+                and edge["evidence_file"] == file and edge["line"] == line)
+        }
+        return {"command_registration": (expected, predicted)}
+
+    if kind == "overload":
+        symbol_id = probe["symbol_id"]
+        symbols = [item for item in scan["symbols"] if item["id"] == symbol_id]
+        if len(symbols) > 1:
+            raise EvaluationError(f"{probe_id}: duplicate canonical symbol in scan")
+        implementation = (symbols[0] if symbols and symbol_id not in scan["ambiguous_symbols"]
+                          else None)
+        expected_resolution = ({(probe_id, "overload_resolution", symbol_id, symbol_id)}
+                               if probe["expected_state"] == "resolved" else set())
+        predicted_resolution = ({(probe_id, "overload_resolution", symbol_id, symbol_id)}
+                                if implementation is not None else set())
+        expected_signatures = {
+            (probe_id, "overload_signature", symbol_id, signature)
+            for signature in probe["expected_signatures"]
+        }
+        predicted_signatures = ({
+            (probe_id, "overload_signature", symbol_id, item["signature"])
+            for item in implementation["overloads"]
+        } if implementation is not None else set())
+        return {
+            "overload_resolution": (expected_resolution, predicted_resolution),
+            "overload_signature": (expected_signatures, predicted_signatures),
+        }
+
+    raise EvaluationError(f"{probe_id}: unsupported probe kind {kind}")

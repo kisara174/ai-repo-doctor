@@ -163,5 +163,270 @@ class ManifestTests(unittest.TestCase):
                 evaluate_baseline.load_manifest(path)
 
 
+class MetricTests(unittest.TestCase):
+    def test_incorrect_target_counts_as_false_positive_and_false_negative(self):
+        expected = {("probe-1", "call", "caller", "pkg.py::wanted")}
+        predicted = {("probe-1", "call", "caller", "pkg.py::other")}
+
+        self.assertEqual(
+            evaluate_baseline._score(expected, predicted),
+            {"tp": 0, "fp": 1, "fn": 1, "precision": 0.0, "recall": 0.0},
+        )
+
+    def test_perfect_match(self):
+        relation = {("probe-1", "call", "caller", "pkg.py::wanted")}
+
+        self.assertEqual(
+            evaluate_baseline._score(relation, relation),
+            {"tp": 1, "fp": 0, "fn": 0, "precision": 1.0, "recall": 1.0},
+        )
+
+    def test_empty_sets_have_undefined_precision_and_recall(self):
+        self.assertEqual(
+            evaluate_baseline._score(set(), set()),
+            {"tp": 0, "fp": 0, "fn": 0, "precision": None, "recall": None},
+        )
+
+
+class ProbeRelationsTests(unittest.TestCase):
+    def test_call_probe_matches_its_unique_callsite(self):
+        probe = _manifest()["repositories"][0]["probes"][0]
+        scan = {
+            "calls": [{
+                "file": "pkg/mod.py", "caller": "pkg/mod.py::run", "expression": "helper",
+                "name": "helper", "receiver": None, "line": 2,
+            }],
+            "call_edges": [{
+                "caller": "pkg/mod.py::run", "callee": "pkg/mod.py::helper", "line": 2,
+                "via_reexports": [],
+            }],
+            "semantic_edges": [],
+            "symbols": [],
+            "ambiguous_symbols": [],
+        }
+        relations = getattr(evaluate_baseline, "_probe_relations", None)
+        self.assertTrue(callable(relations), "probe relation projection must be implemented")
+
+        self.assertEqual(
+            relations(probe, scan)["call"],
+            (
+                {("fixture-call-001", "call", "pkg/mod.py::run", "pkg/mod.py::helper")},
+                {("fixture-call-001", "call", "pkg/mod.py::run", "pkg/mod.py::helper")},
+            ),
+        )
+
+    def test_call_probe_rejects_two_expressions_on_one_line(self):
+        probe = _manifest()["repositories"][0]["probes"][0]
+        caller = probe["caller"]
+        scan = {
+            "calls": [
+                {"file": "pkg/mod.py", "caller": caller, "line": 2, "expression": "helper"},
+                {"file": "pkg/mod.py", "caller": caller, "line": 2, "expression": "wrapper"},
+            ],
+            "call_edges": [{"caller": caller, "line": 2, "callee": "pkg/mod.py::helper"}],
+        }
+        with self.assertRaisesRegex(evaluate_baseline.EvaluationError, "fixture-call-001"):
+            evaluate_baseline._probe_relations(probe, scan)
+
+    def test_expected_unresolved_call_counts_unexpected_edge_as_fp(self):
+        probe = _manifest()["repositories"][0]["probes"][0]
+        probe["expression"] = "os.getcwd"
+        probe["expected_target"] = None
+        probe["unresolved_reason"] = "os is an external standard-library module."
+        caller = probe["caller"]
+        scan = {
+            "calls": [{
+                "file": "pkg/mod.py", "caller": caller, "line": 2,
+                "expression": "os.getcwd",
+            }],
+            "call_edges": [{"caller": caller, "line": 2, "callee": "pkg/mod.py::getcwd"}],
+        }
+        expected, predicted = evaluate_baseline._probe_relations(probe, scan)["call"]
+        self.assertEqual(expected, set())
+        self.assertEqual(
+            evaluate_baseline._score(expected, predicted),
+            {"tp": 0, "fp": 1, "fn": 0, "precision": 0.0, "recall": None},
+        )
+
+    def test_reexport_probe_selects_one_name_on_shared_import_line(self):
+        file = "src/requests/__init__.py"
+        probe = {
+            "id": "requests-reexport-get", "kind": "reexport",
+            "evidence": {"file": file, "start_line": 171, "end_line": 171, "sha256": "a" * 64},
+            "rationale": "The package imports the local API function as get.",
+            "exported_name": "get", "expected_target": "src/requests/api.py::get",
+        }
+        scan = {
+            "calls": [], "call_edges": [], "symbols": [], "ambiguous_symbols": [],
+            "semantic_edges": [
+                {
+                    "kind": "reexport", "target_symbol": "src/requests/api.py::get",
+                    "evidence_file": file, "line": 171, "source_symbol": None,
+                    "source_file": file, "exported_name": "get",
+                },
+                {
+                    "kind": "reexport", "target_symbol": "src/requests/api.py::post",
+                    "evidence_file": file, "line": 171, "source_symbol": None,
+                    "source_file": file, "exported_name": "post",
+                },
+            ],
+        }
+        try:
+            projected = evaluate_baseline._probe_relations(probe, scan)["reexport"]
+        except evaluate_baseline.EvaluationError as exc:
+            self.fail(f"valid re-export probe was rejected: {exc}")
+        relation = (
+            "requests-reexport-get", "reexport", file, "get", "src/requests/api.py::get"
+        )
+        self.assertEqual(projected, ({relation}, {relation}))
+
+    def test_registration_compares_parent_and_callback_endpoints(self):
+        file = "examples/repo/repo.py"
+        parent = "examples/repo/repo.py::cli"
+        callback = "examples/repo/repo.py::clone"
+        probe = {
+            "id": "click-registration-clone", "kind": "command_registration",
+            "evidence": {"file": file, "start_line": 60, "end_line": 60, "sha256": "a" * 64},
+            "rationale": "The cli group registers clone.",
+            "parent_symbol": parent, "callback_symbol": callback, "expect_edge": True,
+        }
+        scan = {
+            "calls": [], "call_edges": [], "symbols": [], "ambiguous_symbols": [],
+            "semantic_edges": [{
+                "kind": "command_registration", "target_symbol": callback,
+                "evidence_file": file, "line": 60, "source_symbol": parent,
+                "source_file": None, "exported_name": None,
+            }],
+        }
+        try:
+            projected = evaluate_baseline._probe_relations(probe, scan)["command_registration"]
+        except evaluate_baseline.EvaluationError as exc:
+            self.fail(f"valid registration probe was rejected: {exc}")
+        relation = ("click-registration-clone", "command_registration", parent, callback)
+        self.assertEqual(projected, ({relation}, {relation}))
+
+    def test_non_command_decorator_does_not_register_callback(self):
+        file = "examples/repo/repo.py"
+        probe = {
+            "id": "click-option-clone", "kind": "command_registration",
+            "evidence": {"file": file, "start_line": 61, "end_line": 61, "sha256": "a" * 64},
+            "rationale": "The decorator only declares an argument.",
+            "parent_symbol": "examples/repo/repo.py::cli",
+            "callback_symbol": "examples/repo/repo.py::clone",
+            "expect_edge": False, "unresolved_reason": "@click.argument is not group registration.",
+        }
+        scan = {
+            "semantic_edges": [{
+                "kind": "command_registration", "evidence_file": file, "line": 61,
+                "source_symbol": "examples/repo/repo.py::cli",
+                "target_symbol": "examples/repo/repo.py::clone",
+            }],
+        }
+        expected, predicted = evaluate_baseline._probe_relations(probe, scan)[
+            "command_registration"
+        ]
+        self.assertEqual(expected, set())
+        self.assertEqual(evaluate_baseline._score(expected, predicted)["fp"], 1)
+
+    def test_overload_resolution_and_signatures_are_separate(self):
+        symbol = "src/click/core.py::Context.invoke"
+        signatures = [
+            "def invoke(self, callback: t.Callable[..., V], /, *args: t.Any, **kwargs: t.Any) -> V",
+            "def invoke(self, callback: Command, /, *args: t.Any, **kwargs: t.Any) -> t.Any",
+        ]
+        probe = {
+            "id": "click-overload-invoke", "kind": "overload",
+            "evidence": {
+                "file": "src/click/core.py", "start_line": 875, "end_line": 883,
+                "sha256": "a" * 64,
+            },
+            "rationale": "Two overload declarations precede one concrete implementation.",
+            "symbol_id": symbol, "expected_state": "resolved",
+            "expected_signatures": signatures,
+        }
+        scan = {
+            "calls": [], "call_edges": [], "semantic_edges": [], "ambiguous_symbols": [],
+            "symbols": [{
+                "id": symbol, "file": "src/click/core.py", "name": "invoke",
+                "qualname": "Context.invoke", "kind": "method", "start_line": 883,
+                "end_line": 940, "parent": "src/click/core.py::Context",
+                "decorators": [], "overloads": [
+                    {"start_line": 875, "end_line": 878, "signature": signatures[0]},
+                    {"start_line": 880, "end_line": 881, "signature": signatures[1]},
+                ],
+            }],
+        }
+        try:
+            projected = evaluate_baseline._probe_relations(probe, scan)
+        except evaluate_baseline.EvaluationError as exc:
+            self.fail(f"valid overload probe was rejected: {exc}")
+        self.assertEqual(
+            projected["overload_resolution"],
+            ({("click-overload-invoke", "overload_resolution", symbol, symbol)},
+             {("click-overload-invoke", "overload_resolution", symbol, symbol)}),
+        )
+        expected_signatures = {
+            ("click-overload-invoke", "overload_signature", symbol, signature)
+            for signature in signatures
+        }
+        self.assertEqual(projected["overload_signature"],
+                         (expected_signatures, expected_signatures))
+
+    def test_ambiguous_overload_rejects_false_unique_implementation(self):
+        symbol = "app.py::parse"
+        probe = {
+            "id": "ambiguous-parse", "kind": "overload",
+            "evidence": {"file": "app.py", "start_line": 1, "end_line": 4,
+                         "sha256": "a" * 64},
+            "rationale": "There are two concrete definitions.",
+            "symbol_id": symbol, "expected_state": "ambiguous", "expected_signatures": [],
+        }
+        scan = {
+            "symbols": [{"id": symbol, "overloads": []}],
+            "ambiguous_symbols": [],
+        }
+        relation = evaluate_baseline._probe_relations(probe, scan)["overload_resolution"]
+        self.assertEqual(relation[0], set())
+        self.assertEqual(evaluate_baseline._score(*relation)["fp"], 1)
+
+    def test_overload_only_group_stays_ambiguous(self):
+        symbol = "app.py::parse"
+        probe = {
+            "id": "overload-only-parse", "kind": "overload",
+            "evidence": {"file": "app.py", "start_line": 1, "end_line": 2,
+                         "sha256": "a" * 64},
+            "rationale": "Only overload declarations exist.",
+            "symbol_id": symbol, "expected_state": "ambiguous", "expected_signatures": [],
+        }
+        scan = {
+            "symbols": [{"id": symbol, "overloads": [{"signature": "def parse(x: int) -> int"}]}],
+            "ambiguous_symbols": [symbol],
+        }
+        projected = evaluate_baseline._probe_relations(probe, scan)
+        self.assertEqual(projected["overload_resolution"], (set(), set()))
+        self.assertEqual(projected["overload_signature"], (set(), set()))
+
+    def test_wrong_overload_signature_is_fp_and_fn(self):
+        symbol = "app.py::parse"
+        probe = {
+            "id": "wrong-signature-parse", "kind": "overload",
+            "evidence": {"file": "app.py", "start_line": 1, "end_line": 3,
+                         "sha256": "a" * 64},
+            "rationale": "The declaration accepts an integer.",
+            "symbol_id": symbol, "expected_state": "resolved",
+            "expected_signatures": ["def parse(x: int) -> int"],
+        }
+        scan = {
+            "symbols": [{"id": symbol, "overloads": [{"signature": "def parse(x: str) -> str"}]}],
+            "ambiguous_symbols": [],
+        }
+        projected = evaluate_baseline._probe_relations(probe, scan)
+        self.assertEqual(evaluate_baseline._score(*projected["overload_resolution"])["tp"], 1)
+        self.assertEqual(
+            evaluate_baseline._score(*projected["overload_signature"]),
+            {"tp": 0, "fp": 1, "fn": 1, "precision": 0.0, "recall": 0.0},
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
