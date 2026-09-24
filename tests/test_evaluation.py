@@ -103,6 +103,43 @@ class ManifestTests(unittest.TestCase):
         with self.assertRaises(evaluate_baseline.EvaluationError):
             evaluate_baseline.validate_manifest_data(manifest)
 
+    def test_positive_registration_requires_both_endpoints(self):
+        manifest = _manifest()
+        probe = manifest["repositories"][0]["probes"][0]
+        probe.update(kind="command_registration", expect_edge=True)
+        probe.pop("caller")
+        probe.pop("expression")
+        probe.pop("expected_target")
+
+        with self.assertRaises(evaluate_baseline.EvaluationError):
+            evaluate_baseline.validate_manifest_data(manifest)
+
+    def test_negative_registration_probe_can_omit_unknown_endpoints(self):
+        manifest = _manifest()
+        probe = manifest["repositories"][0]["probes"][0]
+        probe.clear()
+        probe.update(
+            id="fixture-registration-negative",
+            kind="command_registration",
+            evidence={
+                "file": "pkg/mod.py",
+                "start_line": 2,
+                "end_line": 2,
+                "sha256": "a" * 64,
+            },
+            rationale="A dynamic receiver cannot be resolved to one local group.",
+            expect_edge=False,
+            unresolved_reason="The receiver is an attribute expression.",
+        )
+
+        self.assertIsNone(evaluate_baseline.validate_manifest_data(manifest))
+
+    def test_challenge_v2_dataset_id_is_accepted(self):
+        manifest = _manifest()
+        manifest["dataset_id"] = "challenge-v2"
+
+        self.assertIsNone(evaluate_baseline.validate_manifest_data(manifest))
+
     def test_rejects_invalid_manifest_shapes_and_selectors(self):
         def duplicate_probe(manifest):
             manifest["repositories"][0]["probes"].append(
@@ -185,6 +222,24 @@ class ManifestTests(unittest.TestCase):
                          if probe["kind"] == "command_registration"]
         self.assertGreaterEqual(sum(probe["expect_edge"] for probe in registrations), 5)
         self.assertGreaterEqual(sum(not probe["expect_edge"] for probe in registrations), 5)
+
+    def test_challenge_v2_keeps_fixed_pins_and_source_backed_negative_registrations(self):
+        path = Path(__file__).resolve().parents[1] / "evaluation/challenge-v2.json"
+        manifest = evaluate_baseline.load_manifest(path)
+        evaluate_baseline.validate_dataset_pins(manifest)
+
+        self.assertEqual(manifest["dataset_id"], "challenge-v2")
+        self.assertEqual(sum(len(repo["probes"]) for repo in manifest["repositories"]), 19)
+        negatives = [
+            probe
+            for repo in manifest["repositories"]
+            for probe in repo["probes"]
+            if probe["kind"] == "command_registration" and not probe["expect_edge"]
+        ]
+        self.assertEqual(len(negatives), 4)
+        self.assertTrue(all(probe["unresolved_reason"] for probe in negatives))
+        self.assertTrue(all("parent_symbol" not in probe for probe in negatives))
+        self.assertTrue(all("callback_symbol" not in probe for probe in negatives))
 
 
 class MetricTests(unittest.TestCase):
@@ -335,8 +390,6 @@ class ProbeRelationsTests(unittest.TestCase):
             "id": "click-option-clone", "kind": "command_registration",
             "evidence": {"file": file, "start_line": 61, "end_line": 61, "sha256": "a" * 64},
             "rationale": "The decorator only declares an argument.",
-            "parent_symbol": "examples/repo/repo.py::cli",
-            "callback_symbol": "examples/repo/repo.py::clone",
             "expect_edge": False, "unresolved_reason": "@click.argument is not group registration.",
         }
         scan = {

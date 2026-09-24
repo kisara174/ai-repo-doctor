@@ -89,8 +89,10 @@ def validate_manifest_data(manifest: dict[str, object]) -> None:
     root = _mapping(manifest, "manifest")
     if type(root.get("schema_version")) is not int or root["schema_version"] != 1:
         raise EvaluationError("manifest.schema_version must be 1")
-    if root.get("dataset_id") not in ("baseline-v1", "challenge-v1"):
-        raise EvaluationError("manifest.dataset_id must be baseline-v1 or challenge-v1")
+    if root.get("dataset_id") not in ("baseline-v1", "challenge-v1", "challenge-v2"):
+        raise EvaluationError(
+            "manifest.dataset_id must be baseline-v1, challenge-v1, or challenge-v2"
+        )
     repositories = root.get("repositories")
     if not isinstance(repositories, list) or not repositories:
         raise EvaluationError("manifest.repositories must be a nonempty list")
@@ -150,14 +152,20 @@ def validate_manifest_data(manifest: dict[str, object]) -> None:
                 selector = ((repo_id, kind, file, probe["caller"], line) if kind == "call"
                             else (repo_id, kind, file, line, probe["exported_name"]))
             elif kind == "command_registration":
-                _text(probe.get("parent_symbol"), f"{probe_id}.parent_symbol")
-                _text(probe.get("callback_symbol"), f"{probe_id}.callback_symbol")
                 if type(probe.get("expect_edge")) is not bool:
                     raise EvaluationError(f"{probe_id}.expect_edge must be Boolean")
-                if not probe["expect_edge"]:
+                if probe["expect_edge"]:
+                    _text(probe.get("parent_symbol"), f"{probe_id}.parent_symbol")
+                    _text(probe.get("callback_symbol"), f"{probe_id}.callback_symbol")
+                    if probe.get("unresolved_reason") is not None:
+                        raise EvaluationError(
+                            f"{probe_id}.unresolved_reason conflicts with expect_edge"
+                        )
+                else:
+                    for field in ("parent_symbol", "callback_symbol"):
+                        if probe.get(field) is not None:
+                            _text(probe[field], f"{probe_id}.{field}")
                     _text(probe.get("unresolved_reason"), f"{probe_id}.unresolved_reason")
-                elif probe.get("unresolved_reason") is not None:
-                    raise EvaluationError(f"{probe_id}.unresolved_reason conflicts with expect_edge")
                 selector = (repo_id, kind, file, line)
             else:
                 symbol_id = _text(probe.get("symbol_id"), f"{probe_id}.symbol_id")
@@ -522,6 +530,7 @@ _BASELINE_PINS = {
 _DATASET_PINS = {
     "baseline-v1": _BASELINE_PINS,
     "challenge-v1": _BASELINE_PINS,
+    "challenge-v2": _BASELINE_PINS,
 }
 
 

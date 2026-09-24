@@ -384,6 +384,7 @@ def _explicit_registration_edges(
                 or caller is None
                 or caller.kind != "method"
                 or caller.parent != class_owner
+                or "self" in caller.reassigned_parameters
             ):
                 continue
             class_symbol = index.symbols.get(class_owner)

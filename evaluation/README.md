@@ -61,3 +61,18 @@ python3 tools/evaluate_baseline.py \
 结果只属于 `challenge-v1`，应逐条根据其源码证据解释。
 
 本轮在加入显式 `add_command` 解析后，三仓库各运行五次，每个仓库的五个规范化扫描哈希一致。此前发现的两条源码确认关系现均匹配：Click 的 `examples/completion/completion.py:56` 通过 `cli.add_command(group)` 将子组加入 `cli`；Flask 的 `src/flask/cli.py:594` 通过 `self.add_command(run_command)` 将命令加入 `FlaskGroup`。Click 的三个命令注册探针与 Flask 的一个命令注册探针全部匹配，未出现采样误报或漏报；其余挑战探针也全部匹配。`baseline-v1` 的五次评估另写入临时文件，其逐仓库关系指标与冻结报告一致；原始 baseline manifest 与报告文件保持不变。精确数据与重复运行哈希见 `results/challenge-v1.json` 和 `results/challenge-v1.md`。
+
+## 显式注册边界集 challenge-v2
+
+`challenge-v2` 保留 challenge-v1 的 15 个探针，并增加四个来自相同固定源码快照的负向注册探针：Click 内部装饰器中运行时创建的 `cmd`，Flask 插件入口动态加载命令时的多参数调用，以及 Flask 教程中无法静态解析的 `app.cli` 接收者。负向探针只记录调用位置、理由和未解析说明，不要求标注不存在的父/回调符号。challenge-v1 的清单和报告保留原样。
+
+从仓库根目录运行：
+
+```bash
+python3 tools/evaluate_baseline.py \
+  --manifest evaluation/challenge-v2.json \
+  --repos-root "$BASELINE_CHECKOUTS" \
+  --runs 5 \
+  --json-out evaluation/results/challenge-v2.json \
+  --markdown-out evaluation/results/challenge-v2.md
+```
