@@ -248,8 +248,9 @@ python -m repo_doctor diagnose --help
 **文件：** tools/diagnosis_data.py、tools/evaluate_diagnosis.py、tests/test_diagnosis_data.py、tests/test_diagnosis_evaluation_cli.py、.gitignore。
 **接口：** validate_manifest(data: dict) -> None；prepare_cases(manifest: dict, repos_root: Path, model: str, max_lines: int) -> dict。后者返回 {plan: dict, contexts: dict[str, dict]}，自己不写文件。CLI 原子发布完整准备目录。
 
-- [ ] 写 fixture：app.py 中 def broken(): return 1 / 0，再写一个不会加入上下文的 unrelated 函数；临时 Git 仓库 commit；manifest 标注只在本地 fixture 内存在。
-- [ ] 写并运行以下行为测试，确认因缺少实现失败：合法 fixture 成功；HEAD 错误、dirty/untracked、指纹错误、重复 ID、../、绝对路径、symlink 逃逸均拒绝；未知/歧义符号拒绝；超过预算拒绝。
+- [x] 写 fixture：app.py 中 def broken(): return 1 / 0，再写一个不会加入上下文的 unrelated 函数；临时 Git 仓库 commit；manifest 标注只在本地 fixture 内存在。首轮定向测试因缺少 T3 模块而失败，随后实现并通过。
+- [x] 写并运行以下行为测试，确认因缺少实现失败：合法 fixture 成功；HEAD 错误、dirty/untracked、指纹错误、重复 ID、../、绝对路径、symlink 逃逸均拒绝；未知/歧义符号拒绝；超过预算拒绝。20 项 T3 定向测试通过。代码审查后补充 malformed URL 和 bug/fixed pair 一致性校验，并加入回归测试。
+- [x] 请求隔离：fixture ground_truth 使用 GROUND_TRUTH_SENTINEL；prepared context 仅含 symbol、blocks、call_evidence；urlopen mock 未被调用。
 - [ ] 请求隔离测试示例：
 
 ~~~python
@@ -262,10 +263,10 @@ self.assertEqual(set(context), {"symbol", "blocks", "call_evidence"})
 
 manifest 的 ground_truth 写入 GROUND_TRUTH_SENTINEL；测试 case id 使用 bug-01。导入 unittest.mock.patch 拦截 urllib.request.urlopen，assert_not_called，证明 prepare 没有发请求。
 
-- [ ] 复用已有 build_index、build_context、validate_context_budget、build_diagnosis_prompts；使用其 JSON allowlist 生成 context。读取源码复用安全读取机制；不要只靠字符串前缀判断路径。
-- [ ] CLI 加 prepare，支持 --manifest、--repos-root、--model（必填非空）、--max-lines（默认 120）、--out-dir。输出目录已存在退出 2；错误不留下看似成功的 plan。
-- [ ] .gitignore 新增 /.local/diagnosis/，不要忽略整个 evaluation 目录。
-- [ ] 运行：
+- [x] 复用已有 build_index、build_context、validate_context_budget、build_diagnosis_prompts；使用其 JSON allowlist 生成 context。读取源码复用安全读取机制；不要只靠字符串前缀判断路径。
+- [x] CLI 加 prepare，支持 --manifest、--repos-root、--model（必填非空）、--max-lines（默认 120）、--out-dir。输出目录已存在退出 2；错误不留下看似成功的 plan。
+- [x] .gitignore 新增 /.local/diagnosis/，不要忽略整个 evaluation 目录。
+- [x] 运行：
 
 ~~~bash
 python3 -m unittest tests.test_diagnosis_data tests.test_diagnosis_evaluation_cli -v
@@ -274,7 +275,7 @@ python3 -m unittest discover -s tests -q
 git diff --check
 ~~~
 
-**验收：** 不需要 API Key 即可准备；所有无效输入在网络前失败；标签不进入请求；计划与上下文有稳定哈希。
+**验收：** 不需要 API Key 即可准备；所有无效输入在网络前失败；标签不进入请求；计划与上下文有稳定哈希。真实冻结清单已离线准备 10 个上下文，最大 120 行 / 5,132 字节，原始 manifest SHA-256 与冻结值一致；没有请求 API。
 **提交：** eval: prepare bounded diagnosis contexts offline。
 
 ## 6. 任务 T4：只增加可选 token 用量元数据
