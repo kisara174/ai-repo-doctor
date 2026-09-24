@@ -25,6 +25,34 @@ class GraphTests(unittest.TestCase):
             [(edge.caller, edge.callee) for edge in index.call_edges],
         )
 
+    def test_resolves_same_line_call_after_local_construction(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n    def send(self):\n        pass\n\n"
+                "def run(): client = Client(); client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertIn("app.py::Client.send", [edge.callee for edge in index.call_edges])
+
+    def test_conditional_constructor_binding_remains_unresolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n    def send(self):\n        pass\n\n"
+                "def run(flag):\n"
+                "    if flag:\n        client = Client()\n"
+                "    client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(any(edge.callee == "app.py::Client.send" for edge in index.call_edges))
+
     def test_resolves_instance_created_by_imported_module_context_manager(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -32,6 +60,7 @@ class GraphTests(unittest.TestCase):
             (root / "pkg" / "__init__.py").write_text("", encoding="utf-8")
             (root / "pkg" / "sessions.py").write_text(
                 "class Session:\n"
+                "    def __enter__(self):\n        return self\n"
                 "    def request(self):\n        return 1\n",
                 encoding="utf-8",
             )
@@ -82,6 +111,186 @@ class GraphTests(unittest.TestCase):
             index = build_index(root)
 
         self.assertFalse(any(edge.callee == "app.py::Client.send" for edge in index.call_edges))
+
+    def test_reassigned_to_same_constructor_remains_unresolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n    def send(self):\n        pass\n\n"
+                "def run():\n"
+                "    client = Client()\n"
+                "    client = Client()\n"
+                "    client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(any(edge.callee == "app.py::Client.send" for edge in index.call_edges))
+
+    def test_call_before_local_construction_remains_unresolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n    def send(self):\n        pass\n\n"
+                "def run():\n"
+                "    client.send()\n"
+                "    client = Client()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(any(edge.callee == "app.py::Client.send" for edge in index.call_edges))
+
+    def test_module_rebinding_of_class_name_remains_unresolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n    def send(self):\n        pass\n\n"
+                "Client = object\n\n"
+                "def run():\n"
+                "    client = Client()\n"
+                "    client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(any(edge.callee == "app.py::Client.send" for edge in index.call_edges))
+
+    def test_local_class_and_imported_class_name_collision_remains_unresolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "other.py").write_text(
+                "class Client:\n    def send(self):\n        return 'other'\n",
+                encoding="utf-8",
+            )
+            (root / "app.py").write_text(
+                "from other import Client\n\n"
+                "class Client:\n    def send(self):\n        return 'local'\n\n"
+                "def run():\n"
+                "    client = Client()\n"
+                "    client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(any(edge.callee.endswith(".send") for edge in index.call_edges))
+
+    def test_local_class_shadows_imported_module_alias_in_constructor(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "other.py").write_text(
+                "class Client:\n    def send(self):\n        return 'other'\n",
+                encoding="utf-8",
+            )
+            (root / "app.py").write_text(
+                "import other as clients\n\n"
+                "class clients:\n"
+                "    class Client:\n"
+                "        def send(self):\n            return 'local'\n\n"
+                "def run():\n"
+                "    client = clients.Client()\n"
+                "    client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertNotIn("other.py::Client.send", [edge.callee for edge in index.call_edges])
+
+    def test_local_function_shadows_imported_class_in_constructor(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "other.py").write_text(
+                "class Client:\n    def send(self):\n        return 'other'\n",
+                encoding="utf-8",
+            )
+            (root / "app.py").write_text(
+                "from other import Client\n\n"
+                "def Client():\n    return None\n\n"
+                "def run():\n"
+                "    client = Client()\n"
+                "    client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertNotIn("other.py::Client.send", [edge.callee for edge in index.call_edges])
+
+    def test_match_capture_rebinding_remains_unresolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n    def send(self):\n        pass\n\n"
+                "def run(value):\n"
+                "    client = Client()\n"
+                "    match value:\n"
+                "        case {'client': client}:\n"
+                "            client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(any(edge.callee == "app.py::Client.send" for edge in index.call_edges))
+
+    def test_context_manager_binding_requires_enter_to_return_self(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Inner:\n    def send(self):\n        pass\n\n"
+                "class Wrapper:\n"
+                "    def __enter__(self):\n        return Inner()\n"
+                "    def send(self):\n        pass\n\n"
+                "def run():\n"
+                "    with Wrapper() as client:\n"
+                "        client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(any(edge.callee == "app.py::Wrapper.send" for edge in index.call_edges))
+
+    def test_async_context_manager_uses_aenter_return_value(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Inner:\n    def send(self):\n        pass\n\n"
+                "class Wrapper:\n"
+                "    def __enter__(self):\n        return self\n"
+                "    async def __aenter__(self):\n        return Inner()\n"
+                "    def send(self):\n        pass\n\n"
+                "async def run():\n"
+                "    async with Wrapper() as client:\n"
+                "        client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertFalse(any(edge.callee == "app.py::Wrapper.send" for edge in index.call_edges))
+
+    def test_async_context_manager_resolves_when_aenter_returns_self(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Client:\n"
+                "    async def __aenter__(self):\n        return self\n"
+                "    def send(self):\n        pass\n\n"
+                "async def run():\n"
+                "    async with Client() as client:\n"
+                "        client.send()\n",
+                encoding="utf-8",
+            )
+
+            index = build_index(root)
+
+        self.assertIn("app.py::Client.send", [edge.callee for edge in index.call_edges])
 
     def test_shadowed_constructor_name_remains_unresolved(self):
         with tempfile.TemporaryDirectory() as directory:

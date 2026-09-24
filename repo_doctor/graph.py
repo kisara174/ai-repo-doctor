@@ -3,7 +3,7 @@
 from collections import defaultdict
 from pathlib import PurePosixPath
 
-from .model import CallEdge, CallSite, ImportEdge, ImportRef, RepoIndex, Symbol
+from .model import CallEdge, CallSite, ImportEdge, ImportRef, LocalConstructor, RepoIndex, Symbol
 
 
 def _module_names(path: str) -> set[str]:
@@ -85,19 +85,22 @@ def _unique_alias(
 
 
 def _resolve_class_expression(
-    expression: str,
+    constructor: LocalConstructor,
     file: str,
     caller: Symbol,
     index: RepoIndex,
     aliases: dict[tuple[str, str | None, str], set[tuple[str, str]]],
 ) -> str | None:
-    parts = expression.split(".")
-    if parts[0] in caller.local_bindings:
+    parts = constructor.expression.split(".")
+    if parts[0] in caller.local_bindings or parts[0] in index.module_bindings.get(file, set()):
         return None
     if len(parts) == 1:
         alias_key = (file, None, parts[0])
         alias = _unique_alias(aliases, file, None, parts[0])
         if alias_key in aliases:
+            local_symbol = index.symbols.get(f"{file}::{parts[0]}")
+            if local_symbol is not None:
+                return None
             if alias is None or alias[0] != "symbol":
                 return None
             symbol_id = alias[1]
@@ -108,11 +111,21 @@ def _resolve_class_expression(
         alias = _unique_alias(aliases, file, None, parts[0])
         if alias_key not in aliases or alias is None or alias[0] != "module":
             return None
+        if f"{file}::{parts[0]}" in index.symbols:
+            return None
+        if parts[1] in index.module_bindings.get(alias[1], set()):
+            return None
         symbol_id = f"{alias[1]}::{parts[1]}"
     else:
         return None
     symbol = index.symbols.get(symbol_id)
-    return symbol_id if symbol is not None and symbol.kind == "class" else None
+    if symbol is None or symbol.kind != "class":
+        return None
+    if constructor.context_method:
+        enter = index.symbols.get(f"{symbol_id}.{constructor.context_method}")
+        if enter is None or not enter.returns_self:
+            return None
+    return symbol_id
 
 
 def _resolve_call(
@@ -149,7 +162,13 @@ def _resolve_call(
         return target if target in index.symbols else None
     if receiver in caller.local_bindings:
         constructor = dict(caller.local_constructors).get(receiver)
-        class_id = _resolve_class_expression(constructor, caller.file, caller, index, aliases) if constructor else None
+        if constructor is not None and (constructor.line, constructor.column) >= (call.line, call.column):
+            return None
+        class_id = (
+            _resolve_class_expression(constructor, caller.file, caller, index, aliases)
+            if constructor is not None
+            else None
+        )
         target = f"{class_id}.{call.name}" if class_id else None
         symbol = index.symbols.get(target) if target else None
         return target if symbol is not None and symbol.kind == "method" else None

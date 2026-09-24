@@ -13,6 +13,14 @@ class FileRecord:
 
 
 @dataclass(frozen=True, slots=True)
+class LocalConstructor:
+    expression: str
+    line: int
+    column: int
+    context_method: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class Symbol:
     id: str
     file: str
@@ -23,7 +31,8 @@ class Symbol:
     end_line: int
     parent: str | None
     local_bindings: frozenset[str] = frozenset()
-    local_constructors: tuple[tuple[str, str], ...] = ()
+    local_constructors: tuple[tuple[str, LocalConstructor], ...] = ()
+    returns_self: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +55,7 @@ class CallSite:
     name: str
     receiver: str | None
     line: int
+    column: int
 
 
 @dataclass(frozen=True, slots=True)

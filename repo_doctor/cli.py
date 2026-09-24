@@ -48,7 +48,17 @@ def _scan_data(index: RepoIndex) -> dict:
         "symbols": [_symbol_data(item) for item in symbols],
         "ambiguous_symbols": sorted(index.ambiguous_symbols),
         "imports": [asdict(item) for item in index.imports],
-        "calls": [asdict(item) for item in index.calls],
+        "calls": [
+            {
+                "file": item.file,
+                "caller": item.caller,
+                "expression": item.expression,
+                "name": item.name,
+                "receiver": item.receiver,
+                "line": item.line,
+            }
+            for item in index.calls
+        ],
         "import_edges": [asdict(item) for item in index.import_edges],
         "call_edges": [asdict(item) for item in index.call_edges],
         "import_cycles": index.import_cycles,
