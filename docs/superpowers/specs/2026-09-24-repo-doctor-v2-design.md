@@ -52,7 +52,7 @@ Python AST 为函数定义暴露 `decorator_list`；Python typing 文档规定 o
 - 每个函数/方法在 `symbols[].decorators` 记录装饰器表达式、起始行号及可选的识别类型；未知装饰器只作为源码元数据，不自动视为调用边或行为结论。
 - 静态识别来自未遮蔽 `click` 导入的 `click.group`、`click.command` 及其明确导入/模块别名，例如 `import click as c`、`from click import group as cli_group`。若本地项目模块遮蔽 `click`，不启用该适配器。`@click.group()` 标记其回调符号为可识别的组；`@click.command()` 标记命令回调。
 - 仅当注册接收者能唯一解析为同一模块中的已识别组回调，并且绑定没有冲突或重赋值时，才识别 `@group.command(...)` 和 `@group.group(...)`。对每个回调建立方向为“父组 → 回调”的 `command_registration` 语义边，记录装饰器所在文件和行号。
-- 挑战集追加的显式注册形式使用 Click 的 `Group.add_command(cmd, name=None)` API。只识别恰好一个位置参数且该参数是同模块顶层、由已识别 `@click.command()` 或 `@click.group()` 修饰的简单名称；接收者必须是已识别的组回调名称，或是类方法中的 `self`，且该类沿同模块静态基类链最终继承自未遮蔽的 `click.Group`（支持模块别名及 `from click import Group` 别名）。语义边记录 `add_command` 调用行。参数重绑定、局部遮蔽、动态接收者、关键字/展开参数和无法确认的跨模块基类继续不推断。
+- 挑战集追加的显式注册形式使用 Click 的 `Group.add_command(cmd, name=None)` API。只识别恰好一个位置参数且该参数是同模块顶层、由已识别 `@click.command()` / `@click.group()` 修饰，或已通过上述可信装饰器注册边确认为子命令/子组的简单名称；接收者必须是已识别的组回调名称，或是类方法中的 `self`，且该类沿同模块静态基类链最终继承自未遮蔽的 `click.Group`（支持模块别名及 `from click import Group` 别名）。语义边记录 `add_command` 调用行。参数重绑定、局部遮蔽、动态接收者、关键字/展开参数和无法确认的跨模块基类继续不推断。
 - 不执行装饰器。任意第三方装饰器、动态创建或重绑定的组对象、反射注册、插件加载、工厂返回的组对象及静态信息不足的关系不建立注册边。
 
 ### 关系输出、上下文与影响

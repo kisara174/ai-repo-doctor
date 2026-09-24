@@ -449,8 +449,10 @@ def resolve_semantic_edges(index: RepoIndex) -> None:
     group_aliases = _click_group_import_aliases(index)
     _mark_click_decorators(index, aliases)
     groups = _group_callbacks(index, aliases)
-    index.semantic_edges.extend(_registration_edges(index, groups))
+    decorator_registration_edges = _registration_edges(index, groups)
+    index.semantic_edges.extend(decorator_registration_edges)
     callbacks = _command_callbacks(index, aliases)
+    callbacks.update(edge.target_symbol for edge in decorator_registration_edges)
     index.semantic_edges.extend(
         _explicit_registration_edges(index, groups, callbacks, aliases, group_aliases)
     )

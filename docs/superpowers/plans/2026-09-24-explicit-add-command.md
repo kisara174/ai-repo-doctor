@@ -48,7 +48,7 @@
 - [ ] Identify command callbacks as top-level functions with a confirmed `click.command` or `click.group` decorator; retain the existing group callback set for parent checks.
 - [ ] Resolve a name receiver only when it uniquely identifies a known group callback and is not locally shadowed or module-rebound.
 - [ ] Resolve `self` only inside a direct class method when the enclosing class’s same-module base chain reaches `click.Group` or a statically imported alias of `Group`. Stop on cycles, ambiguous symbols, shadowed aliases, or unknown bases.
-- [ ] Resolve the sole callback argument only when it names a same-module top-level function with a confirmed Click command/group decorator and no binding conflict.
+- [ ] Resolve the sole callback argument only when it names a same-module top-level function with a confirmed Click command/group decorator or an already resolved decorator-registration edge, and no binding conflict.
 - [ ] Emit the call line as `evidence_file` / `line`; preserve existing decorator registration behavior and deterministic edge sorting.
 
 ### Task 3: Verify challenge acceptance and baseline preservation
