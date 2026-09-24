@@ -7,6 +7,7 @@ from .graph import resolve_graph
 from .model import RepoIndex
 from .parser import parse_python_file
 from .scanner import discover_python_files
+from .semantics import resolve_semantic_edges
 
 
 def build_index(root: Path) -> RepoIndex:
@@ -50,4 +51,5 @@ def build_index(root: Path) -> RepoIndex:
             del index.symbols[symbol_id]
             index.ambiguous_symbols.add(symbol_id)
     resolve_graph(index)
+    resolve_semantic_edges(index)
     return index
