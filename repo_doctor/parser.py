@@ -4,7 +4,17 @@ import ast
 from collections import defaultdict
 from pathlib import Path
 
-from .model import CallSite, FileRecord, ImportRef, LocalConstructor, ParsedFile, ParseError, Symbol
+from .model import (
+    CallSite,
+    DecoratorRef,
+    FileRecord,
+    ImportRef,
+    LocalConstructor,
+    OverloadSignature,
+    ParsedFile,
+    ParseError,
+    Symbol,
+)
 from .source import read_source
 
 
@@ -179,9 +189,144 @@ def _returns_self(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     )
 
 
+class _ModuleBindings(ast.NodeVisitor):
+    """Record names bound at module scope without entering class/function scopes."""
+
+    def __init__(self) -> None:
+        self.bindings: dict[str, list[tuple[int, int | None]]] = defaultdict(list)
+
+    def _add(self, name: str, node: ast.AST, alias: ast.alias | None = None) -> None:
+        self.bindings[name].append((id(node), id(alias) if alias is not None else None))
+
+    def visit_Name(self, node: ast.Name) -> None:
+        if isinstance(node.ctx, (ast.Store, ast.Del)):
+            self._add(node.id, node)
+
+    def visit_Import(self, node: ast.Import) -> None:
+        for alias in node.names:
+            self._add(alias.asname or alias.name.split(".", 1)[0], node, alias)
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        for alias in node.names:
+            if alias.name != "*":
+                self._add(alias.asname or alias.name, node, alias)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self._add(node.name, node)
+
+    visit_AsyncFunctionDef = visit_FunctionDef
+    visit_ClassDef = visit_FunctionDef
+
+    def visit_Lambda(self, node: ast.Lambda) -> None:
+        return
+
+    def _visit_comprehension_expressions(self, node: ast.AST) -> None:
+        generators = node.generators
+        for generator in generators:
+            self.visit(generator.iter)
+            for condition in generator.ifs:
+                self.visit(condition)
+        for field_name in ("elt", "key", "value"):
+            value = getattr(node, field_name, None)
+            if value is not None:
+                self.visit(value)
+
+    visit_ListComp = _visit_comprehension_expressions
+    visit_SetComp = _visit_comprehension_expressions
+    visit_DictComp = _visit_comprehension_expressions
+    visit_GeneratorExp = _visit_comprehension_expressions
+
+    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
+        if node.name:
+            self._add(node.name, node)
+        if node.type is not None:
+            self.visit(node.type)
+        for statement in node.body:
+            self.visit(statement)
+
+    def visit_MatchAs(self, node: ast.MatchAs) -> None:
+        if node.name:
+            self._add(node.name, node)
+        if node.pattern is not None:
+            self.visit(node.pattern)
+
+    def visit_MatchStar(self, node: ast.MatchStar) -> None:
+        if node.name:
+            self._add(node.name, node)
+
+    def visit_MatchMapping(self, node: ast.MatchMapping) -> None:
+        if node.rest:
+            self._add(node.rest, node)
+        self.generic_visit(node)
+
+
+def _overload_aliases(
+    tree: ast.Module, module_import_ids: set[int]
+) -> tuple[dict[str, str], dict[str, str]]:
+    bindings = _ModuleBindings()
+    bindings.visit(tree)
+    module_alias_candidates: dict[str, list[tuple[int, int, str]]] = defaultdict(list)
+    function_alias_candidates: dict[str, list[tuple[int, int, str]]] = defaultdict(list)
+
+    for node in tree.body:
+        if id(node) not in module_import_ids:
+            continue
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name in {"typing", "typing_extensions"}:
+                    bound_name = alias.asname or alias.name
+                    module_alias_candidates[bound_name].append(
+                        (id(node), id(alias), alias.name)
+                    )
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module in {
+            "typing",
+            "typing_extensions",
+        }:
+            for alias in node.names:
+                if alias.name == "overload":
+                    bound_name = alias.asname or alias.name
+                    function_alias_candidates[bound_name].append(
+                        (id(node), id(alias), node.module)
+                    )
+
+    def unshadowed(candidates: dict[str, list[tuple[int, int, str]]]) -> dict[str, str]:
+        resolved: dict[str, str] = {}
+        for name, entries in candidates.items():
+            if len(entries) != 1:
+                continue
+            node_id, alias_id, canonical_module = entries[0]
+            if bindings.bindings.get(name) == [(node_id, alias_id)]:
+                resolved[name] = canonical_module
+        return resolved
+
+    return unshadowed(module_alias_candidates), unshadowed(function_alias_candidates)
+
+
+def _overload_signature(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> OverloadSignature:
+    arguments = ast.unparse(node.args)
+    prefix = "async def" if isinstance(node, ast.AsyncFunctionDef) else "def"
+    signature = f"{prefix} {node.name}({arguments})"
+    if node.returns is not None:
+        signature += f" -> {ast.unparse(node.returns)}"
+    decorator_lines = [decorator.lineno for decorator in node.decorator_list]
+    start_line = min([node.lineno, *decorator_lines])
+    return OverloadSignature(start_line, node.end_lineno or node.lineno, signature)
+
+
 class _Extractor(ast.NodeVisitor):
-    def __init__(self, file: str):
+    def __init__(
+        self,
+        file: str,
+        module_import_ids: set[int],
+        overload_module_aliases: dict[str, str],
+        overload_function_aliases: dict[str, str],
+    ):
         self.file = file
+        self.module_import_ids = module_import_ids
+        self.overload_module_aliases = overload_module_aliases
+        self.overload_function_aliases = overload_function_aliases
         self.symbols: list[Symbol] = []
         self.imports: list[ImportRef] = []
         self.calls: list[CallSite] = []
@@ -193,8 +338,20 @@ class _Extractor(ast.NodeVisitor):
     def _add_symbol(self, node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef, kind: str) -> None:
         qualname = ".".join([*self._names, node.name])
         symbol_id = f"{self.file}::{qualname}"
-        decorators = [item.lineno for item in node.decorator_list]
-        start_line = min([node.lineno, *decorators])
+        decorator_refs = tuple(
+            DecoratorRef(
+                expression=ast.unparse(item),
+                line=item.lineno,
+                recognized=self._recognized_overload_decorator(item),
+            )
+            for item in node.decorator_list
+        )
+        start_line = min([node.lineno, *(item.line for item in decorator_refs)])
+        is_overload = (
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and any(item.recognized == "typing.overload" for item in decorator_refs)
+        )
+        overload_signature = _overload_signature(node) if is_overload else None
         local_bindings = _bindings(node) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) else frozenset()
         local_constructors = _local_constructors(node) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) else ()
         returns_self = (
@@ -217,6 +374,9 @@ class _Extractor(ast.NodeVisitor):
                 local_constructors=local_constructors,
                 returns_self=returns_self,
                 is_async=isinstance(node, ast.AsyncFunctionDef),
+                decorators=decorator_refs,
+                is_overload=is_overload,
+                overload_signature=overload_signature,
             )
         )
         self._names.append(node.name)
@@ -227,6 +387,18 @@ class _Extractor(ast.NodeVisitor):
         self._names.pop()
         self._ids.pop()
         self._kinds.pop()
+
+    def _recognized_overload_decorator(self, node: ast.expr) -> str | None:
+        if isinstance(node, ast.Name) and node.id in self.overload_function_aliases:
+            return "typing.overload"
+        if (
+            isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
+            and node.attr == "overload"
+            and node.value.id in self.overload_module_aliases
+        ):
+            return "typing.overload"
+        return None
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         self._add_symbol(node, "class")
@@ -242,13 +414,33 @@ class _Extractor(ast.NodeVisitor):
     def visit_Import(self, node: ast.Import) -> None:
         for item in node.names:
             self.imports.append(
-                ImportRef(self.file, item.name, 0, None, item.asname or item.name.split(".", 1)[0], node.lineno, self._ids[-1] if self._ids else None, item.asname is not None)
+                ImportRef(
+                    self.file,
+                    item.name,
+                    0,
+                    None,
+                    item.asname or item.name.split(".", 1)[0],
+                    node.lineno,
+                    self._ids[-1] if self._ids else None,
+                    item.asname is not None,
+                    id(node) in self.module_import_ids,
+                )
             )
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         for item in node.names:
             self.imports.append(
-                ImportRef(self.file, node.module or "", node.level, item.name, item.asname or item.name, node.lineno, self._ids[-1] if self._ids else None, item.asname is not None)
+                ImportRef(
+                    self.file,
+                    node.module or "",
+                    node.level,
+                    item.name,
+                    item.asname or item.name,
+                    node.lineno,
+                    self._ids[-1] if self._ids else None,
+                    item.asname is not None,
+                    id(node) in self.module_import_ids,
+                )
             )
 
     def visit_Call(self, node: ast.Call) -> None:
@@ -295,6 +487,15 @@ def parse_python_file(
         if "file" not in locals():
             file = FileRecord(relative_path, 0, 0, False)
         return ParsedFile(file, [], [], [], error=ParseError(relative_path, getattr(exc, "lineno", None) or 1, str(exc)))
-    extractor = _Extractor(relative_path)
+    module_import_ids = {
+        id(node) for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))
+    }
+    overload_module_aliases, overload_function_aliases = _overload_aliases(tree, module_import_ids)
+    extractor = _Extractor(
+        relative_path,
+        module_import_ids,
+        overload_module_aliases,
+        overload_function_aliases,
+    )
     extractor.visit(tree)
     return ParsedFile(file, extractor.symbols, extractor.imports, extractor.calls, extractor.module_bindings)
