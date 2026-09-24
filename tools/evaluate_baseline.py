@@ -1,0 +1,174 @@
+"""Measure Repo Doctor against pinned, manually annotated repository probes."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import re
+from pathlib import Path, PurePosixPath
+from urllib.parse import urlsplit
+
+
+class EvaluationError(ValueError):
+    """An evaluation input cannot be used as trustworthy evidence."""
+
+
+def _mapping(value: object, label: str) -> dict[str, object]:
+    if not isinstance(value, dict):
+        raise EvaluationError(f"{label} must be an object")
+    return value
+
+
+def _text(value: object, label: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise EvaluationError(f"{label} must be nonempty text")
+    return value
+
+
+def _safe_relative_file(value: object, label: str) -> str:
+    name = _text(value, label)
+    parts = name.split("/")
+    if (PurePosixPath(name).is_absolute() or any(part in {"", ".", ".."} for part in parts)
+            or PurePosixPath(name).as_posix() != name):
+        raise EvaluationError(f"{label} must be a safe repository-relative POSIX path")
+    return name
+
+
+def _evidence_fields(value: object, label: str) -> tuple[str, int, int, str]:
+    evidence = _mapping(value, label)
+    file = _safe_relative_file(evidence.get("file"), f"{label}.file")
+    start = evidence.get("start_line")
+    end = evidence.get("end_line")
+    if type(start) is not int or type(end) is not int or start < 1 or end < start:
+        raise EvaluationError(f"{label} needs a valid 1-based line range")
+    digest = evidence.get("sha256")
+    if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+        raise EvaluationError(f"{label}.sha256 must be 64 lowercase hex characters")
+    return file, start, end, digest
+
+
+def source_fingerprint(path: Path, start_line: int, end_line: int) -> str:
+    """Hash inclusive source lines after normalizing line endings to LF."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError) as exc:
+        raise EvaluationError(f"cannot read evidence file {path}: {exc}") from exc
+    if (type(start_line) is not int or type(end_line) is not int
+            or start_line < 1 or end_line < start_line or end_line > len(lines)):
+        raise EvaluationError(f"invalid evidence line range {path}:{start_line}-{end_line}")
+    selected = "\n".join(lines[start_line - 1:end_line])
+    return hashlib.sha256(selected.encode("utf-8")).hexdigest()
+
+
+def validate_evidence(repo_root: Path, probe: dict[str, object]) -> None:
+    """Check a probe's source range against one pinned checkout."""
+    probe_id = _text(probe.get("id"), "probe.id")
+    file, start, end, digest = _evidence_fields(probe.get("evidence"), f"{probe_id}.evidence")
+    root = repo_root.resolve()
+    try:
+        source = (root / file).resolve(strict=True)
+        source.relative_to(root)
+    except (OSError, ValueError) as exc:
+        raise EvaluationError(f"{probe_id}: evidence file escapes or is absent: {file}") from exc
+    if not source.is_file() or source_fingerprint(source, start, end) != digest:
+        raise EvaluationError(f"{probe_id}: evidence fingerprint mismatch: {file}:{start}-{end}")
+
+
+def validate_manifest_data(manifest: dict[str, object]) -> None:
+    """Validate annotation shape and distinct probe selectors."""
+    root = _mapping(manifest, "manifest")
+    if type(root.get("schema_version")) is not int or root["schema_version"] != 1:
+        raise EvaluationError("manifest.schema_version must be 1")
+    if root.get("dataset_id") != "baseline-v1":
+        raise EvaluationError("manifest.dataset_id must be baseline-v1")
+    repositories = root.get("repositories")
+    if not isinstance(repositories, list) or not repositories:
+        raise EvaluationError("manifest.repositories must be a nonempty list")
+
+    repo_ids: set[str] = set()
+    probe_ids: set[str] = set()
+    selectors: set[tuple[object, ...]] = set()
+    for repo_value in repositories:
+        repo = _mapping(repo_value, "repository")
+        repo_id = _text(repo.get("id"), "repository.id")
+        if repo_id in repo_ids:
+            raise EvaluationError(f"duplicate repository ID: {repo_id}")
+        repo_ids.add(repo_id)
+        url = _text(repo.get("https_url"), f"{repo_id}.https_url")
+        parsed_url = urlsplit(url)
+        if parsed_url.scheme != "https" or not parsed_url.netloc or parsed_url.username:
+            raise EvaluationError(f"{repo_id}.https_url must be an HTTPS repository URL")
+        commit = repo.get("commit")
+        if not isinstance(commit, str) or re.fullmatch(r"[0-9a-f]{40}", commit) is None:
+            raise EvaluationError(f"{repo_id}.commit must be a 40-character lowercase Git SHA")
+        probes = repo.get("probes")
+        if not isinstance(probes, list) or not probes:
+            raise EvaluationError(f"{repo_id}.probes must be a nonempty list")
+
+        for probe_value in probes:
+            probe = _mapping(probe_value, f"{repo_id}.probe")
+            probe_id = _text(probe.get("id"), f"{repo_id}.probe.id")
+            if probe_id in probe_ids:
+                raise EvaluationError(f"duplicate probe ID: {probe_id}")
+            probe_ids.add(probe_id)
+            kind = probe.get("kind")
+            if not isinstance(kind, str) or kind not in {
+                "call", "reexport", "command_registration", "overload"
+            }:
+                raise EvaluationError(f"{probe_id}.kind is unsupported")
+            file, line, _, _ = _evidence_fields(probe.get("evidence"), f"{probe_id}.evidence")
+            _text(probe.get("rationale"), f"{probe_id}.rationale")
+
+            if kind in {"call", "reexport"}:
+                target = probe.get("expected_target")
+                reason = probe.get("unresolved_reason")
+                if target is not None:
+                    _text(target, f"{probe_id}.expected_target")
+                if reason is not None:
+                    _text(reason, f"{probe_id}.unresolved_reason")
+                has_target = target is not None
+                has_reason = reason is not None
+                if has_target == has_reason:
+                    raise EvaluationError(
+                        f"{probe_id} needs exactly one of expected_target and unresolved_reason"
+                    )
+                selector_name = ("caller", "expression") if kind == "call" else ("exported_name",)
+                for field in selector_name:
+                    _text(probe.get(field), f"{probe_id}.{field}")
+                selector = ((repo_id, kind, file, probe["caller"], line) if kind == "call"
+                            else (repo_id, kind, file, line, probe["exported_name"]))
+            elif kind == "command_registration":
+                _text(probe.get("parent_symbol"), f"{probe_id}.parent_symbol")
+                _text(probe.get("callback_symbol"), f"{probe_id}.callback_symbol")
+                if type(probe.get("expect_edge")) is not bool:
+                    raise EvaluationError(f"{probe_id}.expect_edge must be Boolean")
+                if not probe["expect_edge"]:
+                    _text(probe.get("unresolved_reason"), f"{probe_id}.unresolved_reason")
+                elif probe.get("unresolved_reason") is not None:
+                    raise EvaluationError(f"{probe_id}.unresolved_reason conflicts with expect_edge")
+                selector = (repo_id, kind, file, line)
+            else:
+                symbol_id = _text(probe.get("symbol_id"), f"{probe_id}.symbol_id")
+                state = probe.get("expected_state")
+                signatures = probe.get("expected_signatures")
+                if not isinstance(state, str) or state not in {"resolved", "ambiguous"}:
+                    raise EvaluationError(f"{probe_id}.expected_state is invalid")
+                if (not isinstance(signatures, list)
+                        or any(not isinstance(s, str) or not s.strip() for s in signatures)
+                        or (state == "resolved" and not signatures)
+                        or (state == "ambiguous" and signatures)):
+                    raise EvaluationError(f"{probe_id}.expected_signatures is invalid")
+                selector = (repo_id, kind, symbol_id)
+            if selector in selectors:
+                raise EvaluationError(f"{probe_id}: duplicate relation selector")
+            selectors.add(selector)
+
+
+def load_manifest(path: Path) -> dict[str, object]:
+    """Read and validate the hand-reviewed probe manifest."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise EvaluationError(f"cannot load manifest {path}: {exc}") from exc
+    validate_manifest_data(data)
+    return data
