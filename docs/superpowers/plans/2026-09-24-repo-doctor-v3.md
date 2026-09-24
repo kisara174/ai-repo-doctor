@@ -294,7 +294,7 @@ git commit -m "feat: add DeepSeek diagnose command"
 - README accurately distinguishes local static analysis/context/evidence checks from remote DeepSeek inference.
 - README includes a working shell example using `DEEPSEEK_API_KEY`, optional `DEEPSEEK_MODEL`, and the `diagnose` command.
 
-- [ ] **Step 1: Update the quick start and diagnosis documentation**
+- [x] **Step 1: Update the quick start and diagnosis documentation**
 
 Update the README introduction to say DeepSeek diagnosis is optional and requires an API Key, while static commands work offline. Keep the manual context/ChatGPT workflow. Add a DeepSeek section with these commands:
 
@@ -306,7 +306,7 @@ python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::User
 
 Explain that `diagnose` sends only the selected bounded source context and its repository-relative evidence metadata to DeepSeek; it does not send the entire repository. Warn that selected code can contain secrets and should be inspected with `context`. State that accepted findings have grounded quotes but still need human review and runtime/test confirmation. Replace the old claim that automatic API diagnosis is outside V1 with the remaining exclusions: patches, test execution, and broader multi-symbol review.
 
-- [ ] **Step 2: Run the full acceptance checks**
+- [x] **Step 2: Run the full acceptance checks**
 
 Run: `python3 -m unittest discover -s tests -v`
 
@@ -324,11 +324,11 @@ Run: `git diff --check`
 
 Expected: no whitespace errors. Also run `git diff --cached --check` on any staged changes before committing.
 
-- [ ] **Step 3: Review the final diff against every V3 acceptance criterion**
+- [x] **Step 3: Review the final diff against every V3 acceptance criterion**
 
 Confirm the only network request path is the explicit `diagnose` command; no secret is printed or persisted; request tests do not reach the network; other commands stay offline; model output is an object with a list-valued `findings`; all accepted evidence is inside submitted blocks; text/JSON output and exit codes match the spec; and README states the cloud data boundary accurately. Do not make a live API call unless the user explicitly configured a key and separately asks for that smoke test.
 
-- [ ] **Step 4: Commit the documentation and acceptance unit**
+- [x] **Step 4: Commit the documentation and acceptance unit**
 
 ```bash
 git add README.md
@@ -337,11 +337,11 @@ git commit -m "docs: explain DeepSeek diagnosis data flow"
 
 ## Final Acceptance Checklist
 
-- [ ] Existing offline commands work without credentials and make no HTTP calls.
-- [ ] Missing credentials, invalid symbol, invalid line limit, and source over 64 KiB fail before the transport is called.
-- [ ] DeepSeek transport targets only the official HTTPS endpoint, uses JSON mode, performs one non-streaming request, and does not retry.
-- [ ] Model response must be a JSON object with a `findings` list; malformed and truncated responses fail safely.
-- [ ] Every accepted finding passes repository grounding and submitted-context scope checks.
-- [ ] Text output, JSON output, stderr preflight summary, and exit codes match the V3 specification.
-- [ ] README states what is sent to the cloud and warns that context may contain secrets.
-- [ ] Full unit suite and compile/help checks pass without a live API call.
+- [x] Existing offline commands work without credentials and make no HTTP calls.
+- [x] Missing credentials, invalid symbol, invalid line limit, and source over 64 KiB fail before the transport is called.
+- [x] DeepSeek transport targets only the official HTTPS endpoint, uses JSON mode, performs one non-streaming request, and does not retry.
+- [x] Model response must be a JSON object with a `findings` list; malformed and truncated responses fail safely.
+- [x] Every accepted finding passes repository grounding and submitted-context scope checks.
+- [x] Text output, JSON output, stderr preflight summary, and exit codes match the V3 specification.
+- [x] README states what is sent to the cloud and warns that context may contain secrets.
+- [x] Full unit suite and compile/help checks pass without a live API call.
