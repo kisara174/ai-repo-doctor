@@ -44,4 +44,4 @@
 - [x] Run challenge-v1 and challenge-v2 five-run evaluations; write baseline-v1 comparison output only under `/tmp`.
 - [x] Confirm frozen baseline hashes and challenge-v1 report hashes remain unchanged.
 - [x] Review the complete diff and update this plan.
-- [ ] Push the updated PR branch.
+- [x] Push the updated PR branch.
