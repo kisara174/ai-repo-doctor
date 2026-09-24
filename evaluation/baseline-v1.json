@@ -1,0 +1,817 @@
+{
+  "schema_version": 1,
+  "dataset_id": "baseline-v1",
+  "repositories": [
+    {
+      "id": "click",
+      "https_url": "https://github.com/pallets/click.git",
+      "commit": "06b2a678741131fd577ce170e23e5ca0aeba0309",
+      "probes": [
+        {
+          "id": "click-call-001",
+          "kind": "call",
+          "evidence": {
+            "file": "examples/aliases/aliases.py",
+            "start_line": 104,
+            "end_line": 104,
+            "sha256": "45d57eaac808bf09675241d1ebec2cfeff3066bfe75ff3cff95a407725baf2ba"
+          },
+          "rationale": "The imported click package exposes echo from its local utils module.",
+          "caller": "examples/aliases/aliases.py::push",
+          "expression": "click.echo",
+          "expected_target": "src/click/utils.py::echo"
+        },
+        {
+          "id": "click-call-002",
+          "kind": "call",
+          "evidence": {
+            "file": "examples/complex/complex/cli.py",
+            "start_line": 24,
+            "end_line": 24,
+            "sha256": "bb115cd21466c414232de2ffdf48eebf4dd80318459e41cedbac9ffd9823a686"
+          },
+          "rationale": "Environment.vlog invokes its own log method.",
+          "caller": "examples/complex/complex/cli.py::Environment.vlog",
+          "expression": "self.log",
+          "expected_target": "examples/complex/complex/cli.py::Environment.log"
+        },
+        {
+          "id": "click-call-003",
+          "kind": "call",
+          "evidence": {
+            "file": "src/click/_compat.py",
+            "start_line": 30,
+            "end_line": 30,
+            "sha256": "43a77122908b06af1153cc26ca2bc25b215f6627af6419e73377f778b435f853"
+          },
+          "rationale": "The helper is defined in the same compatibility module.",
+          "caller": "src/click/_compat.py::_make_text_stream",
+          "expression": "get_best_encoding",
+          "expected_target": "src/click/_compat.py::get_best_encoding"
+        },
+        {
+          "id": "click-call-004",
+          "kind": "call",
+          "evidence": {
+            "file": "src/click/_compat.py",
+            "start_line": 33,
+            "end_line": 33,
+            "sha256": "4dfff48b1ad2b0e6b28c7bdd9d86170ab9a457da75fd1a29e96f508d869382ce"
+          },
+          "rationale": "The local wrapper class is constructed by this helper.",
+          "caller": "src/click/_compat.py::_make_text_stream",
+          "expression": "_NonClosingTextIOWrapper",
+          "expected_target": "src/click/_compat.py::_NonClosingTextIOWrapper"
+        },
+        {
+          "id": "click-call-005",
+          "kind": "call",
+          "evidence": {
+            "file": "src/click/_compat.py",
+            "start_line": 54,
+            "end_line": 54,
+            "sha256": "182b9b7c667c724678a0f2e03d78a0f2571da0e7b270e1e0d6d3f6f0afd7e345"
+          },
+          "rationale": "The encoding helper calls the sibling function in this file.",
+          "caller": "src/click/_compat.py::get_best_encoding",
+          "expression": "is_ascii_encoding",
+          "expected_target": "src/click/_compat.py::is_ascii_encoding"
+        },
+        {
+          "id": "click-call-006",
+          "kind": "call",
+          "evidence": {
+            "file": "src/click/_termui_impl.py",
+            "start_line": 112,
+            "end_line": 112,
+            "sha256": "aefd2e775013f6eb8f50a261cd98d32b82ef56acd08b8e133bbb8ac70daaee59"
+          },
+          "rationale": "The module imports isatty directly from click._compat.",
+          "caller": "src/click/_termui_impl.py::ProgressBar.__init__",
+          "expression": "isatty",
+          "expected_target": "src/click/_compat.py::isatty"
+        },
+        {
+          "id": "click-call-007",
+          "kind": "call",
+          "evidence": {
+            "file": "src/click/__init__.py",
+            "start_line": 82,
+            "end_line": 82,
+            "sha256": "52247074309ecf4feed3ad701a293f614c64105b36c8a7f970a8e8716e3bfd27"
+          },
+          "rationale": "This warning call has no local repository callee.",
+          "caller": "src/click/__init__.py::__getattr__",
+          "expression": "warnings.warn",
+          "unresolved_reason": "warnings is a standard-library module outside the scanned repository."
+        },
+        {
+          "id": "click-call-008",
+          "kind": "call",
+          "evidence": {
+            "file": "src/click/_compat.py",
+            "start_line": 46,
+            "end_line": 46,
+            "sha256": "31f2f70416ea3d0dfe78323749069388d8110acf512293adc1d1f674f292ac05"
+          },
+          "rationale": "The lookup call targets Python codecs, not a Click symbol.",
+          "caller": "src/click/_compat.py::is_ascii_encoding",
+          "expression": "codecs.lookup",
+          "unresolved_reason": "codecs is a standard-library module outside the scanned repository."
+        },
+        {
+          "id": "click-reexport-001",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/click/__init__.py",
+            "start_line": 10,
+            "end_line": 10,
+            "sha256": "13afb884096cd306ad924fe56edfaeaacead30184e960c8bb4ee2fc90573dd7a"
+          },
+          "rationale": "The package binds Argument from click.core.",
+          "exported_name": "Argument",
+          "expected_target": "src/click/core.py::Argument"
+        },
+        {
+          "id": "click-reexport-002",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/click/__init__.py",
+            "start_line": 11,
+            "end_line": 11,
+            "sha256": "cb567a56c3cc9c517dee87af24b52e1ea318700484d9b40e86cdc55324e4fe48"
+          },
+          "rationale": "The package binds Command from click.core.",
+          "exported_name": "Command",
+          "expected_target": "src/click/core.py::Command"
+        },
+        {
+          "id": "click-reexport-003",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/click/__init__.py",
+            "start_line": 18,
+            "end_line": 18,
+            "sha256": "59f589a4f66947544d9be8d391253934f7aeb031aa839576d427b7452bb26680"
+          },
+          "rationale": "The package binds argument from click.decorators.",
+          "exported_name": "argument",
+          "expected_target": "src/click/decorators.py::argument"
+        },
+        {
+          "id": "click-reexport-004",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/click/__init__.py",
+            "start_line": 19,
+            "end_line": 19,
+            "sha256": "f26a92b5b675b3b5948f007acc06d8e791da1877151e8172f5760688c4cd0a6f"
+          },
+          "rationale": "The package binds command from click.decorators.",
+          "exported_name": "command",
+          "expected_target": "src/click/decorators.py::command"
+        },
+        {
+          "id": "click-registration-001",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/repo/repo.py",
+            "start_line": 60,
+            "end_line": 60,
+            "sha256": "cdfc09f2f9289729224361508800f38ef2a9d3ea255d1998864647e77516fbe5"
+          },
+          "rationale": "The decorator at line 60 registers the clone callback.",
+          "parent_symbol": "examples/repo/repo.py::cli",
+          "callback_symbol": "examples/repo/repo.py::clone",
+          "expect_edge": true
+        },
+        {
+          "id": "click-registration-002",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/repo/repo.py",
+            "start_line": 88,
+            "end_line": 88,
+            "sha256": "cdfc09f2f9289729224361508800f38ef2a9d3ea255d1998864647e77516fbe5"
+          },
+          "rationale": "The decorator at line 88 registers the delete callback.",
+          "parent_symbol": "examples/repo/repo.py::cli",
+          "callback_symbol": "examples/repo/repo.py::delete",
+          "expect_edge": true
+        },
+        {
+          "id": "click-registration-003",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/repo/repo.py",
+            "start_line": 100,
+            "end_line": 100,
+            "sha256": "cdfc09f2f9289729224361508800f38ef2a9d3ea255d1998864647e77516fbe5"
+          },
+          "rationale": "The decorator at line 100 registers the setuser callback.",
+          "parent_symbol": "examples/repo/repo.py::cli",
+          "callback_symbol": "examples/repo/repo.py::setuser",
+          "expect_edge": true
+        },
+        {
+          "id": "click-registration-004",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/repo/repo.py",
+            "start_line": 116,
+            "end_line": 116,
+            "sha256": "cdfc09f2f9289729224361508800f38ef2a9d3ea255d1998864647e77516fbe5"
+          },
+          "rationale": "The decorator at line 116 registers the commit callback.",
+          "parent_symbol": "examples/repo/repo.py::cli",
+          "callback_symbol": "examples/repo/repo.py::commit",
+          "expect_edge": true
+        },
+        {
+          "id": "click-registration-005",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/repo/repo.py",
+            "start_line": 154,
+            "end_line": 154,
+            "sha256": "4cbdad636b3e679fef17906049c4828c65eded29556e9e92c4b0a12c5f04f3c0"
+          },
+          "rationale": "The decorator at line 154 registers the copy callback.",
+          "parent_symbol": "examples/repo/repo.py::cli",
+          "callback_symbol": "examples/repo/repo.py::copy",
+          "expect_edge": true
+        },
+        {
+          "id": "click-registration-006",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/repo/repo.py",
+            "start_line": 61,
+            "end_line": 61,
+            "sha256": "51dca7fb857b84d343d34aa2f499d2d014557034775487602f231c34c2865267"
+          },
+          "rationale": "The decorator at line 61 only configures the clone callback.",
+          "parent_symbol": "examples/repo/repo.py::cli",
+          "callback_symbol": "examples/repo/repo.py::clone",
+          "expect_edge": false,
+          "unresolved_reason": "click.argument declares a parameter, not a child command."
+        },
+        {
+          "id": "click-registration-007",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/repo/repo.py",
+            "start_line": 62,
+            "end_line": 62,
+            "sha256": "f16817816adf675efa35079adfb34809a51c6670230fa2d65ff92c582dbe8d08"
+          },
+          "rationale": "The decorator at line 62 only configures the clone callback.",
+          "parent_symbol": "examples/repo/repo.py::cli",
+          "callback_symbol": "examples/repo/repo.py::clone",
+          "expect_edge": false,
+          "unresolved_reason": "click.argument declares a parameter, not a child command."
+        },
+        {
+          "id": "click-registration-008",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/repo/repo.py",
+            "start_line": 63,
+            "end_line": 63,
+            "sha256": "b460ff6ce7062a7dcbc782aa1658235b4da925f867f46037d8d36e4bbe4f5d8a"
+          },
+          "rationale": "The decorator at line 63 only configures the clone callback.",
+          "parent_symbol": "examples/repo/repo.py::cli",
+          "callback_symbol": "examples/repo/repo.py::clone",
+          "expect_edge": false,
+          "unresolved_reason": "click.option declares an option, not a child command."
+        },
+        {
+          "id": "click-registration-009",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/repo/repo.py",
+            "start_line": 89,
+            "end_line": 89,
+            "sha256": "4abebbb6558120e7836c6de88c8e5208544789ff273eee199869486035945bdc"
+          },
+          "rationale": "The decorator at line 89 only configures the delete callback.",
+          "parent_symbol": "examples/repo/repo.py::cli",
+          "callback_symbol": "examples/repo/repo.py::delete",
+          "expect_edge": false,
+          "unresolved_reason": "click.confirmation_option configures confirmation, not registration."
+        },
+        {
+          "id": "click-registration-010",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/repo/repo.py",
+            "start_line": 101,
+            "end_line": 101,
+            "sha256": "f93079cf8a1c49787cde8db7779097f8df57938dc541b1866b11ab1f5bc0997c"
+          },
+          "rationale": "The decorator at line 101 only configures the setuser callback.",
+          "parent_symbol": "examples/repo/repo.py::cli",
+          "callback_symbol": "examples/repo/repo.py::setuser",
+          "expect_edge": false,
+          "unresolved_reason": "click.option declares an option, not a child command."
+        },
+        {
+          "id": "click-overload-001",
+          "kind": "overload",
+          "evidence": {
+            "file": "src/click/_termui_impl.py",
+            "start_line": 743,
+            "end_line": 751,
+            "sha256": "43203fc6feb349202d87cc837f0b225635d1e8f3fa3e69419d3d0da1097bcf23"
+          },
+          "rationale": "Two typed edit overloads precede the concrete Editor.edit body.",
+          "symbol_id": "src/click/_termui_impl.py::Editor.edit",
+          "expected_state": "resolved",
+          "expected_signatures": [
+            "def edit(self, text: bytes | bytearray) -> bytes | None",
+            "def edit(self, text: str | None) -> str | None"
+          ]
+        },
+        {
+          "id": "click-overload-002",
+          "kind": "overload",
+          "evidence": {
+            "file": "src/click/core.py",
+            "start_line": 1491,
+            "end_line": 1511,
+            "sha256": "06a82f4ad836575e76838734951b9b7634387c18b0cdbacf3a32a75350e511a0"
+          },
+          "rationale": "Two standalone_mode overloads precede one concrete Command.main body.",
+          "symbol_id": "src/click/core.py::Command.main",
+          "expected_state": "resolved",
+          "expected_signatures": [
+            "def main(self, args: cabc.Sequence[str] | None=None, prog_name: str | None=None, complete_var: str | None=None, standalone_mode: t.Literal[True]=True, **extra: t.Any) -> t.NoReturn",
+            "def main(self, args: cabc.Sequence[str] | None=None, prog_name: str | None=None, complete_var: str | None=None, standalone_mode: bool=..., **extra: t.Any) -> t.Any"
+          ]
+        },
+        {
+          "id": "click-overload-003",
+          "kind": "overload",
+          "evidence": {
+            "file": "src/click/core.py",
+            "start_line": 875,
+            "end_line": 883,
+            "sha256": "e55c3c6bae25ace2850a840aeef0922311ed8f32b0d9dbafbb0732b267cc4934"
+          },
+          "rationale": "Two callback type overloads precede one concrete Context.invoke body.",
+          "symbol_id": "src/click/core.py::Context.invoke",
+          "expected_state": "resolved",
+          "expected_signatures": [
+            "def invoke(self, callback: t.Callable[..., V], /, *args: t.Any, **kwargs: t.Any) -> V",
+            "def invoke(self, callback: Command, /, *args: t.Any, **kwargs: t.Any) -> t.Any"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "requests",
+      "https_url": "https://github.com/psf/requests.git",
+      "commit": "611c6162cbc4ac2020a2f91c7cfa4f3abf9bbb60",
+      "probes": [
+        {
+          "id": "requests-call-001",
+          "kind": "call",
+          "evidence": {
+            "file": "src/requests/adapters.py",
+            "start_line": 221,
+            "end_line": 221,
+            "sha256": "5a731e49660124cba553fc9ba089e19219e2a8fdec55a6bb8b08a1a259d08bef"
+          },
+          "rationale": "The adapter constructor invokes its own pool manager initializer.",
+          "caller": "src/requests/adapters.py::HTTPAdapter.__init__",
+          "expression": "self.init_poolmanager",
+          "expected_target": "src/requests/adapters.py::HTTPAdapter.init_poolmanager"
+        },
+        {
+          "id": "requests-call-002",
+          "kind": "call",
+          "evidence": {
+            "file": "src/requests/adapters.py",
+            "start_line": 284,
+            "end_line": 284,
+            "sha256": "3827b9207c711c92ee483885a07885551f593e586aed946642e28395de0123c3"
+          },
+          "rationale": "The adapters module imports get_auth_from_url from requests.utils.",
+          "caller": "src/requests/adapters.py::HTTPAdapter.proxy_manager_for",
+          "expression": "get_auth_from_url",
+          "expected_target": "src/requests/utils.py::get_auth_from_url"
+        },
+        {
+          "id": "requests-call-003",
+          "kind": "call",
+          "evidence": {
+            "file": "src/requests/adapters.py",
+            "start_line": 375,
+            "end_line": 375,
+            "sha256": "40b7181902fdb09215b7a8c3e1b0f1b5cb0fdf0f7e058ae212f33eaecbebf814"
+          },
+          "rationale": "The imported alias _is_prepared names is_prepared in requests._types.",
+          "caller": "src/requests/adapters.py::HTTPAdapter.build_response",
+          "expression": "_is_prepared",
+          "expected_target": "src/requests/_types.py::is_prepared"
+        },
+        {
+          "id": "requests-call-004",
+          "kind": "call",
+          "evidence": {
+            "file": "src/requests/adapters.py",
+            "start_line": 376,
+            "end_line": 376,
+            "sha256": "bb334ea2fa1d8424b9dadfce1e7e8ca6522b57fffb0ae90b2084978e84711c42"
+          },
+          "rationale": "The adapters module imports and constructs requests.models.Response.",
+          "caller": "src/requests/adapters.py::HTTPAdapter.build_response",
+          "expression": "Response",
+          "expected_target": "src/requests/models.py::Response"
+        },
+        {
+          "id": "requests-call-005",
+          "kind": "call",
+          "evidence": {
+            "file": "src/requests/adapters.py",
+            "start_line": 385,
+            "end_line": 385,
+            "sha256": "18bceaf4bdf07efa82233a6f5c015633bc6bdf38deffbcd9c94e29d23d82f8db"
+          },
+          "rationale": "The adapters module imports this header helper from requests.utils.",
+          "caller": "src/requests/adapters.py::HTTPAdapter.build_response",
+          "expression": "get_encoding_from_headers",
+          "expected_target": "src/requests/utils.py::get_encoding_from_headers"
+        },
+        {
+          "id": "requests-call-006",
+          "kind": "call",
+          "evidence": {
+            "file": "src/requests/adapters.py",
+            "start_line": 395,
+            "end_line": 395,
+            "sha256": "74201bd9b9b97ee9f22e09184c2c1c06e6945366c5a298e2c7298e77b16bbf6d"
+          },
+          "rationale": "The adapters module imports this cookie helper from requests.cookies.",
+          "caller": "src/requests/adapters.py::HTTPAdapter.build_response",
+          "expression": "extract_cookies_to_jar",
+          "expected_target": "src/requests/cookies.py::extract_cookies_to_jar"
+        },
+        {
+          "id": "requests-call-007",
+          "kind": "call",
+          "evidence": {
+            "file": "src/requests/__init__.py",
+            "start_line": 65,
+            "end_line": 65,
+            "sha256": "f0a60fdefc26604878b3e0679c4d8139dfb27bef9c3fb7b180a880a83fd021ad"
+          },
+          "rationale": "The call operates on the urllib3 version string.",
+          "caller": "src/requests/__init__.py::check_compatibility",
+          "expression": "urllib3_version.split",
+          "unresolved_reason": "split is a string method, not a repository function."
+        },
+        {
+          "id": "requests-call-008",
+          "kind": "call",
+          "evidence": {
+            "file": "src/requests/__init__.py",
+            "start_line": 92,
+            "end_line": 92,
+            "sha256": "52247074309ecf4feed3ad701a293f614c64105b36c8a7f970a8e8716e3bfd27"
+          },
+          "rationale": "The warning call has no local Requests callee.",
+          "caller": "src/requests/__init__.py::check_compatibility",
+          "expression": "warnings.warn",
+          "unresolved_reason": "warnings is a standard-library module outside the scanned repository."
+        },
+        {
+          "id": "requests-reexport-001",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/requests/__init__.py",
+            "start_line": 47,
+            "end_line": 47,
+            "sha256": "efa08343711305d0a003113f56534facda00e0cb324b3e35549b5e402a23bf55"
+          },
+          "rationale": "The package imports this warning class from requests.exceptions.",
+          "exported_name": "RequestsDependencyWarning",
+          "expected_target": "src/requests/exceptions.py::RequestsDependencyWarning"
+        },
+        {
+          "id": "requests-reexport-002",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/requests/__init__.py",
+            "start_line": 171,
+            "end_line": 171,
+            "sha256": "273c648926a21438c2e7d72262b9ec669d59bea8951c537e36f3b05ac73dbfc4"
+          },
+          "rationale": "The package imports get from requests.api among several names.",
+          "exported_name": "get",
+          "expected_target": "src/requests/api.py::get"
+        },
+        {
+          "id": "requests-reexport-003",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/requests/__init__.py",
+            "start_line": 184,
+            "end_line": 184,
+            "sha256": "ccc80452483af866297bef5e54a8aba65a7f21fd309e492aeec47b96a5107f7c"
+          },
+          "rationale": "The package imports Response from requests.models among several names.",
+          "exported_name": "Response",
+          "expected_target": "src/requests/models.py::Response"
+        },
+        {
+          "id": "requests-reexport-004",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/requests/__init__.py",
+            "start_line": 185,
+            "end_line": 185,
+            "sha256": "77b6826fd0c3484b7545ee9eb5857222e9745c55533359ae3adf678eb868b475"
+          },
+          "rationale": "The package imports Session from requests.sessions.",
+          "exported_name": "Session",
+          "expected_target": "src/requests/sessions.py::Session"
+        },
+        {
+          "id": "requests-overload-001",
+          "kind": "overload",
+          "evidence": {
+            "file": "src/requests/auth.py",
+            "start_line": 91,
+            "end_line": 96,
+            "sha256": "f09bd9e2eef383c14c9da8219c6bdd0e0b47732c118f94b1f9f20f6ec8fbc12b"
+          },
+          "rationale": "String and byte credential overloads precede one concrete constructor.",
+          "symbol_id": "src/requests/auth.py::HTTPBasicAuth.__init__",
+          "expected_state": "resolved",
+          "expected_signatures": [
+            "def __init__(self, username: str, password: str) -> None",
+            "def __init__(self, username: bytes, password: bytes) -> None"
+          ]
+        },
+        {
+          "id": "requests-overload-002",
+          "kind": "overload",
+          "evidence": {
+            "file": "src/requests/cookies.py",
+            "start_line": 563,
+            "end_line": 579,
+            "sha256": "5376dea9863f984d4d58656841ebf7ef400c9bb1f8dd9c1921c15b9af75b98f2"
+          },
+          "rationale": "Two cookiejar argument overloads precede one concrete function.",
+          "symbol_id": "src/requests/cookies.py::cookiejar_from_dict",
+          "expected_state": "resolved",
+          "expected_signatures": [
+            "def cookiejar_from_dict(cookie_dict: dict[str, str] | None, cookiejar: None=None, overwrite: bool=True) -> RequestsCookieJar",
+            "def cookiejar_from_dict(cookie_dict: dict[str, str] | None, cookiejar: _CookieJarT, overwrite: bool=True) -> _CookieJarT"
+          ]
+        },
+        {
+          "id": "requests-overload-003",
+          "kind": "overload",
+          "evidence": {
+            "file": "src/requests/models.py",
+            "start_line": 906,
+            "end_line": 914,
+            "sha256": "65836d8dfe3b5a2bfa50dcebb7f720831249a9e0ed1d2aeaa1c8875f6bd2eafe"
+          },
+          "rationale": "Two decode_unicode overloads precede one concrete iterator method.",
+          "symbol_id": "src/requests/models.py::Response.iter_content",
+          "expected_state": "resolved",
+          "expected_signatures": [
+            "def iter_content(self, chunk_size: int | None=1, decode_unicode: Literal[False]=False) -> Iterator[bytes]",
+            "def iter_content(self, chunk_size: int | None=1, *, decode_unicode: Literal[True]) -> Iterator[str | bytes]"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "flask",
+      "https_url": "https://github.com/pallets/flask.git",
+      "commit": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35",
+      "probes": [
+        {
+          "id": "flask-call-001",
+          "kind": "call",
+          "evidence": {
+            "file": "examples/celery/src/task_app/__init__.py",
+            "start_line": 8,
+            "end_line": 8,
+            "sha256": "975cdc79094eac882e23626ab21cfdccadb421edb75bc7d1f3170eba03525518"
+          },
+          "rationale": "The example imports and constructs Flask from the package API.",
+          "caller": "examples/celery/src/task_app/__init__.py::create_app",
+          "expression": "Flask",
+          "expected_target": "src/flask/app.py::Flask"
+        },
+        {
+          "id": "flask-call-002",
+          "kind": "call",
+          "evidence": {
+            "file": "examples/celery/src/task_app/__init__.py",
+            "start_line": 17,
+            "end_line": 17,
+            "sha256": "56f62fea7441c8f9c606d5461ccb703dcbaf9385250e2a2e80579997359091f9"
+          },
+          "rationale": "The factory calls the sibling celery_init_app function defined below.",
+          "caller": "examples/celery/src/task_app/__init__.py::create_app",
+          "expression": "celery_init_app",
+          "expected_target": "examples/celery/src/task_app/__init__.py::celery_init_app"
+        },
+        {
+          "id": "flask-call-003",
+          "kind": "call",
+          "evidence": {
+            "file": "examples/celery/src/task_app/__init__.py",
+            "start_line": 21,
+            "end_line": 21,
+            "sha256": "0b98d9dbda00e1cc6db0b67a6deeff2f4d8eb3f76706d1743604c1bb311efa71"
+          },
+          "rationale": "The example imports render_template from the Flask package API.",
+          "caller": "examples/celery/src/task_app/__init__.py::create_app.index",
+          "expression": "render_template",
+          "expected_target": "src/flask/templating.py::render_template"
+        },
+        {
+          "id": "flask-call-004",
+          "kind": "call",
+          "evidence": {
+            "file": "src/flask/app.py",
+            "start_line": 410,
+            "end_line": 410,
+            "sha256": "05ab76c11ab0fc872773705bc7139db07e70f51951c78803b3ba885840c3eabe"
+          },
+          "rationale": "The Flask method calls its inherited local get_send_file_max_age method.",
+          "caller": "src/flask/app.py::Flask.send_static_file",
+          "expression": "self.get_send_file_max_age",
+          "expected_target": "src/flask/app.py::Flask.get_send_file_max_age"
+        },
+        {
+          "id": "flask-call-005",
+          "kind": "call",
+          "evidence": {
+            "file": "src/flask/app.py",
+            "start_line": 411,
+            "end_line": 411,
+            "sha256": "ec7c2e95b43205c61424ca7e13474c7701a1bf8d3d1d42966ff35b2c380ae936"
+          },
+          "rationale": "The app module imports send_from_directory from flask.helpers.",
+          "caller": "src/flask/app.py::Flask.send_static_file",
+          "expression": "send_from_directory",
+          "expected_target": "src/flask/helpers.py::send_from_directory"
+        },
+        {
+          "id": "flask-call-006",
+          "kind": "call",
+          "evidence": {
+            "file": "src/flask/app.py",
+            "start_line": 710,
+            "end_line": 710,
+            "sha256": "c845ff327517b835e3d6fb60c1a879a764e922c3bc398189ca75e7ccafffeecb"
+          },
+          "rationale": "The app module imports get_load_dotenv from flask.helpers.",
+          "caller": "src/flask/app.py::Flask.run",
+          "expression": "get_load_dotenv",
+          "expected_target": "src/flask/helpers.py::get_load_dotenv"
+        },
+        {
+          "id": "flask-call-007",
+          "kind": "call",
+          "evidence": {
+            "file": "src/flask/app.py",
+            "start_line": 297,
+            "end_line": 297,
+            "sha256": "226bd9a5e573f7c445707e9670d7f47c6ccbc4056f02a0ff86f5203df28301bb"
+          },
+          "rationale": "The isclass call is to Python inspect, not a local Flask symbol.",
+          "caller": "src/flask/app.py::Flask.__init_subclass__",
+          "expression": "inspect.isclass",
+          "unresolved_reason": "inspect is a standard-library module outside the scanned repository."
+        },
+        {
+          "id": "flask-call-008",
+          "kind": "call",
+          "evidence": {
+            "file": "src/flask/app.py",
+            "start_line": 301,
+            "end_line": 301,
+            "sha256": "14dacabeecc7ba1d17fce4c2c922c60af351f673aa7e9b6af52f23dc4eaaa0cf"
+          },
+          "rationale": "The warning call has no local Flask callee.",
+          "caller": "src/flask/app.py::Flask.__init_subclass__",
+          "expression": "warnings.warn",
+          "unresolved_reason": "warnings is a standard-library module outside the scanned repository."
+        },
+        {
+          "id": "flask-reexport-001",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/flask/__init__.py",
+            "start_line": 2,
+            "end_line": 2,
+            "sha256": "218a060cec0f98bc05dd39b9e7ed5ebcdc51ec8005b2da6ed479d10a2860d325"
+          },
+          "rationale": "The package binds Flask from flask.app.",
+          "exported_name": "Flask",
+          "expected_target": "src/flask/app.py::Flask"
+        },
+        {
+          "id": "flask-reexport-002",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/flask/__init__.py",
+            "start_line": 3,
+            "end_line": 3,
+            "sha256": "0daf61134be6f95c1806d41d9576e0412aec051c320029e274f91e682e6284a3"
+          },
+          "rationale": "The package binds Blueprint from flask.blueprints.",
+          "exported_name": "Blueprint",
+          "expected_target": "src/flask/blueprints.py::Blueprint"
+        },
+        {
+          "id": "flask-reexport-003",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/flask/__init__.py",
+            "start_line": 21,
+            "end_line": 21,
+            "sha256": "4603b9631149e47530d1cc40719549e4709dc267f0dff8bee4f3045f88417c13"
+          },
+          "rationale": "The package binds stream_with_context from flask.helpers.",
+          "exported_name": "stream_with_context",
+          "expected_target": "src/flask/helpers.py::stream_with_context"
+        },
+        {
+          "id": "flask-reexport-004",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/flask/__init__.py",
+            "start_line": 34,
+            "end_line": 34,
+            "sha256": "9ddf94395f51bcea9dabd00542f21b8449b63d957d399761691b49c0d5e0700f"
+          },
+          "rationale": "The package binds render_template from flask.templating.",
+          "exported_name": "render_template",
+          "expected_target": "src/flask/templating.py::render_template"
+        },
+        {
+          "id": "flask-overload-001",
+          "kind": "overload",
+          "evidence": {
+            "file": "src/flask/cli.py",
+            "start_line": 229,
+            "end_line": 241,
+            "sha256": "d52ce0c02bf53a7ba2eb27e9c1f04162a73b5e3ace0a97308601748d5cdaa6d0"
+          },
+          "rationale": "Two raise_if_not_found overloads precede one concrete function.",
+          "symbol_id": "src/flask/cli.py::locate_app",
+          "expected_state": "resolved",
+          "expected_signatures": [
+            "def locate_app(module_name: str, app_name: str | None, raise_if_not_found: t.Literal[True]=True) -> Flask",
+            "def locate_app(module_name: str, app_name: str | None, raise_if_not_found: t.Literal[False]=...) -> Flask | None"
+          ]
+        },
+        {
+          "id": "flask-overload-002",
+          "kind": "overload",
+          "evidence": {
+            "file": "src/flask/config.py",
+            "start_line": 29,
+            "end_line": 35,
+            "sha256": "1a958bf93024b3b629f3f155ffd9924a68cb4370ec8d469e38140689900b2810"
+          },
+          "rationale": "Two descriptor access overloads precede one concrete method.",
+          "symbol_id": "src/flask/config.py::ConfigAttribute.__get__",
+          "expected_state": "resolved",
+          "expected_signatures": [
+            "def __get__(self, obj: None, owner: None) -> te.Self",
+            "def __get__(self, obj: App, owner: type[App]) -> T"
+          ]
+        },
+        {
+          "id": "flask-overload-003",
+          "kind": "overload",
+          "evidence": {
+            "file": "src/flask/helpers.py",
+            "start_line": 51,
+            "end_line": 63,
+            "sha256": "73e820981472ff1c4f766ec993f717607000cca65f4c015fc4de201e2b353c32"
+          },
+          "rationale": "Iterator and callable overloads precede one concrete function.",
+          "symbol_id": "src/flask/helpers.py::stream_with_context",
+          "expected_state": "resolved",
+          "expected_signatures": [
+            "def stream_with_context(generator_or_function: t.Iterator[t.AnyStr]) -> t.Iterator[t.AnyStr]",
+            "def stream_with_context(generator_or_function: t.Callable[..., t.Iterator[t.AnyStr]]) -> t.Callable[[t.Iterator[t.AnyStr]], t.Iterator[t.AnyStr]]"
+          ]
+        }
+      ]
+    }
+  ]
+}

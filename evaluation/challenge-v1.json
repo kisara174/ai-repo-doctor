@@ -1,0 +1,245 @@
+{
+  "schema_version": 1,
+  "dataset_id": "challenge-v1",
+  "repositories": [
+    {
+      "id": "click",
+      "https_url": "https://github.com/pallets/click.git",
+      "commit": "06b2a678741131fd577ce170e23e5ca0aeba0309",
+      "probes": [
+        {
+          "id": "click-call-001",
+          "kind": "call",
+          "evidence": {
+            "file": "examples/completion/completion.py",
+            "start_line": 27,
+            "end_line": 27,
+            "sha256": "aa56d029d1e66fd8ee9c27d4d6bd9519bf0341a9e5dea62467643052314807ab"
+          },
+          "rationale": "The module-level Click package import exposes `echo` from the repository's `click.utils`.",
+          "caller": "examples/completion/completion.py::show_env",
+          "expression": "click.echo",
+          "expected_target": "src/click/utils.py::echo"
+        },
+        {
+          "id": "click-reexport-001",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/click/__init__.py",
+            "start_line": 80,
+            "end_line": 80,
+            "sha256": "2391910e6404f564d332f81c5d6d321b602068b2bfccb803c09f35375e90e000"
+          },
+          "rationale": "`BaseCommand` is exposed via conditional `__getattr__`, with the private import nested inside the function rather than a module-level binding.",
+          "exported_name": "BaseCommand",
+          "unresolved_reason": "BaseCommand is looked up through module __getattr__; the nested import does not create a statically supported module-level reexport."
+        },
+        {
+          "id": "click-registration-001",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/completion/completion.py",
+            "start_line": 31,
+            "end_line": 31,
+            "sha256": "0f0a8eaabdcb4490bff9a1ae471a75293b180412fe3a3bd1c7a0c607e0833669"
+          },
+          "rationale": "The `cli.group` decorator registers `group` under the root `cli`.",
+          "parent_symbol": "examples/completion/completion.py::cli",
+          "callback_symbol": "examples/completion/completion.py::group",
+          "expect_edge": true
+        },
+        {
+          "id": "click-registration-002",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/completion/completion.py",
+            "start_line": 50,
+            "end_line": 50,
+            "sha256": "eea13f45f3dcee7ee4be9645b95a533d301fb8709545619e981ed2e3650696e6"
+          },
+          "rationale": "`group.command` registers `select_user` as a child of `group`.",
+          "parent_symbol": "examples/completion/completion.py::group",
+          "callback_symbol": "examples/completion/completion.py::select_user",
+          "expect_edge": true
+        },
+        {
+          "id": "click-registration-003",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/completion/completion.py",
+            "start_line": 56,
+            "end_line": 56,
+            "sha256": "c44d9143c8c57dc3ff0de7f9ce240827da6c80f93c3257d0ddefca84789aff25"
+          },
+          "rationale": "The explicit `cli.add_command(group)` call installs `group` as a child command of `cli`.",
+          "parent_symbol": "examples/completion/completion.py::cli",
+          "callback_symbol": "examples/completion/completion.py::group",
+          "expect_edge": true
+        },
+        {
+          "id": "click-overload-001",
+          "kind": "overload",
+          "evidence": {
+            "file": "src/click/shell_completion.py",
+            "start_line": 585,
+            "end_line": 592,
+            "sha256": "2fca0a1a5009ad601e0f86211ec10f91a16f51fc7621e630140fe5ce10c916ae"
+          },
+          "rationale": "Four typed variants for shell names precede the concrete completion-class lookup.",
+          "symbol_id": "src/click/shell_completion.py::get_completion_class",
+          "expected_state": "resolved",
+          "expected_signatures": [
+            "def get_completion_class(shell: t.Literal['bash']) -> type[BashComplete]",
+            "def get_completion_class(shell: t.Literal['fish']) -> type[FishComplete]",
+            "def get_completion_class(shell: t.Literal['zsh']) -> type[ZshComplete]",
+            "def get_completion_class(shell: str) -> type[ShellComplete] | None"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "requests",
+      "https_url": "https://github.com/psf/requests.git",
+      "commit": "611c6162cbc4ac2020a2f91c7cfa4f3abf9bbb60",
+      "probes": [
+        {
+          "id": "requests-call-001",
+          "kind": "call",
+          "evidence": {
+            "file": "src/requests/sessions.py",
+            "start_line": 778,
+            "end_line": 778,
+            "sha256": "7a296eb2b23010dcfa416bd0f85dde5255abeb1e2bda62fd68b34f00a590e206"
+          },
+          "rationale": "`Session.send` obtains its adapter by calling the sibling `Session.get_adapter` method.",
+          "caller": "src/requests/sessions.py::Session.send",
+          "expression": "self.get_adapter",
+          "expected_target": "src/requests/sessions.py::Session.get_adapter"
+        },
+        {
+          "id": "requests-call-002",
+          "kind": "call",
+          "evidence": {
+            "file": "src/requests/compat.py",
+            "start_line": 42,
+            "end_line": 42,
+            "sha256": "c94a7bd6b82b4c8a9cce8712599ce65d9af8673ffdad08cfb8eb4e4f4c525294"
+          },
+          "rationale": "The imported stdlib helper receives a module name selected by a runtime loop variable.",
+          "caller": "src/requests/compat.py::_resolve_char_detection",
+          "expression": "importlib.import_module",
+          "unresolved_reason": "importlib is an external standard-library module and the argument is a runtime-selected module name."
+        },
+        {
+          "id": "requests-reexport-001",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/requests/__init__.py",
+            "start_line": 171,
+            "end_line": 171,
+            "sha256": "273c648926a21438c2e7d72262b9ec669d59bea8951c537e36f3b05ac73dbfc4"
+          },
+          "rationale": "This multi-name import binds `delete` from `requests.api`.",
+          "exported_name": "delete",
+          "expected_target": "src/requests/api.py::delete"
+        },
+        {
+          "id": "requests-overload-001",
+          "kind": "overload",
+          "evidence": {
+            "file": "src/requests/structures.py",
+            "start_line": 123,
+            "end_line": 127,
+            "sha256": "1524bfbd6894267b1081713a2734cf62b9dab22cd91c76eea8d69914c6fd9cd9"
+          },
+          "rationale": "`LookupDict.get` has separate overload variants for an omitted/None default and a typed default before its implementation.",
+          "symbol_id": "src/requests/structures.py::LookupDict.get",
+          "expected_state": "resolved",
+          "expected_signatures": [
+            "def get(self, key: str, default: None=None) -> _VT | None",
+            "def get(self, key: str, default: _D | _VT) -> _D | _VT"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "flask",
+      "https_url": "https://github.com/pallets/flask.git",
+      "commit": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35",
+      "probes": [
+        {
+          "id": "flask-call-001",
+          "kind": "call",
+          "evidence": {
+            "file": "src/flask/cli.py",
+            "start_line": 49,
+            "end_line": 49,
+            "sha256": "63a0b8e03de9def5271460853b46db7f64f11a4d3f644e9954a262e2e0caf589"
+          },
+          "rationale": "`find_best_app` retrieves a name chosen at runtime from a module object.",
+          "caller": "src/flask/cli.py::find_best_app",
+          "expression": "getattr",
+          "unresolved_reason": "getattr is a built-in and the requested attribute name is selected at runtime, so no local repository callee is identified."
+        },
+        {
+          "id": "flask-call-002",
+          "kind": "call",
+          "evidence": {
+            "file": "src/flask/sansio/scaffold.py",
+            "start_line": 370,
+            "end_line": 370,
+            "sha256": "95fe68d88f730035312865cfe53ef4f8d96d8c7dd2d6fffecb5be62f5ded063a"
+          },
+          "rationale": "The nested decorator returned by `Scaffold.route` invokes an instance method through `self`, so the evidence does not give one uniquely named callee.",
+          "caller": "src/flask/sansio/scaffold.py::Scaffold.route.decorator",
+          "expression": "self.add_url_rule",
+          "unresolved_reason": "This receiver-based call inside a nested decorator does not identify one statically unique local target."
+        },
+        {
+          "id": "flask-reexport-001",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/flask/__init__.py",
+            "start_line": 4,
+            "end_line": 4,
+            "sha256": "d2943de79784523b80214b303b551dbd2a30d941ae9554b2f50b4370413ad410"
+          },
+          "rationale": "The package imports Config from flask.config and binds it as Config.",
+          "exported_name": "Config",
+          "expected_target": "src/flask/config.py::Config"
+        },
+        {
+          "id": "flask-registration-001",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "src/flask/cli.py",
+            "start_line": 594,
+            "end_line": 594,
+            "sha256": "612d965dfb64f09af86e939dd52d0f39f301d1f9d3adb2eaa5630d224e043471"
+          },
+          "rationale": "`FlaskGroup.__init__` explicitly installs `run_command` with `self.add_command`.",
+          "parent_symbol": "src/flask/cli.py::FlaskGroup",
+          "callback_symbol": "src/flask/cli.py::run_command",
+          "expect_edge": true
+        },
+        {
+          "id": "flask-overload-001",
+          "kind": "overload",
+          "evidence": {
+            "file": "src/flask/sansio/app.py",
+            "start_line": 663,
+            "end_line": 668,
+            "sha256": "989b7c8436e258f11725eedfdc4b1209f98c8c64c7a504f7d77d93cceefe47f4"
+          },
+          "rationale": "`App.template_filter` has direct-use and decorator-factory overload variants before its implementation.",
+          "symbol_id": "src/flask/sansio/app.py::App.template_filter",
+          "expected_state": "resolved",
+          "expected_signatures": [
+            "def template_filter(self, name: T_template_filter) -> T_template_filter",
+            "def template_filter(self, name: str | None=None) -> t.Callable[[T_template_filter], T_template_filter]"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,996 @@
+{
+  "schema_version": 1,
+  "dataset_id": "challenge-v1",
+  "generated_at_utc": "2026-09-24T10:43:28.527415+00:00",
+  "repo_doctor_commit": "a4444c5ca850b1f59c1efa8baee1ca7fd6d62601",
+  "python_version": "3.14.5 (v3.14.5:5607950ef23, May 10 2026, 07:38:09) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "architecture": "arm64",
+  "runs": 5,
+  "repositories": [
+    {
+      "id": "click",
+      "https_url": "https://github.com/pallets/click.git",
+      "commit": "06b2a678741131fd577ce170e23e5ca0aeba0309",
+      "stats": {
+        "python_files": 91,
+        "python_lines": 30174,
+        "code_lines": 23119,
+        "classes": 173,
+        "functions": 1358,
+        "methods": 468,
+        "ambiguous_symbols": 12,
+        "local_import_edges": 338,
+        "resolved_calls": 1600,
+        "unresolved_calls": 3451,
+        "parse_errors": 0
+      },
+      "timing": {
+        "runs_seconds": [
+          1.5551946249997854,
+          1.5672445410000364,
+          1.5924472910010081,
+          1.613606750001054,
+          1.634883083999739
+        ],
+        "median_seconds": 1.5924472910010081,
+        "minimum_seconds": 1.5551946249997854,
+        "maximum_seconds": 1.634883083999739
+      },
+      "scan_hashes": [
+        "d65ef2927c726995cfd22b1b44f21b435751acf644d0ac865845aa4c54792890",
+        "d65ef2927c726995cfd22b1b44f21b435751acf644d0ac865845aa4c54792890",
+        "d65ef2927c726995cfd22b1b44f21b435751acf644d0ac865845aa4c54792890",
+        "d65ef2927c726995cfd22b1b44f21b435751acf644d0ac865845aa4c54792890",
+        "d65ef2927c726995cfd22b1b44f21b435751acf644d0ac865845aa4c54792890"
+      ],
+      "metrics": {
+        "call": {
+          "status": "sampled",
+          "positive_probes": 1,
+          "negative_probes": 0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "reexport": {
+          "status": "sampled",
+          "positive_probes": 0,
+          "negative_probes": 1,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "precision": null,
+          "recall": null
+        },
+        "command_registration": {
+          "status": "sampled",
+          "positive_probes": 3,
+          "negative_probes": 0,
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "overload_resolution": {
+          "status": "sampled",
+          "positive_probes": 1,
+          "negative_probes": 0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "overload_signature": {
+          "status": "sampled",
+          "positive_probes": 1,
+          "negative_probes": 0,
+          "tp": 4,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        }
+      },
+      "probes": [
+        {
+          "id": "click-call-001",
+          "kind": "call",
+          "evidence": {
+            "file": "examples/completion/completion.py",
+            "start_line": 27,
+            "end_line": 27,
+            "sha256": "aa56d029d1e66fd8ee9c27d4d6bd9519bf0341a9e5dea62467643052314807ab"
+          },
+          "rationale": "The module-level Click package import exposes `echo` from the repository's `click.utils`.",
+          "relations": {
+            "call": {
+              "expected": [
+                [
+                  "click-call-001",
+                  "call",
+                  "examples/completion/completion.py::show_env",
+                  "src/click/utils.py::echo"
+                ]
+              ],
+              "predicted": [
+                [
+                  "click-call-001",
+                  "call",
+                  "examples/completion/completion.py::show_env",
+                  "src/click/utils.py::echo"
+                ]
+              ],
+              "tp": [
+                [
+                  "click-call-001",
+                  "call",
+                  "examples/completion/completion.py::show_env",
+                  "src/click/utils.py::echo"
+                ]
+              ],
+              "fp": [],
+              "fn": []
+            }
+          }
+        },
+        {
+          "id": "click-reexport-001",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/click/__init__.py",
+            "start_line": 80,
+            "end_line": 80,
+            "sha256": "2391910e6404f564d332f81c5d6d321b602068b2bfccb803c09f35375e90e000"
+          },
+          "rationale": "`BaseCommand` is exposed via conditional `__getattr__`, with the private import nested inside the function rather than a module-level binding.",
+          "relations": {
+            "reexport": {
+              "expected": [],
+              "predicted": [],
+              "tp": [],
+              "fp": [],
+              "fn": []
+            }
+          }
+        },
+        {
+          "id": "click-registration-001",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/completion/completion.py",
+            "start_line": 31,
+            "end_line": 31,
+            "sha256": "0f0a8eaabdcb4490bff9a1ae471a75293b180412fe3a3bd1c7a0c607e0833669"
+          },
+          "rationale": "The `cli.group` decorator registers `group` under the root `cli`.",
+          "relations": {
+            "command_registration": {
+              "expected": [
+                [
+                  "click-registration-001",
+                  "command_registration",
+                  "examples/completion/completion.py::cli",
+                  "examples/completion/completion.py::group"
+                ]
+              ],
+              "predicted": [
+                [
+                  "click-registration-001",
+                  "command_registration",
+                  "examples/completion/completion.py::cli",
+                  "examples/completion/completion.py::group"
+                ]
+              ],
+              "tp": [
+                [
+                  "click-registration-001",
+                  "command_registration",
+                  "examples/completion/completion.py::cli",
+                  "examples/completion/completion.py::group"
+                ]
+              ],
+              "fp": [],
+              "fn": []
+            }
+          }
+        },
+        {
+          "id": "click-registration-002",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/completion/completion.py",
+            "start_line": 50,
+            "end_line": 50,
+            "sha256": "eea13f45f3dcee7ee4be9645b95a533d301fb8709545619e981ed2e3650696e6"
+          },
+          "rationale": "`group.command` registers `select_user` as a child of `group`.",
+          "relations": {
+            "command_registration": {
+              "expected": [
+                [
+                  "click-registration-002",
+                  "command_registration",
+                  "examples/completion/completion.py::group",
+                  "examples/completion/completion.py::select_user"
+                ]
+              ],
+              "predicted": [
+                [
+                  "click-registration-002",
+                  "command_registration",
+                  "examples/completion/completion.py::group",
+                  "examples/completion/completion.py::select_user"
+                ]
+              ],
+              "tp": [
+                [
+                  "click-registration-002",
+                  "command_registration",
+                  "examples/completion/completion.py::group",
+                  "examples/completion/completion.py::select_user"
+                ]
+              ],
+              "fp": [],
+              "fn": []
+            }
+          }
+        },
+        {
+          "id": "click-registration-003",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "examples/completion/completion.py",
+            "start_line": 56,
+            "end_line": 56,
+            "sha256": "c44d9143c8c57dc3ff0de7f9ce240827da6c80f93c3257d0ddefca84789aff25"
+          },
+          "rationale": "The explicit `cli.add_command(group)` call installs `group` as a child command of `cli`.",
+          "relations": {
+            "command_registration": {
+              "expected": [
+                [
+                  "click-registration-003",
+                  "command_registration",
+                  "examples/completion/completion.py::cli",
+                  "examples/completion/completion.py::group"
+                ]
+              ],
+              "predicted": [
+                [
+                  "click-registration-003",
+                  "command_registration",
+                  "examples/completion/completion.py::cli",
+                  "examples/completion/completion.py::group"
+                ]
+              ],
+              "tp": [
+                [
+                  "click-registration-003",
+                  "command_registration",
+                  "examples/completion/completion.py::cli",
+                  "examples/completion/completion.py::group"
+                ]
+              ],
+              "fp": [],
+              "fn": []
+            }
+          }
+        },
+        {
+          "id": "click-overload-001",
+          "kind": "overload",
+          "evidence": {
+            "file": "src/click/shell_completion.py",
+            "start_line": 585,
+            "end_line": 592,
+            "sha256": "2fca0a1a5009ad601e0f86211ec10f91a16f51fc7621e630140fe5ce10c916ae"
+          },
+          "rationale": "Four typed variants for shell names precede the concrete completion-class lookup.",
+          "relations": {
+            "overload_resolution": {
+              "expected": [
+                [
+                  "click-overload-001",
+                  "overload_resolution",
+                  "src/click/shell_completion.py::get_completion_class",
+                  "src/click/shell_completion.py::get_completion_class"
+                ]
+              ],
+              "predicted": [
+                [
+                  "click-overload-001",
+                  "overload_resolution",
+                  "src/click/shell_completion.py::get_completion_class",
+                  "src/click/shell_completion.py::get_completion_class"
+                ]
+              ],
+              "tp": [
+                [
+                  "click-overload-001",
+                  "overload_resolution",
+                  "src/click/shell_completion.py::get_completion_class",
+                  "src/click/shell_completion.py::get_completion_class"
+                ]
+              ],
+              "fp": [],
+              "fn": []
+            },
+            "overload_signature": {
+              "expected": [
+                [
+                  "click-overload-001",
+                  "overload_signature",
+                  "src/click/shell_completion.py::get_completion_class",
+                  "def get_completion_class(shell: str) -> type[ShellComplete] | None"
+                ],
+                [
+                  "click-overload-001",
+                  "overload_signature",
+                  "src/click/shell_completion.py::get_completion_class",
+                  "def get_completion_class(shell: t.Literal['bash']) -> type[BashComplete]"
+                ],
+                [
+                  "click-overload-001",
+                  "overload_signature",
+                  "src/click/shell_completion.py::get_completion_class",
+                  "def get_completion_class(shell: t.Literal['fish']) -> type[FishComplete]"
+                ],
+                [
+                  "click-overload-001",
+                  "overload_signature",
+                  "src/click/shell_completion.py::get_completion_class",
+                  "def get_completion_class(shell: t.Literal['zsh']) -> type[ZshComplete]"
+                ]
+              ],
+              "predicted": [
+                [
+                  "click-overload-001",
+                  "overload_signature",
+                  "src/click/shell_completion.py::get_completion_class",
+                  "def get_completion_class(shell: str) -> type[ShellComplete] | None"
+                ],
+                [
+                  "click-overload-001",
+                  "overload_signature",
+                  "src/click/shell_completion.py::get_completion_class",
+                  "def get_completion_class(shell: t.Literal['bash']) -> type[BashComplete]"
+                ],
+                [
+                  "click-overload-001",
+                  "overload_signature",
+                  "src/click/shell_completion.py::get_completion_class",
+                  "def get_completion_class(shell: t.Literal['fish']) -> type[FishComplete]"
+                ],
+                [
+                  "click-overload-001",
+                  "overload_signature",
+                  "src/click/shell_completion.py::get_completion_class",
+                  "def get_completion_class(shell: t.Literal['zsh']) -> type[ZshComplete]"
+                ]
+              ],
+              "tp": [
+                [
+                  "click-overload-001",
+                  "overload_signature",
+                  "src/click/shell_completion.py::get_completion_class",
+                  "def get_completion_class(shell: str) -> type[ShellComplete] | None"
+                ],
+                [
+                  "click-overload-001",
+                  "overload_signature",
+                  "src/click/shell_completion.py::get_completion_class",
+                  "def get_completion_class(shell: t.Literal['bash']) -> type[BashComplete]"
+                ],
+                [
+                  "click-overload-001",
+                  "overload_signature",
+                  "src/click/shell_completion.py::get_completion_class",
+                  "def get_completion_class(shell: t.Literal['fish']) -> type[FishComplete]"
+                ],
+                [
+                  "click-overload-001",
+                  "overload_signature",
+                  "src/click/shell_completion.py::get_completion_class",
+                  "def get_completion_class(shell: t.Literal['zsh']) -> type[ZshComplete]"
+                ]
+              ],
+              "fp": [],
+              "fn": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "requests",
+      "https_url": "https://github.com/psf/requests.git",
+      "commit": "611c6162cbc4ac2020a2f91c7cfa4f3abf9bbb60",
+      "stats": {
+        "python_files": 37,
+        "python_lines": 12032,
+        "code_lines": 9048,
+        "classes": 96,
+        "functions": 181,
+        "methods": 510,
+        "ambiguous_symbols": 0,
+        "local_import_edges": 129,
+        "resolved_calls": 769,
+        "unresolved_calls": 1727,
+        "parse_errors": 0
+      },
+      "timing": {
+        "runs_seconds": [
+          0.466983166999853,
+          0.4684218750007858,
+          0.4660023750002438,
+          0.47043904199927056,
+          0.47616870799902244
+        ],
+        "median_seconds": 0.4684218750007858,
+        "minimum_seconds": 0.4660023750002438,
+        "maximum_seconds": 0.47616870799902244
+      },
+      "scan_hashes": [
+        "b1ad6e9d0a9bc7835073d37ac5f344e37e607e35c206198dc9d77533de55ad42",
+        "b1ad6e9d0a9bc7835073d37ac5f344e37e607e35c206198dc9d77533de55ad42",
+        "b1ad6e9d0a9bc7835073d37ac5f344e37e607e35c206198dc9d77533de55ad42",
+        "b1ad6e9d0a9bc7835073d37ac5f344e37e607e35c206198dc9d77533de55ad42",
+        "b1ad6e9d0a9bc7835073d37ac5f344e37e607e35c206198dc9d77533de55ad42"
+      ],
+      "metrics": {
+        "call": {
+          "status": "sampled",
+          "positive_probes": 1,
+          "negative_probes": 1,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "reexport": {
+          "status": "sampled",
+          "positive_probes": 1,
+          "negative_probes": 0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "command_registration": {
+          "status": "not_sampled",
+          "positive_probes": 0,
+          "negative_probes": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "precision": null,
+          "recall": null
+        },
+        "overload_resolution": {
+          "status": "sampled",
+          "positive_probes": 1,
+          "negative_probes": 0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "overload_signature": {
+          "status": "sampled",
+          "positive_probes": 1,
+          "negative_probes": 0,
+          "tp": 2,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        }
+      },
+      "probes": [
+        {
+          "id": "requests-call-001",
+          "kind": "call",
+          "evidence": {
+            "file": "src/requests/sessions.py",
+            "start_line": 778,
+            "end_line": 778,
+            "sha256": "7a296eb2b23010dcfa416bd0f85dde5255abeb1e2bda62fd68b34f00a590e206"
+          },
+          "rationale": "`Session.send` obtains its adapter by calling the sibling `Session.get_adapter` method.",
+          "relations": {
+            "call": {
+              "expected": [
+                [
+                  "requests-call-001",
+                  "call",
+                  "src/requests/sessions.py::Session.send",
+                  "src/requests/sessions.py::Session.get_adapter"
+                ]
+              ],
+              "predicted": [
+                [
+                  "requests-call-001",
+                  "call",
+                  "src/requests/sessions.py::Session.send",
+                  "src/requests/sessions.py::Session.get_adapter"
+                ]
+              ],
+              "tp": [
+                [
+                  "requests-call-001",
+                  "call",
+                  "src/requests/sessions.py::Session.send",
+                  "src/requests/sessions.py::Session.get_adapter"
+                ]
+              ],
+              "fp": [],
+              "fn": []
+            }
+          }
+        },
+        {
+          "id": "requests-call-002",
+          "kind": "call",
+          "evidence": {
+            "file": "src/requests/compat.py",
+            "start_line": 42,
+            "end_line": 42,
+            "sha256": "c94a7bd6b82b4c8a9cce8712599ce65d9af8673ffdad08cfb8eb4e4f4c525294"
+          },
+          "rationale": "The imported stdlib helper receives a module name selected by a runtime loop variable.",
+          "relations": {
+            "call": {
+              "expected": [],
+              "predicted": [],
+              "tp": [],
+              "fp": [],
+              "fn": []
+            }
+          }
+        },
+        {
+          "id": "requests-reexport-001",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/requests/__init__.py",
+            "start_line": 171,
+            "end_line": 171,
+            "sha256": "273c648926a21438c2e7d72262b9ec669d59bea8951c537e36f3b05ac73dbfc4"
+          },
+          "rationale": "This multi-name import binds `delete` from `requests.api`.",
+          "relations": {
+            "reexport": {
+              "expected": [
+                [
+                  "requests-reexport-001",
+                  "reexport",
+                  "src/requests/__init__.py",
+                  "delete",
+                  "src/requests/api.py::delete"
+                ]
+              ],
+              "predicted": [
+                [
+                  "requests-reexport-001",
+                  "reexport",
+                  "src/requests/__init__.py",
+                  "delete",
+                  "src/requests/api.py::delete"
+                ]
+              ],
+              "tp": [
+                [
+                  "requests-reexport-001",
+                  "reexport",
+                  "src/requests/__init__.py",
+                  "delete",
+                  "src/requests/api.py::delete"
+                ]
+              ],
+              "fp": [],
+              "fn": []
+            }
+          }
+        },
+        {
+          "id": "requests-overload-001",
+          "kind": "overload",
+          "evidence": {
+            "file": "src/requests/structures.py",
+            "start_line": 123,
+            "end_line": 127,
+            "sha256": "1524bfbd6894267b1081713a2734cf62b9dab22cd91c76eea8d69914c6fd9cd9"
+          },
+          "rationale": "`LookupDict.get` has separate overload variants for an omitted/None default and a typed default before its implementation.",
+          "relations": {
+            "overload_resolution": {
+              "expected": [
+                [
+                  "requests-overload-001",
+                  "overload_resolution",
+                  "src/requests/structures.py::LookupDict.get",
+                  "src/requests/structures.py::LookupDict.get"
+                ]
+              ],
+              "predicted": [
+                [
+                  "requests-overload-001",
+                  "overload_resolution",
+                  "src/requests/structures.py::LookupDict.get",
+                  "src/requests/structures.py::LookupDict.get"
+                ]
+              ],
+              "tp": [
+                [
+                  "requests-overload-001",
+                  "overload_resolution",
+                  "src/requests/structures.py::LookupDict.get",
+                  "src/requests/structures.py::LookupDict.get"
+                ]
+              ],
+              "fp": [],
+              "fn": []
+            },
+            "overload_signature": {
+              "expected": [
+                [
+                  "requests-overload-001",
+                  "overload_signature",
+                  "src/requests/structures.py::LookupDict.get",
+                  "def get(self, key: str, default: None=None) -> _VT | None"
+                ],
+                [
+                  "requests-overload-001",
+                  "overload_signature",
+                  "src/requests/structures.py::LookupDict.get",
+                  "def get(self, key: str, default: _D | _VT) -> _D | _VT"
+                ]
+              ],
+              "predicted": [
+                [
+                  "requests-overload-001",
+                  "overload_signature",
+                  "src/requests/structures.py::LookupDict.get",
+                  "def get(self, key: str, default: None=None) -> _VT | None"
+                ],
+                [
+                  "requests-overload-001",
+                  "overload_signature",
+                  "src/requests/structures.py::LookupDict.get",
+                  "def get(self, key: str, default: _D | _VT) -> _D | _VT"
+                ]
+              ],
+              "tp": [
+                [
+                  "requests-overload-001",
+                  "overload_signature",
+                  "src/requests/structures.py::LookupDict.get",
+                  "def get(self, key: str, default: None=None) -> _VT | None"
+                ],
+                [
+                  "requests-overload-001",
+                  "overload_signature",
+                  "src/requests/structures.py::LookupDict.get",
+                  "def get(self, key: str, default: _D | _VT) -> _D | _VT"
+                ]
+              ],
+              "fp": [],
+              "fn": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "flask",
+      "https_url": "https://github.com/pallets/flask.git",
+      "commit": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35",
+      "stats": {
+        "python_files": 83,
+        "python_lines": 18345,
+        "code_lines": 13301,
+        "classes": 148,
+        "functions": 1054,
+        "methods": 367,
+        "ambiguous_symbols": 11,
+        "local_import_edges": 309,
+        "resolved_calls": 665,
+        "unresolved_calls": 2654,
+        "parse_errors": 0
+      },
+      "timing": {
+        "runs_seconds": [
+          0.8274436669998977,
+          0.824212624998836,
+          0.8423486669998965,
+          0.8312948750008218,
+          0.8377472909996868
+        ],
+        "median_seconds": 0.8312948750008218,
+        "minimum_seconds": 0.824212624998836,
+        "maximum_seconds": 0.8423486669998965
+      },
+      "scan_hashes": [
+        "21fcca7665eafef8b2ff368d01eb536aa519d0713f21b6fd1052fb1d736ff9c4",
+        "21fcca7665eafef8b2ff368d01eb536aa519d0713f21b6fd1052fb1d736ff9c4",
+        "21fcca7665eafef8b2ff368d01eb536aa519d0713f21b6fd1052fb1d736ff9c4",
+        "21fcca7665eafef8b2ff368d01eb536aa519d0713f21b6fd1052fb1d736ff9c4",
+        "21fcca7665eafef8b2ff368d01eb536aa519d0713f21b6fd1052fb1d736ff9c4"
+      ],
+      "metrics": {
+        "call": {
+          "status": "sampled",
+          "positive_probes": 0,
+          "negative_probes": 2,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "precision": null,
+          "recall": null
+        },
+        "reexport": {
+          "status": "sampled",
+          "positive_probes": 1,
+          "negative_probes": 0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "command_registration": {
+          "status": "sampled",
+          "positive_probes": 1,
+          "negative_probes": 0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "overload_resolution": {
+          "status": "sampled",
+          "positive_probes": 1,
+          "negative_probes": 0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        },
+        "overload_signature": {
+          "status": "sampled",
+          "positive_probes": 1,
+          "negative_probes": 0,
+          "tp": 2,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
+        }
+      },
+      "probes": [
+        {
+          "id": "flask-call-001",
+          "kind": "call",
+          "evidence": {
+            "file": "src/flask/cli.py",
+            "start_line": 49,
+            "end_line": 49,
+            "sha256": "63a0b8e03de9def5271460853b46db7f64f11a4d3f644e9954a262e2e0caf589"
+          },
+          "rationale": "`find_best_app` retrieves a name chosen at runtime from a module object.",
+          "relations": {
+            "call": {
+              "expected": [],
+              "predicted": [],
+              "tp": [],
+              "fp": [],
+              "fn": []
+            }
+          }
+        },
+        {
+          "id": "flask-call-002",
+          "kind": "call",
+          "evidence": {
+            "file": "src/flask/sansio/scaffold.py",
+            "start_line": 370,
+            "end_line": 370,
+            "sha256": "95fe68d88f730035312865cfe53ef4f8d96d8c7dd2d6fffecb5be62f5ded063a"
+          },
+          "rationale": "The nested decorator returned by `Scaffold.route` invokes an instance method through `self`, so the evidence does not give one uniquely named callee.",
+          "relations": {
+            "call": {
+              "expected": [],
+              "predicted": [],
+              "tp": [],
+              "fp": [],
+              "fn": []
+            }
+          }
+        },
+        {
+          "id": "flask-reexport-001",
+          "kind": "reexport",
+          "evidence": {
+            "file": "src/flask/__init__.py",
+            "start_line": 4,
+            "end_line": 4,
+            "sha256": "d2943de79784523b80214b303b551dbd2a30d941ae9554b2f50b4370413ad410"
+          },
+          "rationale": "The package imports Config from flask.config and binds it as Config.",
+          "relations": {
+            "reexport": {
+              "expected": [
+                [
+                  "flask-reexport-001",
+                  "reexport",
+                  "src/flask/__init__.py",
+                  "Config",
+                  "src/flask/config.py::Config"
+                ]
+              ],
+              "predicted": [
+                [
+                  "flask-reexport-001",
+                  "reexport",
+                  "src/flask/__init__.py",
+                  "Config",
+                  "src/flask/config.py::Config"
+                ]
+              ],
+              "tp": [
+                [
+                  "flask-reexport-001",
+                  "reexport",
+                  "src/flask/__init__.py",
+                  "Config",
+                  "src/flask/config.py::Config"
+                ]
+              ],
+              "fp": [],
+              "fn": []
+            }
+          }
+        },
+        {
+          "id": "flask-registration-001",
+          "kind": "command_registration",
+          "evidence": {
+            "file": "src/flask/cli.py",
+            "start_line": 594,
+            "end_line": 594,
+            "sha256": "612d965dfb64f09af86e939dd52d0f39f301d1f9d3adb2eaa5630d224e043471"
+          },
+          "rationale": "`FlaskGroup.__init__` explicitly installs `run_command` with `self.add_command`.",
+          "relations": {
+            "command_registration": {
+              "expected": [
+                [
+                  "flask-registration-001",
+                  "command_registration",
+                  "src/flask/cli.py::FlaskGroup",
+                  "src/flask/cli.py::run_command"
+                ]
+              ],
+              "predicted": [
+                [
+                  "flask-registration-001",
+                  "command_registration",
+                  "src/flask/cli.py::FlaskGroup",
+                  "src/flask/cli.py::run_command"
+                ]
+              ],
+              "tp": [
+                [
+                  "flask-registration-001",
+                  "command_registration",
+                  "src/flask/cli.py::FlaskGroup",
+                  "src/flask/cli.py::run_command"
+                ]
+              ],
+              "fp": [],
+              "fn": []
+            }
+          }
+        },
+        {
+          "id": "flask-overload-001",
+          "kind": "overload",
+          "evidence": {
+            "file": "src/flask/sansio/app.py",
+            "start_line": 663,
+            "end_line": 668,
+            "sha256": "989b7c8436e258f11725eedfdc4b1209f98c8c64c7a504f7d77d93cceefe47f4"
+          },
+          "rationale": "`App.template_filter` has direct-use and decorator-factory overload variants before its implementation.",
+          "relations": {
+            "overload_resolution": {
+              "expected": [
+                [
+                  "flask-overload-001",
+                  "overload_resolution",
+                  "src/flask/sansio/app.py::App.template_filter",
+                  "src/flask/sansio/app.py::App.template_filter"
+                ]
+              ],
+              "predicted": [
+                [
+                  "flask-overload-001",
+                  "overload_resolution",
+                  "src/flask/sansio/app.py::App.template_filter",
+                  "src/flask/sansio/app.py::App.template_filter"
+                ]
+              ],
+              "tp": [
+                [
+                  "flask-overload-001",
+                  "overload_resolution",
+                  "src/flask/sansio/app.py::App.template_filter",
+                  "src/flask/sansio/app.py::App.template_filter"
+                ]
+              ],
+              "fp": [],
+              "fn": []
+            },
+            "overload_signature": {
+              "expected": [
+                [
+                  "flask-overload-001",
+                  "overload_signature",
+                  "src/flask/sansio/app.py::App.template_filter",
+                  "def template_filter(self, name: T_template_filter) -> T_template_filter"
+                ],
+                [
+                  "flask-overload-001",
+                  "overload_signature",
+                  "src/flask/sansio/app.py::App.template_filter",
+                  "def template_filter(self, name: str | None=None) -> t.Callable[[T_template_filter], T_template_filter]"
+                ]
+              ],
+              "predicted": [
+                [
+                  "flask-overload-001",
+                  "overload_signature",
+                  "src/flask/sansio/app.py::App.template_filter",
+                  "def template_filter(self, name: T_template_filter) -> T_template_filter"
+                ],
+                [
+                  "flask-overload-001",
+                  "overload_signature",
+                  "src/flask/sansio/app.py::App.template_filter",
+                  "def template_filter(self, name: str | None=None) -> t.Callable[[T_template_filter], T_template_filter]"
+                ]
+              ],
+              "tp": [
+                [
+                  "flask-overload-001",
+                  "overload_signature",
+                  "src/flask/sansio/app.py::App.template_filter",
+                  "def template_filter(self, name: T_template_filter) -> T_template_filter"
+                ],
+                [
+                  "flask-overload-001",
+                  "overload_signature",
+                  "src/flask/sansio/app.py::App.template_filter",
+                  "def template_filter(self, name: str | None=None) -> t.Callable[[T_template_filter], T_template_filter]"
+                ]
+              ],
+              "fp": [],
+              "fn": []
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
