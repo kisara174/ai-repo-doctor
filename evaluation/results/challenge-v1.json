@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "dataset_id": "challenge-v1",
-  "generated_at_utc": "2026-09-24T07:11:17.441271+00:00",
-  "repo_doctor_commit": "d2a9853d92404d5c246a707f3f9e2b8f97e50f98",
+  "generated_at_utc": "2026-09-24T07:42:55.709037+00:00",
+  "repo_doctor_commit": "06fa4f5b392da8f974f74c396d0ec6c6784c7a85",
   "python_version": "3.14.5 (v3.14.5:5607950ef23, May 10 2026, 07:38:09) [Clang 21.0.0 (clang-2100.0.123.102)]",
   "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
   "architecture": "arm64",
@@ -27,22 +27,22 @@
       },
       "timing": {
         "runs_seconds": [
-          1.5073042909998549,
-          1.444222082999886,
-          1.4651724580000973,
-          1.4667398750000302,
-          1.4543854580001607
+          1.532970459000353,
+          1.508954999999787,
+          1.4946194169997398,
+          1.5627554579996286,
+          1.5489361670001927
         ],
-        "median_seconds": 1.4651724580000973,
-        "minimum_seconds": 1.444222082999886,
-        "maximum_seconds": 1.5073042909998549
+        "median_seconds": 1.532970459000353,
+        "minimum_seconds": 1.4946194169997398,
+        "maximum_seconds": 1.5627554579996286
       },
       "scan_hashes": [
-        "8ae271684fb5e7496de02aa392823758e1e426e815435865eba3c40889b6180a",
-        "8ae271684fb5e7496de02aa392823758e1e426e815435865eba3c40889b6180a",
-        "8ae271684fb5e7496de02aa392823758e1e426e815435865eba3c40889b6180a",
-        "8ae271684fb5e7496de02aa392823758e1e426e815435865eba3c40889b6180a",
-        "8ae271684fb5e7496de02aa392823758e1e426e815435865eba3c40889b6180a"
+        "d65ef2927c726995cfd22b1b44f21b435751acf644d0ac865845aa4c54792890",
+        "d65ef2927c726995cfd22b1b44f21b435751acf644d0ac865845aa4c54792890",
+        "d65ef2927c726995cfd22b1b44f21b435751acf644d0ac865845aa4c54792890",
+        "d65ef2927c726995cfd22b1b44f21b435751acf644d0ac865845aa4c54792890",
+        "d65ef2927c726995cfd22b1b44f21b435751acf644d0ac865845aa4c54792890"
       ],
       "metrics": {
         "call": {
@@ -69,11 +69,11 @@
           "status": "sampled",
           "positive_probes": 3,
           "negative_probes": 0,
-          "tp": 2,
+          "tp": 3,
           "fp": 0,
-          "fn": 1,
+          "fn": 0,
           "precision": 1.0,
-          "recall": 0.6666666666666666
+          "recall": 1.0
         },
         "overload_resolution": {
           "status": "sampled",
@@ -260,17 +260,24 @@
                   "examples/completion/completion.py::group"
                 ]
               ],
-              "predicted": [],
-              "tp": [],
-              "fp": [],
-              "fn": [
+              "predicted": [
                 [
                   "click-registration-003",
                   "command_registration",
                   "examples/completion/completion.py::cli",
                   "examples/completion/completion.py::group"
                 ]
-              ]
+              ],
+              "tp": [
+                [
+                  "click-registration-003",
+                  "command_registration",
+                  "examples/completion/completion.py::cli",
+                  "examples/completion/completion.py::group"
+                ]
+              ],
+              "fp": [],
+              "fn": []
             }
           }
         },
@@ -418,15 +425,15 @@
       },
       "timing": {
         "runs_seconds": [
-          0.420767916999921,
-          0.40716941699997733,
-          0.42111658299995725,
-          0.4025147920001473,
-          0.405481416999919
+          0.4221390840002641,
+          0.41607799999974304,
+          0.42224362500019197,
+          0.42046320800000103,
+          0.4143958329996167
         ],
-        "median_seconds": 0.40716941699997733,
-        "minimum_seconds": 0.4025147920001473,
-        "maximum_seconds": 0.42111658299995725
+        "median_seconds": 0.42046320800000103,
+        "minimum_seconds": 0.4143958329996167,
+        "maximum_seconds": 0.42224362500019197
       },
       "scan_hashes": [
         "b1ad6e9d0a9bc7835073d37ac5f344e37e607e35c206198dc9d77533de55ad42",
@@ -701,22 +708,22 @@
       },
       "timing": {
         "runs_seconds": [
-          0.7260712079998939,
-          0.7176094579999699,
-          0.7079095410001628,
-          0.7200567499999124,
-          0.7087884170000507
+          0.7571086660000219,
+          0.756239542000003,
+          0.7731900839999071,
+          0.7550510830001258,
+          0.7778776669997569
         ],
-        "median_seconds": 0.7176094579999699,
-        "minimum_seconds": 0.7079095410001628,
-        "maximum_seconds": 0.7260712079998939
+        "median_seconds": 0.7571086660000219,
+        "minimum_seconds": 0.7550510830001258,
+        "maximum_seconds": 0.7778776669997569
       },
       "scan_hashes": [
-        "083a6c1b0725b85e4762368c67b0a4d64ed75e87eaf43943d68da2f659c3149d",
-        "083a6c1b0725b85e4762368c67b0a4d64ed75e87eaf43943d68da2f659c3149d",
-        "083a6c1b0725b85e4762368c67b0a4d64ed75e87eaf43943d68da2f659c3149d",
-        "083a6c1b0725b85e4762368c67b0a4d64ed75e87eaf43943d68da2f659c3149d",
-        "083a6c1b0725b85e4762368c67b0a4d64ed75e87eaf43943d68da2f659c3149d"
+        "21fcca7665eafef8b2ff368d01eb536aa519d0713f21b6fd1052fb1d736ff9c4",
+        "21fcca7665eafef8b2ff368d01eb536aa519d0713f21b6fd1052fb1d736ff9c4",
+        "21fcca7665eafef8b2ff368d01eb536aa519d0713f21b6fd1052fb1d736ff9c4",
+        "21fcca7665eafef8b2ff368d01eb536aa519d0713f21b6fd1052fb1d736ff9c4",
+        "21fcca7665eafef8b2ff368d01eb536aa519d0713f21b6fd1052fb1d736ff9c4"
       ],
       "metrics": {
         "call": {
@@ -743,11 +750,11 @@
           "status": "sampled",
           "positive_probes": 1,
           "negative_probes": 0,
-          "tp": 0,
+          "tp": 1,
           "fp": 0,
-          "fn": 1,
-          "precision": null,
-          "recall": 0.0
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0
         },
         "overload_resolution": {
           "status": "sampled",
@@ -875,17 +882,24 @@
                   "src/flask/cli.py::run_command"
                 ]
               ],
-              "predicted": [],
-              "tp": [],
-              "fp": [],
-              "fn": [
+              "predicted": [
                 [
                   "flask-registration-001",
                   "command_registration",
                   "src/flask/cli.py::FlaskGroup",
                   "src/flask/cli.py::run_command"
                 ]
-              ]
+              ],
+              "tp": [
+                [
+                  "flask-registration-001",
+                  "command_registration",
+                  "src/flask/cli.py::FlaskGroup",
+                  "src/flask/cli.py::run_command"
+                ]
+              ],
+              "fp": [],
+              "fn": []
             }
           }
         },

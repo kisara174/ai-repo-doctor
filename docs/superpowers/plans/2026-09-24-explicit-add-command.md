@@ -30,11 +30,11 @@
 
 **Produces:** `RepoIndex.registration_calls` records with source file, line, receiver name, callback name, lexical caller, and enclosing class (when present). Class `Symbol` records retain base-expression strings internally. Neither field is serialized by `repo_doctor/cli.py`.
 
-- [ ] Add a frozen internal `CommandRegistrationCall` record. Add a trailing `base_expressions` field to `Symbol`, a defaulted `registration_calls` field to `ParsedFile`, and `registration_calls` to `RepoIndex`.
-- [ ] In `_Extractor._add_symbol`, save `ast.unparse(base)` for `ClassDef` bases.
-- [ ] In `_Extractor.visit_Call`, record only calls shaped as `name.add_command(callback_name)` with exactly one positional `ast.Name` argument, no keyword arguments, and an `ast.Name` receiver. Record these at module scope and inside direct class methods; preserve the enclosing method and nearest class IDs when available. Continue generic traversal so normal call extraction remains unchanged.
-- [ ] Return the metadata from `parse_python_file` and aggregate it in `build_index`.
-- [ ] Confirm with a focused source inspection that `_symbol_data` remains explicit and does not serialize `base_expressions` or registration-call internals.
+- [x] Add a frozen internal `CommandRegistrationCall` record. Add a trailing `base_expressions` field to `Symbol`, a defaulted `registration_calls` field to `ParsedFile`, and `registration_calls` to `RepoIndex`.
+- [x] In `_Extractor._add_symbol`, save `ast.unparse(base)` for `ClassDef` bases.
+- [x] In `_Extractor.visit_Call`, record only calls shaped as `name.add_command(callback_name)` with exactly one positional `ast.Name` argument, no keyword arguments, and an `ast.Name` receiver. Record these at module scope and inside direct class methods; preserve the enclosing method and nearest class IDs when available. Continue generic traversal so normal call extraction remains unchanged.
+- [x] Return the metadata from `parse_python_file` and aggregate it in `build_index`.
+- [x] Confirm with a focused source inspection that `_symbol_data` remains explicit and does not serialize `base_expressions` or registration-call internals.
 
 ### Task 2: Resolve only source-provable Click registrations
 
@@ -45,11 +45,11 @@
 
 **Produces:** Additional `SemanticEdge(kind="command_registration", ...)` records whose source is a known group callback or a class proven to inherit Click `Group`, and whose target is a known same-module Click command/group callback.
 
-- [ ] Identify command callbacks as top-level functions with a confirmed `click.command` or `click.group` decorator; retain the existing group callback set for parent checks.
-- [ ] Resolve a name receiver only when it uniquely identifies a known group callback and is not locally shadowed or module-rebound.
-- [ ] Resolve `self` only inside a direct class method when the enclosing class’s same-module base chain reaches `click.Group` or a statically imported alias of `Group`. Stop on cycles, ambiguous symbols, shadowed aliases, or unknown bases.
-- [ ] Resolve the sole callback argument only when it names a same-module top-level function with a confirmed Click command/group decorator or an already resolved decorator-registration edge, and no binding conflict.
-- [ ] Emit the call line as `evidence_file` / `line`; preserve existing decorator registration behavior and deterministic edge sorting.
+- [x] Identify command callbacks as top-level functions with a confirmed `click.command` or `click.group` decorator; retain the existing group callback set for parent checks.
+- [x] Resolve a name receiver only when it uniquely identifies a known group callback and is not locally shadowed or module-rebound.
+- [x] Resolve `self` only inside a direct class method when the enclosing class’s same-module base chain reaches `click.Group` or a statically imported alias of `Group`. Stop on cycles, ambiguous symbols, shadowed aliases, or unknown bases.
+- [x] Resolve the sole callback argument only when it names a same-module top-level function with a confirmed Click command/group decorator or an already resolved decorator-registration edge, and no binding conflict.
+- [x] Emit the call line as `evidence_file` / `line`; preserve existing decorator registration behavior and deterministic edge sorting.
 
 ### Task 3: Verify challenge acceptance and baseline preservation
 
@@ -59,7 +59,7 @@
 - Regenerate: `evaluation/results/challenge-v1.json`
 - Regenerate: `evaluation/results/challenge-v1.md`
 
-- [ ] Run the five-run challenge evaluation from the repository root:
+- [x] Run the five-run challenge evaluation from the repository root:
 
 ```bash
 python3 tools/evaluate_baseline.py \
@@ -70,8 +70,8 @@ python3 tools/evaluate_baseline.py \
   --markdown-out evaluation/results/challenge-v1.md
 ```
 
-- [ ] Confirm `click-registration-003` and `flask-registration-001` are true positives, all five hashes are stable within each repository, and no new false positives appear.
-- [ ] Run the five-run baseline evaluation to temporary output paths so the published baseline report remains unchanged:
+- [x] Confirm `click-registration-003` and `flask-registration-001` are true positives, all five hashes are stable within each repository, and no new false positives appear.
+- [x] Run the five-run baseline evaluation to temporary output paths so the published baseline report remains unchanged:
 
 ```bash
 python3 tools/evaluate_baseline.py \
@@ -82,5 +82,5 @@ python3 tools/evaluate_baseline.py \
   --markdown-out /tmp/ai-repo-doctor-baseline-after-add-command.md
 ```
 
-- [ ] Compare baseline relation metrics and mismatch IDs with `evaluation/results/v2-baseline.json`; preserve the checked-in baseline manifest/report hashes.
-- [ ] Update the README’s challenge-result note to describe the regenerated report, run `git diff --check`, inspect the full diff, then commit the implementation and reports.
+- [x] Compare baseline relation metrics and mismatch IDs with `evaluation/results/v2-baseline.json`; preserve the checked-in baseline manifest/report hashes.
+- [x] Update the README’s challenge-result note to describe the regenerated report, run `git diff --check`, inspect the full diff, then commit the implementation and reports.
