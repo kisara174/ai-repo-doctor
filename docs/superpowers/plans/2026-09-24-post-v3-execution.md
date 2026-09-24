@@ -302,13 +302,13 @@ python3 -m unittest discover -s tests -q
 
 CLI：run --plan-dir --manifest --repos-root --out-dir --repeats --max-calls --allow-network。repeats 只允许 1–3；max-calls 正整数，cases*repeats 超限时整个运行拒绝，而不是跑前几个。--allow-network 缺省时返回 2，不调用 client。
 
-- [ ] 先写离线 mock 测试：缺开关、缺 key、预算不够、上下文哈希改变、manifest/analysis SHA 改变、目标 dirty/HEAD 不匹配、输出目录存在，全部 assert_not_called。
-- [ ] 调用前重新校验 manifest、每个 checkout、分析器干净状态/commit、context 哈希与请求指纹；有效负载只来自冻结 context，不从标签拼 prompt。
-- [ ] 顺序执行，最多一个请求在途，不重试。一次 provider 或响应格式失败则写失败记录并停止余下任务；结果明确 partial，CLI 返回 2。accepted/rejected 都是有效实验结果，不因为 evidence rejection 中断下一 case。
-- [ ] 在发请求前创建整个实验的锁定目录与状态文件；每次请求前写 started，完成后临时文件+replace 写记录。保留中断状态，不自动再次发送 started 未完成的请求。
-- [ ] 通过 validate_diagnosis_payload 校验证据；将 accepted/rejected 与 token usage、延迟、模型名写入记录。保存的源码来自已审核公开 context，避免保存 HTTP envelope/环境变量。
-- [ ] 两个 case、repeats=1、max_calls=2 的 mock 成功测试应恰好调用两次并生成两份记录；首次 401/timeout/无效 JSON 时只有一次调用。扫描所有记录，不得出现测试密钥 TEST_SECRET_SENTINEL。
-- [ ] 退出码：0=计划内全部请求成功并形成记录（允许 finding 被拒绝）；2=配置/输入错误或 partial。不要复制 diagnose 的 rejected=1 到 runner。
+- [x] 先写离线 mock 测试：缺开关、缺 key、预算不够、上下文哈希改变、manifest/analysis SHA 改变、目标 dirty/HEAD 不匹配、输出目录存在，全部 assert_not_called。
+- [x] 调用前重新校验 manifest、每个 checkout、分析器干净状态/commit、context 哈希与请求指纹；有效负载只来自冻结 context，不从标签拼 prompt。
+- [x] 顺序执行，最多一个请求在途，不重试。一次 provider 或响应格式失败则写失败记录并停止余下任务；结果明确 partial，CLI 返回 2。accepted/rejected 都是有效实验结果，不因为 evidence rejection 中断下一 case。
+- [x] 在发请求前创建整个实验的锁定目录与状态文件；每次请求前写 started，完成后临时文件+replace 写记录。保留中断状态，不自动再次发送 started 未完成的请求。
+- [x] 通过 validate_diagnosis_payload 校验证据；将 accepted/rejected 与 token usage、延迟、模型名写入记录。保存的源码来自已审核公开 context，避免保存 HTTP envelope/环境变量。
+- [x] 两个 case、repeats=1、max_calls=2 的 mock 成功测试应恰好调用两次并生成两份记录；首次 401/timeout/无效 JSON 时只有一次调用。扫描所有记录，不得出现测试密钥 TEST_SECRET_SENTINEL。
+- [x] 退出码：0=计划内全部请求成功并形成记录（允许 finding 被拒绝）；2=配置/输入错误或 partial。不要复制 diagnose 的 rejected=1 到 runner。
 
 ~~~bash
 python3 -m unittest tests.test_diagnosis_runner tests.test_diagnosis_evaluation_cli -v
@@ -317,6 +317,8 @@ python3 -m unittest discover -s tests -q
 
 **验收：** 预算校验在第一请求之前、失败不重试、记录可追踪、密钥不落盘、全部测试离线。
 **提交：** eval: run explicitly authorized diagnosis requests。
+
+**T5 实际复核：** 定向 runner/CLI 测试 24 项通过；全量测试 203 项通过；compileall、run CLI help、diff whitespace 检查通过。只对 Python 可捕获中断写 `partial`；如果已原子发布响应记录，会按当前请求 payload 核对并补入 `record_files` 后再退出。未完成的请求保留 `.inflight` 标记，输出目录仍不可复用。独立只读审查的两项中断窗口问题均已修正并复审通过；未发起真实 API 请求。
 
 ## 8. 任务 T6：离线复核模板与评分
 

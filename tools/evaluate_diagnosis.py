@@ -6,12 +6,15 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
 from pathlib import Path
 
+from repo_doctor.deepseek import complete_json
 from .diagnosis_data import EvaluationDataError, prepare_cases
+from .diagnosis_runner import run_cases
 
 
 def _read_manifest(path: Path) -> tuple[dict, str]:
@@ -74,6 +77,67 @@ def _prepare(args: argparse.Namespace) -> int:
     return 0
 
 
+def _read_prepared_bundle(plan_dir: Path) -> tuple[dict, dict[str, dict]]:
+    try:
+        root = Path(plan_dir).resolve(strict=True)
+        if not root.is_dir() or Path(plan_dir).is_symlink():
+            raise EvaluationDataError("plan directory must be a real directory")
+        plan_path = root / "plan.json"
+        if plan_path.is_symlink() or not plan_path.is_file():
+            raise EvaluationDataError("plan directory does not contain plan.json")
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise EvaluationDataError("cannot read a valid prepared plan") from exc
+    if not isinstance(plan, dict) or not isinstance(plan.get("cases"), list):
+        raise EvaluationDataError("prepared plan must contain a cases list")
+    contexts = {}
+    for case in plan["cases"]:
+        if not isinstance(case, dict):
+            raise EvaluationDataError("prepared plan contains an invalid case")
+        case_id = case.get("id")
+        if not isinstance(case_id, str) or re.fullmatch(r"[A-Za-z0-9_-]+", case_id) is None:
+            raise EvaluationDataError("prepared plan contains an unsafe case ID")
+        filename = f"{case_id}.json"
+        if case.get("context_file") != filename:
+            raise EvaluationDataError(f"{case_id}: unexpected context file path")
+        context_path = root / filename
+        if context_path.is_symlink() or not context_path.is_file():
+            raise EvaluationDataError(f"{case_id}: prepared context is missing or is a symlink")
+        try:
+            context = json.loads(context_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise EvaluationDataError(f"{case_id}: cannot read a valid context JSON") from exc
+        contexts[case_id] = context
+    return plan, contexts
+
+
+def _run(args: argparse.Namespace) -> int:
+    if not args.allow_network:
+        raise EvaluationDataError("--allow-network is required to call the provider")
+    api_key = os.environ.get("DEEPSEEK_API_KEY", "")
+    if not api_key.strip():
+        raise EvaluationDataError("DEEPSEEK_API_KEY is required")
+    manifest, manifest_hash = _read_manifest(Path(args.manifest))
+    plan, contexts = _read_prepared_bundle(Path(args.plan_dir))
+    summary = run_cases(
+        plan,
+        contexts,
+        Path(args.repos_root),
+        repeats=args.repeats,
+        max_calls=args.max_calls,
+        api_key=api_key,
+        client=complete_json,
+        output_dir=Path(args.out_dir),
+        manifest=manifest,
+        manifest_sha256=manifest_hash,
+    )
+    print(
+        f"Run {summary['state']}: {summary['attempted_calls']}/{summary['planned_calls']} "
+        f"requests attempted in {args.out_dir}"
+    )
+    return 0 if summary["state"] == "complete" else 2
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="evaluate_diagnosis")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -83,6 +147,14 @@ def build_parser() -> argparse.ArgumentParser:
     prepare.add_argument("--model", required=True)
     prepare.add_argument("--max-lines", type=int, default=120)
     prepare.add_argument("--out-dir", required=True)
+    run = subparsers.add_parser("run", help="send an explicitly authorized diagnosis evaluation")
+    run.add_argument("--plan-dir", required=True)
+    run.add_argument("--manifest", required=True)
+    run.add_argument("--repos-root", required=True)
+    run.add_argument("--out-dir", required=True)
+    run.add_argument("--repeats", type=int, default=1)
+    run.add_argument("--max-calls", type=int, required=True)
+    run.add_argument("--allow-network", action="store_true")
     return parser
 
 
@@ -91,7 +163,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "prepare":
             return _prepare(args)
-    except (EvaluationDataError, OSError) as exc:
+        if args.command == "run":
+            return _run(args)
+    except (EvaluationDataError, OSError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     return 2
