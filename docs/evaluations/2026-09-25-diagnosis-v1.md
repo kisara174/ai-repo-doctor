@@ -17,7 +17,9 @@
 | Errors, uncertain findings, duplicates | 1 `provider_error` among 1 completed call; 9 requests were not attempted |
 | Tokens / latency | Usage is unavailable (`null`); the failed request took 0.0346 seconds, not a model-response latency |
 
-The initial preparation process did not have `DEEPSEEK_API_KEY`. The key is now available to a zsh login shell; its value was never displayed or written to the repository. The first live request was attempted from that shell and recorded only as `provider_error`. The client deliberately stores a generic error category, so the record does not distinguish an HTTP rejection from a connection failure. No automatic retry occurred, and the other nine requests were not sent. The user approved the original ten-request scope; any additional attempt requires fresh authorization. Billing for the failed request cannot be determined from the run record.
+The initial preparation process did not have `DEEPSEEK_API_KEY`. The key is now available to a zsh login shell; its value was never displayed or written to the repository. The first live request was attempted from that shell and recorded only as `provider_error`. The client deliberately stores a generic error category, so the record does not distinguish an HTTP rejection from a connection failure. No automatic retry occurred, and the other nine requests were not sent. Billing for the failed request cannot be determined from the run record.
+
+This report describes the original ten-case T7 run only. A separately authorized single-sample smoke for `requests-6628-bug` is recorded in [the live-smoke report](2026-09-25-live-smoke.md). Its latest attempt returned a truncated completion with token usage but no valid diagnosis payload; it does not change the ten-case run record, its failure denominator, or its model-quality limitations.
 
 ## Scope and reviewed request contents
 

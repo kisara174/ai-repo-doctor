@@ -1,27 +1,47 @@
-# DeepSeek live smoke — 2026-09-25
+# DeepSeek single-sample online attempts — 2026-09-25
 
-## Result
+## Latest result
 
-One transport attempt was made with `deepseek-flash`. The CLI returned `Could not connect to DeepSeek API`; no valid provider response or usage record was received. The outcome is a connection failure, not evidence that the API key is invalid. Whether the provider received the request or charged for it is unknown. No retry, model switch, key change, or second API call was made.
+The latest user-authorized attempt sent exactly one request for `requests-6628-bug` using the previously reviewed frozen prompt. The API response envelope was readable, but the completion ended with `finish_reason=length` at the client's 4,096-token output limit. The client recorded `invalid_response` with safe detail `truncated` and usage of 1,483 prompt, 4,096 completion, and 5,579 total tokens. Elapsed time was 17.040 seconds.
 
-This run does **not** qualify as a successful connectivity check and provides no model-quality evidence. M07 remains blocked.
+This confirms a verified TLS connection and a provider response for this request. It does not provide a complete diagnosis payload, findings, manual review rows, or model-quality evidence. Usage is not a billing amount; no charge is inferred. The raw provider response and API key were not stored. There was no automatic retry.
 
-## Request audit
+## Captured exact-payload attempts
 
-The analyzer code was at clean HEAD `24fb68ce67297c80d0c643e6b87802b2e6b009cb`. The intended sample was manifest case `requests-6628-bug`, pinned to Requests commit `7a13c041dbef42f9f3feb14110f02626f6892e9a` at checkout `requests-7a13c041dbef`. Its previously reviewed context had 44 lines / 2,170 source bytes and a 5,594-byte serialized request.
+All three attempts below used the same 5,594-byte frozen wire body, same requested model, target commit, context hash, canonical request hash, and no-retry behavior. Each row represents one actual provider request.
 
-The command accidentally selected a different local Requests checkout:
+| Started (UTC) | Analyzer commit | Result | Usage | Elapsed |
+| --- | --- | --- | --- | ---: |
+| 2026-09-25 03:53:14 | `9a77fa6` | `provider_error` / `connection`; no HTTP status or usage | unavailable | 0.021 s |
+| 2026-09-25 04:55:39 | `9a77fa6` | `invalid_response`; the client did not yet preserve a safe detail or usage | unavailable in the saved record | 15.981 s |
+| 2026-09-25 05:17:26 | `f5ecae3ab0ef50c4eba1f48d01155220a5de8d3d` | `invalid_response` / `truncated` | 1,483 / 4,096 / 5,579 tokens | 17.040 s |
 
-```sh
-python3 -m repo_doctor diagnose /tmp/ai-repo-doctor-diagnosis-checkouts/requests-0b401c76b6e8 src/requests/exceptions.py::JSONDecodeError --max-lines 120 --model deepseek-flash --json
-```
+Local attempt artifacts, excluding raw provider content, are in ignored paths:
 
-That checkout was clean at commit `0b401c76b6e80a4eecf3c690085b2553f6e261ca`, which is not the manifest pin. The CLI reported 56 source lines / 2,766 source bytes. A read-only reconstruction of the exact serialized request gives 6,620 bytes, SHA-256 `4b0d2f67be93a44051d6ba0c875d709722a79ed6cac116f0a0af129731e32faf`; its context SHA-256 is `18593348bbf4768f285147ff49eea7c5ee94cb2b893564423e3ee35716968237`. Ground truth was not present in the serialized context.
+- `.local/diagnosis/m06-online-requests-6628-9a77fa6/`
+- `.local/diagnosis/m06-online-requests-6628-attempt2-9a77fa6/`
+- `.local/diagnosis/m06-online-requests-6628-attempt3-f5ecae3/`
 
-The wrong checkout selection means this attempt did not exercise the pre-reviewed frozen case. This was an execution error by the primary agent and is retained in the record; no quality or sample-pair conclusion is drawn from it.
+The third artifact contains `attempt.json`, `result.json`, `report.md`, and an empty `review-template.json`. The persisted result has no response payload or response body.
 
-The request used the client's fixed 4,096 output-token limit, 60-second timeout, 256 KiB request limit, and 2 MiB response limit. At the official peak prices, a byte-based planning estimate is about $0.0069 for this request at those limits; it is not a billing record. DeepSeek currently lists `deepseek-flash` as DeepSeek-V4.1-Flash and publishes separate peak/off-peak token prices on its [Models & Pricing page](https://api-docs.deepseek.com/quick_start/pricing/). The API returned no usage data, so actual billing remains unknown.
+## Frozen request audit
 
-## Gate
+- Sample: manifest case `requests-6628-bug`.
+- Target: Requests commit `7a13c041dbef42f9f3feb14110f02626f6892e9a`, checkout `requests-7a13c041dbef`.
+- Symbol: `src/requests/exceptions.py::JSONDecodeError`.
+- Analyzer for the latest attempt: clean commit `f5ecae3ab0ef50c4eba1f48d01155220a5de8d3d`.
+- Context SHA-256: `742c6ef12db73d6e77c725fd3b23fcec40f39d5c5d5e984a7d889d43ab50d7d2`.
+- Canonical request SHA-256: `1d4f44fcf85af62c9dae49bc341302a7c250059b64a1be6af13cabd5026519a1`.
+- Wire body: 5,594 bytes; SHA-256 `319afcb1be294ef3f976ab6d34a04c8497483ff3d076bf25db5b74877577faa7`.
 
-Do not retry within this smoke task. Any future connectivity attempt must be a new, explicitly bounded run using the correct pinned checkout and reviewed payload. Until a valid response is available and reviewed, do not create model scores or claims.
+Before the latest call, the frozen payload was reconstructed from the pinned checkout. Its selected source blocks and call sites matched the reviewed context. The current analyzer adds V2-derived context metadata; those derived fields were excluded from the already frozen prompt. The exact serialized request bytes matched the earlier reviewed body. The prompt contains only the diagnostic instructions and allowlisted `symbol`, `blocks`, and `call_evidence`; it excludes issue labels, ground truth, credentials, and local absolute paths.
+
+TLS was verified through the configured loopback proxy using the process-scoped Homebrew CA bundle at `/opt/homebrew/etc/openssl@3/cert.pem`. No global trust or proxy settings were changed.
+
+## Earlier unpinned CLI smoke
+
+An earlier CLI smoke, recorded in the first version of this note, selected Requests checkout `0b401c76b6e80a4eecf3c690085b2553f6e261ca` instead of the manifest-pinned snapshot. That request was 6,620 bytes with SHA-256 `4b0d2f67be93a44051d6ba0c875d709722a79ed6cac116f0a0af129731e32faf`; it returned a connection error and produced no usable response or usage. It is separate from the three exact-payload attempts above and is not used as diagnosis evidence.
+
+## Next step
+
+Keep the ten-case T7 run unchanged. Work offline on a shorter output contract and tests for truncation handling before considering another provider request. Until a complete response passes local validation and manual review, do not score this single sample or make model-quality claims.

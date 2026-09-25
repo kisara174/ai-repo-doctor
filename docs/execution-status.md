@@ -4,13 +4,11 @@ Plan: `docs/superpowers/plans/2026-09-24-post-v3-execution.md`
 
 Branch / worktree: `codex/diagnosis-evaluation` / `/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor`
 
-Current local HEAD: `fba3d86a1304923898e89e57404f827b0c67e695` (merge of the now-merged default-branch PR #6; local only, not pushed). The T8 report, this status file, and the execution plan have local documentation updates not yet committed.
-
-Latest implementation commit: `5044a94` (`eval: score human-reviewed diagnosis results`), on top of T5 commit `81fa9d3`.
+Latest analyzer code commit: `f5ecae3ab0ef50c4eba1f48d01155220a5de8d3d` (`fix: record safe DeepSeek response diagnostics`). This status and evaluation report now include the latest single-sample attempt. No push or merge was performed.
 
 ## Phase
 
-T0–T6 are implemented, validated, reviewed, and committed. T7's offline preparation and prompt review are complete. One approved live run was attempted and stopped after the first `provider_error`; the partial run has an empty review template and an offline partial score. T8 now records that outcome. No model-quality conclusion is available because no valid response was returned.
+T0–T6 are implemented, validated, reviewed, and committed. T7's offline preparation and prompt review are complete. The original ten-case run remains partial: its first call was `provider_error`, and nine calls were not attempted. A separately authorized single-sample smoke sent three one-request attempts using the exact frozen Requests payload; the latest response was truncated at the 4,096-token output limit. It yielded usage metadata but no valid diagnosis payload or quality evidence.
 
 The frozen ten-case manifest is unchanged at SHA-256 `f76bbe7a4daa4933b0be2db0552a740a7147ddc8923ed7ed91bc04bdfc78f31f`. T5 only ran against mocks. T6 provides manual-review templates and deterministic offline scoring. Its two independent-review corrections are included: E2E denominators are calculated per repeat, and completed-call failure rate is `failed_calls / completed_calls`, with unresolved attempts separate.
 
@@ -23,6 +21,7 @@ The frozen ten-case manifest is unchanged at SHA-256 `f76bbe7a4daa4933b0be2db055
 - `git diff --check`: passed.
 - Independent read-only review of both T6 metric corrections: no remaining findings.
 - After locally integrating merged PR #6, the combined branch passed 229 tests; focused DeepSeek transport tests passed 15/15. The 5-run baseline/challenge artifacts are preserved under `.local/diagnosis/post-review-pr6-3492deb/`.
+- After safe error-detail and failure-usage recording was added: full suite 260 tests passed; `compileall`, evaluation CLI help, staged-diff review, and `git diff --check` passed. These checks were run before the latest online attempt.
 
 ## T7 exact offline preparation
 
@@ -33,13 +32,15 @@ The frozen ten-case manifest is unchanged at SHA-256 `f76bbe7a4daa4933b0be2db055
 - At preparation time `DEEPSEEK_API_KEY` was absent. It is now available to a zsh login shell; the value was not displayed or written to the repository. A local format check and local proxy TCP check passed, but neither verifies provider authorization or balance.
 - The user approved the exact payloads and usage-based billing. The first case (`click-3084-bug`) was attempted and recorded as `provider_error`; no usage data or valid response was returned. The runner stopped as designed, without retrying, and the other nine requests were not sent. Billing for the failed request is unknown.
 
+The separate `requests-6628-bug` smoke preserved the T7 run. The latest attempt used analyzer `f5ecae3`, target commit `7a13c041dbef`, context SHA-256 `742c6ef1…ab50d7d2`, and wire SHA-256 `319afc…77faa7`. It returned `invalid_response/truncated` with usage 1,483 prompt, 4,096 completion, and 5,579 total tokens. Its local artifacts are under `.local/diagnosis/m06-online-requests-6628-attempt3-f5ecae3/`; the response body and key were not saved. See `docs/evaluations/2026-09-25-live-smoke.md` for the attempt ledger.
+
 ## T8 report
 
 `docs/evaluations/2026-09-25-diagnosis-v1.md` records the manifest and analyzer hashes, all ten context/request hashes, request and token limits, cost uncertainty, the partial provider failure, and the limits of the resulting offline score. `README.md` links to the report. The partial report separates the one failed call and nine unattempted calls; quality ratios are undefined, and its 0/4 end-to-end count is explicitly not treated as a model-quality estimate.
 
 ## Remaining gates
 
-1. The current live run is intentionally stopped after the provider error, per user instruction. No further API calls will be made in this run. Any new attempt requires checking the provider account/key and billing state, then fresh approval.
+1. The original ten-case run remains partial and was not retried. The separately authorized one-sample smoke is complete with a truncated response; no further API request was made after it. Continue with offline output-contract and truncation work before scheduling another provider call.
 2. The partial record, zero-row review template, and offline score are complete. The quality evaluation remains inconclusive until a run returns usable model responses.
 3. PR #6 head `3492deb7c9971c06da48477f2dff6a8836cf2226` was merged into `codex/repo-doctor-v1` at `ec5041d3b98e07dc42532336e36ebe9ac2e82f12`. Both CI runs passed on Python 3.11, 3.12, and 3.13 (six green jobs total); the updated PR worktree also passed all 163 tests, compileall, CLI help, and whitespace checks. This is independent of the partial DeepSeek run; no further API request was sent.
 
