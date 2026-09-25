@@ -19,6 +19,7 @@ from repo_doctor.diagnosis import (
 )
 from repo_doctor.deepseek import MAX_REQUEST_BYTES, _serialize_request_body
 from repo_doctor.index import build_index
+from repo_doctor.model import RepoIndex
 from repo_doctor.source import read_source
 from .analyzer_provenance import AnalyzerProvenanceError, require_clean_analyzer
 
@@ -256,6 +257,7 @@ def prepare_cases(
     contexts: dict[str, dict] = {}
     prepared_cases = []
     checkout_cache: dict[str, tuple[str, Path]] = {}
+    index_cache: dict[tuple[str, str], RepoIndex] = {}
 
     for case in manifest["cases"]:
         checkout_id = case["checkout_id"]
@@ -270,7 +272,11 @@ def prepare_cases(
 
         _source_fingerprint(checkout, case)
         try:
-            index = build_index(checkout)
+            snapshot = (checkout_id, case["commit"])
+            index = index_cache.get(snapshot)
+            if index is None:
+                index = build_index(checkout)
+                index_cache[snapshot] = index
             if case["symbol"] in index.ambiguous_symbols:
                 raise EvaluationDataError(f"{case['id']}: Ambiguous symbol: {case['symbol']}")
             if case["symbol"] not in index.symbols:

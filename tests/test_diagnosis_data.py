@@ -8,7 +8,13 @@ from pathlib import Path
 from unittest.mock import patch
 
 from repo_doctor.diagnosis import build_diagnosis_prompts
-from tools.diagnosis_data import EvaluationDataError, prepare_cases, validate_manifest
+from repo_doctor.index import build_index
+from tools.diagnosis_data import (
+    EvaluationDataError,
+    _source_fingerprint,
+    prepare_cases,
+    validate_manifest,
+)
 
 
 def git(root, *args):
@@ -120,6 +126,47 @@ class DiagnosisDataTests(unittest.TestCase):
         ).hexdigest()
         self.assertEqual(prepared["plan"]["cases"][0]["request_sha256"], expected_request_hash)
         open_request.assert_not_called()
+
+    def test_prepare_reuses_index_for_duplicate_snapshot_within_each_call(self):
+        manifest = self.make_manifest()
+        second_case = dict(manifest["cases"][0])
+        second_case.update({
+            "id": "control-02",
+            "symbol": "app.py::unrelated",
+            "source": {
+                "file": "app.py",
+                "start_line": 1,
+                "end_line": 2,
+                "sha256": source_hash(self.source, 1, 2),
+            },
+        })
+        manifest["cases"].append(second_case)
+
+        with (
+            patch("tools.diagnosis_data.build_index", wraps=build_index) as index_builder,
+            patch(
+                "tools.diagnosis_data._source_fingerprint",
+                wraps=_source_fingerprint,
+            ) as source_fingerprint,
+        ):
+            first = prepare_cases(manifest, self.repos_root, "test-model", 120)
+            second = prepare_cases(manifest, self.repos_root, "test-model", 120)
+
+        self.assertEqual(index_builder.call_count, 2)
+        self.assertEqual(source_fingerprint.call_count, 4)
+        for prepared in (first, second):
+            self.assertEqual(
+                [case["id"] for case in prepared["plan"]["cases"]],
+                ["bug-01", "control-02"],
+            )
+            self.assertEqual(
+                list(prepared["contexts"]),
+                ["bug-01", "control-02"],
+            )
+            self.assertEqual(
+                [prepared["contexts"][case_id]["symbol"] for case_id in prepared["contexts"]],
+                ["app.py::broken", "app.py::unrelated"],
+            )
 
     def test_prepare_rejects_analyzer_head_change_after_generation(self):
         with patch(
