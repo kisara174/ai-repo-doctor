@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
-from repo_doctor.deepseek import DeepSeekError, DeepSeekResult
+from repo_doctor.deepseek import DEEPSEEK_ERROR_CODES, DeepSeekError, DeepSeekResult
 from repo_doctor.context import build_context
 from repo_doctor.diagnosis import (
     build_diagnosis_prompts,
@@ -67,20 +67,20 @@ def _safe_usage(value: object) -> dict[str, int | None]:
     return result
 
 
-def _client_error_status(error: Exception) -> str:
-    invalid_responses = {
-        "DeepSeek API returned invalid JSON",
-        "DeepSeek API response must be a JSON object",
-        "DeepSeek API response did not include a model name",
-        "DeepSeek API response did not include a completion",
-        "DeepSeek response was truncated by the output token limit",
-        "DeepSeek returned empty response content",
-        "DeepSeek response content was not valid JSON",
-        "DeepSeek response content must be a JSON object",
-    }
-    if isinstance(error, DeepSeekError) and str(error) in invalid_responses:
-        return "invalid_response"
-    return "provider_error"
+def _client_error_details(error: Exception) -> tuple[str, str, int | None]:
+    code = "unknown"
+    http_status = None
+    if isinstance(error, DeepSeekError):
+        candidate_code = getattr(error, "code", None)
+        if isinstance(candidate_code, str) and candidate_code in DEEPSEEK_ERROR_CODES:
+            code = candidate_code
+        candidate_status = getattr(error, "http_status", None)
+        if code == "http" and type(candidate_status) is int and 100 <= candidate_status <= 599:
+            http_status = candidate_status
+        elif code == "http":
+            code = "unknown"
+    status = "invalid_response" if code == "invalid_response" else "provider_error"
+    return status, code, http_status
 
 
 def _write_json_atomic(path: Path, value: dict) -> None:
@@ -317,6 +317,8 @@ def run_cases(
                 response: DeepSeekResult | None = None
                 status = "success"
                 error = None
+                error_code = None
+                http_status = None
                 validated: dict = {"accepted": [], "rejected": []}
                 try:
                     response = client(
@@ -326,7 +328,7 @@ def run_cases(
                         model=model,
                     )
                 except Exception as exc:
-                    status = _client_error_status(exc)
+                    status, error_code, http_status = _client_error_details(exc)
                     error = status
                 elapsed = time.perf_counter() - started
 
@@ -348,6 +350,7 @@ def run_cases(
                     except (OSError, ValueError, TypeError, KeyError):
                         status = "invalid_response"
                         error = "invalid_response"
+                        error_code = "invalid_response"
 
                 response_model = response.model if status == "success" and response else None
                 usage = _safe_usage(response.usage if response else None)
@@ -367,6 +370,8 @@ def run_cases(
                     "accepted": validated["accepted"] if status == "success" else [],
                     "rejected": validated["rejected"] if status == "success" else [],
                     "error": error,
+                    "error_code": error_code,
+                    "http_status": http_status,
                 }
                 serialized_record = _canonical_json(record)
                 if len(api_key) >= 8 and api_key in serialized_record:
@@ -377,6 +382,8 @@ def run_cases(
                         "rejected": [],
                         "status": "invalid_response",
                         "error": "invalid_response",
+                        "error_code": "invalid_response",
+                        "http_status": None,
                     })
 
                 active_record_payload = record

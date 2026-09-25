@@ -6,6 +6,7 @@ import math
 import re
 from statistics import median
 
+from repo_doctor.deepseek import DEEPSEEK_ERROR_CODES
 from .diagnosis_data import EvaluationDataError, validate_manifest
 from .diagnosis_score_math import calculate_repeat_metrics
 
@@ -213,6 +214,28 @@ def _validate_run_and_records(manifest: dict, records: list[dict], run: dict) ->
             _fail(f"{case_id}: record fingerprints must be SHA-256 values")
         if record.get("status") not in ("success", "provider_error", "invalid_response"):
             _fail(f"{case_id}: unknown record status")
+        error_code = record.get("error_code")
+        if error_code is not None and (
+            not isinstance(error_code, str) or error_code not in DEEPSEEK_ERROR_CODES
+        ):
+            _fail(f"{case_id}: error_code is not an allowed diagnostic code")
+        http_status = record.get("http_status")
+        if http_status is not None and (
+            type(http_status) is not int or not 100 <= http_status <= 599
+        ):
+            _fail(f"{case_id}: http_status must be an HTTP status code or null")
+        if record["status"] == "success":
+            if error_code is not None or http_status is not None:
+                _fail(f"{case_id}: successful record cannot contain error diagnostics")
+        else:
+            if record["status"] == "invalid_response" and error_code not in (None, "invalid_response"):
+                _fail(f"{case_id}: invalid_response status has inconsistent error_code")
+            if error_code == "invalid_response" and record["status"] != "invalid_response":
+                _fail(f"{case_id}: invalid_response error_code has inconsistent status")
+            if error_code == "http" and http_status is None:
+                _fail(f"{case_id}: HTTP error is missing http_status")
+            if error_code != "http" and http_status is not None:
+                _fail(f"{case_id}: http_status requires an HTTP error code")
         if failure_seen:
             _fail("records continue after a failed provider response")
         if record["status"] != "success":

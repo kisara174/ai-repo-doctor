@@ -220,6 +220,8 @@ class DiagnosisRunnerTests(unittest.TestCase):
         self.assertEqual(record["status"], "provider_error")
         self.assertNotIn(API_KEY, json.dumps(record))
         self.assertEqual(record["error"], "provider_error")
+        self.assertEqual(record.get("error_code"), "unknown")
+        self.assertIsNone(record.get("http_status"))
 
     def test_invalid_response_is_recorded_and_stops_after_one_call(self):
         client = Mock(return_value=DeepSeekResult("test-model", {"bad": []}))
@@ -233,7 +235,9 @@ class DiagnosisRunnerTests(unittest.TestCase):
         self.assertEqual(record["error"], "invalid_response")
 
     def test_client_protocol_error_is_classified_as_invalid_response(self):
-        client = Mock(side_effect=DeepSeekError("DeepSeek response content was not valid JSON"))
+        error = DeepSeekError("DeepSeek response content was not valid JSON")
+        error.code = "invalid_response"
+        client = Mock(side_effect=error)
 
         summary, output_dir = self.run_with(client=client)
 
@@ -242,6 +246,44 @@ class DiagnosisRunnerTests(unittest.TestCase):
         record = json.loads((output_dir / summary["record_files"][0]).read_text())
         self.assertEqual(record["status"], "invalid_response")
         self.assertEqual(record["error"], "invalid_response")
+        self.assertEqual(record.get("error_code"), "invalid_response")
+        self.assertIsNone(record.get("http_status"))
+
+    def test_error_message_does_not_determine_the_failure_category(self):
+        client = Mock(side_effect=DeepSeekError("DeepSeek response content was not valid JSON"))
+
+        summary, output_dir = self.run_with(client=client)
+
+        record = json.loads((output_dir / summary["record_files"][0]).read_text())
+        self.assertEqual(record["status"], "provider_error")
+        self.assertEqual(record.get("error_code"), "unknown")
+
+    def test_http_error_record_contains_only_safe_code_and_status(self):
+        error = DeepSeekError(f"private body {API_KEY}")
+        error.code = "http"
+        error.http_status = 429
+        client = Mock(side_effect=error)
+
+        summary, output_dir = self.run_with(client=client)
+
+        record = json.loads((output_dir / summary["record_files"][0]).read_text())
+        self.assertEqual(record["status"], "provider_error")
+        self.assertEqual(record["error"], "provider_error")
+        self.assertEqual(record.get("error_code"), "http")
+        self.assertEqual(record.get("http_status"), 429)
+        self.assertNotIn(API_KEY, json.dumps(record))
+        self.assertNotIn("private body", json.dumps(record))
+
+    def test_custom_exception_uses_unknown_code_without_persisting_message(self):
+        client = Mock(side_effect=RuntimeError(API_KEY))
+
+        summary, output_dir = self.run_with(client=client)
+
+        record = json.loads((output_dir / summary["record_files"][0]).read_text())
+        self.assertEqual(record["status"], "provider_error")
+        self.assertEqual(record.get("error_code"), "unknown")
+        self.assertIsNone(record.get("http_status"))
+        self.assertNotIn(API_KEY, json.dumps(record))
 
     def test_keyboard_interrupt_marks_run_partial_and_preserves_inflight_marker(self):
         client = Mock(side_effect=KeyboardInterrupt)

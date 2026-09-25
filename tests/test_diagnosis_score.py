@@ -231,6 +231,34 @@ class DiagnosisScoreTests(unittest.TestCase):
             "denominator": 5,
         })
 
+    def test_optional_error_diagnostics_are_validated_and_legacy_records_still_work(self):
+        legacy_report = score_records(
+            self.inputs.manifest, copy.deepcopy(self.inputs.records), self.inputs.review
+        )
+        self.assertEqual(legacy_report["totals"]["failed_calls"], 1)
+
+        invalid_metadata = [
+            {"error_code": "private provider detail"},
+            {"http_status": 429},
+            {"error_code": "http", "http_status": True},
+            {"error_code": "http", "http_status": 429},
+            {"error_code": "invalid_response"},
+        ]
+        for metadata in invalid_metadata:
+            with self.subTest(metadata=metadata):
+                records = copy.deepcopy(self.inputs.records)
+                records[0].update(metadata)
+                with self.assertRaises(ValueError):
+                    score_records(self.inputs.manifest, records, self.inputs.review)
+
+    def test_scoring_accepts_http_diagnostics_on_a_failed_record(self):
+        records = copy.deepcopy(self.inputs.records)
+        records[-1].update(error_code="http", http_status=429)
+
+        report = score_records(self.inputs.manifest, records, self.inputs.review)
+
+        self.assertEqual(report["totals"]["failed_calls"], 1)
+
     def test_unresolved_attempts_are_excluded_from_completed_call_failure_rate(self):
         records = [self.inputs.make_record("bug-1", accepted=(0,))]
         run = copy.deepcopy(self.inputs.run)
