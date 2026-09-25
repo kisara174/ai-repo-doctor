@@ -7,7 +7,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from repo_doctor.deepseek import DeepSeekError, DeepSeekResult
+import tools.diagnosis_runner as diagnosis_runner_module
+from repo_doctor.deepseek import MAX_REQUEST_BYTES, DeepSeekError, DeepSeekResult
 import tests.test_diagnosis_data as data_fixture
 from tools.diagnosis_data import prepare_cases
 from tools.diagnosis_runner import run_cases
@@ -123,6 +124,18 @@ class DiagnosisRunnerTests(unittest.TestCase):
     def test_insufficient_call_budget_rejects_the_entire_run_before_client(self):
         client = Mock()
         output = self.assert_rejected_before_client(client, max_calls=1)
+        self.assertFalse(output.exists())
+
+    def test_oversized_wire_request_rejects_before_creating_run_or_calling_client(self):
+        client = Mock(return_value=DeepSeekResult("test-model", {"findings": []}))
+        with patch.object(
+            diagnosis_runner_module,
+            "_serialize_request_body",
+            return_value=b"x" * (MAX_REQUEST_BYTES + 1),
+            create=True,
+        ):
+            output = self.assert_rejected_before_client(client)
+
         self.assertFalse(output.exists())
 
     def test_changed_context_hash_rejects_the_run_before_client(self):

@@ -232,6 +232,10 @@ class DiagnosisDataTests(unittest.TestCase):
         with self.assertRaisesRegex(EvaluationDataError, "model"):
             prepare_cases(self.manifest, self.repos_root, "", 120)
 
+    def test_prepare_rejects_oversized_serialized_wire_request(self):
+        with self.assertRaisesRegex(EvaluationDataError, "256 KiB"):
+            prepare_cases(self.manifest, self.repos_root, "m" * (300 * 1024), 120)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,6 +5,7 @@ import urllib.error
 import urllib.request
 from unittest.mock import Mock, patch
 
+import repo_doctor.deepseek as deepseek_module
 from repo_doctor.deepseek import (
     DeepSeekError,
     DeepSeekResult,
@@ -20,15 +21,19 @@ class FakeResponse:
             if isinstance(payload, bytes)
             else json.dumps(payload).encode("utf-8")
         )
+        self.read_sizes = []
+        self.closed = False
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        self.closed = True
         return False
 
-    def read(self):
-        return self.payload
+    def read(self, size=-1):
+        self.read_sizes.append(size)
+        return self.payload if size < 0 else self.payload[:size]
 
 
 class DeepSeekTests(unittest.TestCase):
@@ -204,6 +209,60 @@ class DeepSeekTests(unittest.TestCase):
 
         open_request.assert_not_called()
         self.assertEqual(getattr(raised.exception, "code", None), "request_too_large")
+
+    def test_request_wire_bytes_accept_exact_limit_and_reject_one_byte_over(self):
+        limit = getattr(deepseek_module, "MAX_REQUEST_BYTES", None)
+        serializer = getattr(deepseek_module, "_serialize_request_body", None)
+        if not isinstance(limit, int) or not callable(serializer):
+            self.fail("wire request serializer and byte limit are not available")
+
+        base = serializer("system", "", "model")
+        remaining = limit - len(base)
+        user_prompt = "x" * (remaining - 2) + "é"
+        expected_body = serializer("system", user_prompt, "model")
+        self.assertEqual(len(expected_body), limit)
+
+        response = self.fake_api_response('{"findings": []}')
+        with patch("urllib.request.OpenerDirector.open", return_value=response) as open_request:
+            complete_json("system", user_prompt, api_key="test-secret", model="model")
+        self.assertEqual(open_request.call_args.args[0].data, expected_body)
+
+        with patch("urllib.request.OpenerDirector.open") as open_request:
+            with self.assertRaisesRegex(DeepSeekError, "request exceeds") as raised:
+                complete_json(
+                    "system", user_prompt + "x", api_key="test-secret", model="model"
+                )
+        open_request.assert_not_called()
+        self.assertEqual(raised.exception.code, "request_too_large")
+
+    def test_response_exact_limit_is_accepted_with_a_bounded_read(self):
+        limit = getattr(deepseek_module, "MAX_RESPONSE_BYTES", None)
+        if not isinstance(limit, int):
+            self.fail("bounded response limit is not available")
+        valid = b'{"model":"deepseek-flash","choices":[{"finish_reason":"stop","message":{"content":"{}"}}]}'
+        response = FakeResponse(valid + b" " * (limit - len(valid)))
+
+        with patch("urllib.request.OpenerDirector.open", return_value=response):
+            result = self.call_client()
+
+        self.assertEqual(result.payload, {})
+        self.assertEqual(response.read_sizes, [limit + 1])
+        self.assertTrue(response.closed)
+
+    def test_response_one_byte_over_limit_is_rejected_before_json_decode(self):
+        limit = getattr(deepseek_module, "MAX_RESPONSE_BYTES", None)
+        if not isinstance(limit, int):
+            self.fail("bounded response limit is not available")
+        valid = b'{"model":"deepseek-flash","choices":[{"finish_reason":"stop","message":{"content":"{}"}}]}'
+        response = FakeResponse(valid + b" " * (limit + 1 - len(valid)))
+
+        with patch("urllib.request.OpenerDirector.open", return_value=response):
+            with self.assertRaisesRegex(DeepSeekError, "response exceeds") as raised:
+                self.call_client()
+
+        self.assertEqual(raised.exception.code, "response_too_large")
+        self.assertEqual(response.read_sizes, [limit + 1])
+        self.assertTrue(response.closed)
 
     def test_url_error_does_not_leak_its_reason(self):
         with patch(

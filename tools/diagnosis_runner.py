@@ -12,7 +12,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
-from repo_doctor.deepseek import DEEPSEEK_ERROR_CODES, DeepSeekError, DeepSeekResult
+from repo_doctor.deepseek import (
+    DEEPSEEK_ERROR_CODES,
+    MAX_REQUEST_BYTES,
+    DeepSeekError,
+    DeepSeekResult,
+    _serialize_request_body,
+)
 from repo_doctor.context import build_context
 from repo_doctor.diagnosis import (
     build_diagnosis_prompts,
@@ -258,6 +264,9 @@ def run_cases(
     planned_calls = len(prepared) * repeats
     if planned_calls > max_calls:
         raise EvaluationDataError("planned calls exceed max_calls")
+    for _, _, _, system_prompt, user_prompt in prepared:
+        if len(_serialize_request_body(system_prompt, user_prompt, model)) > MAX_REQUEST_BYTES:
+            raise EvaluationDataError("prepared request exceeds 256 KiB limit")
 
     try:
         output.parent.mkdir(parents=True, exist_ok=True)

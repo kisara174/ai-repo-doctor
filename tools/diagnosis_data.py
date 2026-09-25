@@ -17,6 +17,7 @@ from repo_doctor.diagnosis import (
     build_diagnosis_prompts,
     validate_context_budget,
 )
+from repo_doctor.deepseek import MAX_REQUEST_BYTES, _serialize_request_body
 from repo_doctor.index import build_index
 from repo_doctor.source import read_source
 
@@ -294,6 +295,8 @@ def prepare_cases(
 
         if set(context) != {"symbol", "blocks", "call_evidence"}:
             raise EvaluationDataError(f"{case['id']}: prompt context contains unexpected fields")
+        if len(_serialize_request_body(system_prompt, user_prompt, model)) > MAX_REQUEST_BYTES:
+            raise EvaluationDataError(f"{case['id']}: serialized request exceeds 256 KiB limit")
         context_hash = _canonical_hash(context)
         request_shape = {
             "system_prompt": system_prompt,

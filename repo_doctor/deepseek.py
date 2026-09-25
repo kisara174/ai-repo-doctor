@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 API_URL = "https://api.deepseek.com/chat/completions"
 MAX_REQUEST_BYTES = 256 * 1024
+MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 DEEPSEEK_ERROR_CODES = frozenset({
     "timeout",
     "connection",
@@ -45,6 +46,20 @@ class DeepSeekError(Exception):
         )
 
 
+def _serialize_request_body(system_prompt: str, user_prompt: str, model: str) -> bytes:
+    request_data = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "stream": False,
+        "max_tokens": 4096,
+        "response_format": {"type": "json_object"},
+    }
+    return json.dumps(request_data, ensure_ascii=False).encode("utf-8")
+
+
 @dataclass(frozen=True)
 class DeepSeekResult:
     model: str
@@ -61,17 +76,7 @@ def complete_json(
     timeout: float = 60.0,
 ) -> DeepSeekResult:
     """Send one non-streaming JSON request and parse the model response."""
-    request_data = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        "stream": False,
-        "max_tokens": 4096,
-        "response_format": {"type": "json_object"},
-    }
-    request_body = json.dumps(request_data, ensure_ascii=False).encode("utf-8")
+    request_body = _serialize_request_body(system_prompt, user_prompt, model)
     if len(request_body) > MAX_REQUEST_BYTES:
         raise DeepSeekError(
             "DeepSeek API request exceeds 256 KiB limit", code="request_too_large"
@@ -89,7 +94,11 @@ def complete_json(
     try:
         opener = urllib.request.build_opener(_NoRedirectHandler())
         with opener.open(request, timeout=timeout) as response:
-            response_body = response.read()
+            response_body = response.read(MAX_RESPONSE_BYTES + 1)
+            if len(response_body) > MAX_RESPONSE_BYTES:
+                raise DeepSeekError(
+                    "DeepSeek API response exceeds 2 MiB limit", code="response_too_large"
+                )
     except urllib.error.HTTPError as exc:
         exc.close()
         raise DeepSeekError(
