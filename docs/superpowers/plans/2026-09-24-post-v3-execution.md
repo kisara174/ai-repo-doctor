@@ -408,7 +408,7 @@ python3 -m tools.evaluate_diagnosis score --manifest evaluation/diagnosis/manife
 
 ### 2026-09-25 post-truncation offline prompt revision
 
-The latest single-sample response ended at `finish_reason=length` with 4,096 completion tokens. The frozen T7 plan and captured request hashes remain immutable. The diagnostic prompt now asks for at most three findings, no more than two evidence items per finding, exact evidence quotes of at most 240 characters, and one or two short sentences for reasoning, impact, and suggested fix. The `reasoning` field is requested as an evidence-linked rationale summary rather than chain-of-thought. The output schema, validator, API parameters, and token limit are unchanged.
+The latest single-sample response ended at `finish_reason=length` with 4,096 completion tokens. The frozen T7 plan and captured request hashes remain immutable. The diagnostic prompt now asks for at most three findings, no more than two evidence items per finding, exact evidence quotes of at most 240 characters, titles of at most 120 characters, categories of at most 40 characters, and reasoning/impact/suggested-fix fields of at most 240 characters each. The `reasoning` field is requested as an evidence-linked rationale summary rather than chain-of-thought. The output schema, validator, API parameters, and token limit are unchanged.
 
 This is an offline prompt experiment, not evidence that truncation is fixed. The captured aggregate usage does not provide a verified reasoning-token count, so default thinking is not attributed as the cause. Any future call must use a separately prepared and reviewed plan with a new request fingerprint; do not reuse or rewrite the original T7 payloads.
 

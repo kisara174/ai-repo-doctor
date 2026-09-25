@@ -44,6 +44,8 @@ An earlier CLI smoke, recorded in the first version of this note, selected Reque
 
 ## Next step
 
-Keep the ten-case T7 run and its frozen payloads unchanged. An offline prompt revision now asks for at most three findings, two evidence items per finding, exact evidence quotes up to 240 characters, and short evidence-linked explanations. The existing JSON fields, validator, `max_tokens=4096`, and thinking parameters are unchanged. The prompt change has only passed offline tests; it has not been shown to prevent truncation.
+Keep the ten-case T7 run and its frozen payloads unchanged. An offline prompt revision now asks for at most three findings, two evidence items per finding, exact evidence quotes up to 240 characters, titles up to 120 characters, categories up to 40 characters, and reasoning/impact/suggested-fix fields up to 240 characters each. The existing JSON fields, validator, `max_tokens=4096`, and thinking parameters are unchanged. The prompt change has only passed offline tests; it has not been shown to prevent truncation.
 
 Before a future provider request, prepare and inspect a separate plan with the new prompt and request fingerprints. Do not reuse the old request hashes. The previous aggregate usage record does not expose a verified reasoning-token count, so default thinking remains a hypothesis rather than an established cause. Until a complete response passes local validation and manual review, do not score this single sample or make model-quality claims.
+
+An intermediate local plan was generated before the final per-field character limits were added. It is superseded and must not be used for a provider run; regenerate from the final committed prompt revision.

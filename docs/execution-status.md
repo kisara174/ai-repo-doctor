@@ -41,7 +41,7 @@ The separate `requests-6628-bug` smoke preserved the T7 run. The latest attempt 
 
 ## Remaining gates
 
-1. The original ten-case run remains partial and was not retried. The separately authorized one-sample smoke is complete with a truncated response; no further API request was made after it. The offline compact-output prompt revision is in place. Before a future provider request, prepare and inspect a separate plan with its new request fingerprints; do not modify the original ten-case plan or interpret the prompt change as proof that truncation is fixed.
+1. The original ten-case run remains partial and was not retried. The separately authorized one-sample smoke is complete with a truncated response; no further API request was made after it. The offline compact-output prompt revision is in place. An intermediate local plan predates the final per-field character limits and is superseded; create and inspect a fresh plan from the final committed revision before any future provider request. Do not modify the original ten-case plan or interpret the prompt change as proof that truncation is fixed.
 2. The partial record, zero-row review template, and offline score are complete. The quality evaluation remains inconclusive until a run returns usable model responses.
 3. PR #6 head `3492deb7c9971c06da48477f2dff6a8836cf2226` was merged into `codex/repo-doctor-v1` at `ec5041d3b98e07dc42532336e36ebe9ac2e82f12`. Both CI runs passed on Python 3.11, 3.12, and 3.13 (six green jobs total); the updated PR worktree also passed all 163 tests, compileall, CLI help, and whitespace checks. This is independent of the partial DeepSeek run; no further API request was sent.
 
