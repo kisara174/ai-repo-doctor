@@ -8,7 +8,7 @@ Latest analyzer code commit: `f5ecae3ab0ef50c4eba1f48d01155220a5de8d3d` (`fix: r
 
 ## Phase
 
-T0–T6 are implemented, validated, reviewed, and committed. T7's offline preparation and prompt review are complete. The original ten-case run remains partial: its first call was `provider_error`, and nine calls were not attempted. A separately authorized single-sample smoke sent three one-request attempts using the exact frozen Requests payload; the latest response was truncated at the 4,096-token output limit. It yielded usage metadata but no valid diagnosis payload or quality evidence.
+T0–T6 are implemented, validated, reviewed, and committed. T7's original offline preparation and prompt review are complete. The original ten-case run remains partial: its first call was `provider_error`, and nine calls were not attempted. A separately authorized single-sample smoke sent three one-request attempts using the exact frozen Requests payload; the latest response was truncated at the 4,096-token output limit. It yielded usage metadata but no valid diagnosis payload or quality evidence. A separate offline prompt revision now bounds visible output; the frozen run and its request fingerprints remain unchanged.
 
 The frozen ten-case manifest is unchanged at SHA-256 `f76bbe7a4daa4933b0be2db0552a740a7147ddc8923ed7ed91bc04bdfc78f31f`. T5 only ran against mocks. T6 provides manual-review templates and deterministic offline scoring. Its two independent-review corrections are included: E2E denominators are calculated per repeat, and completed-call failure rate is `failed_calls / completed_calls`, with unresolved attempts separate.
 
@@ -22,6 +22,7 @@ The frozen ten-case manifest is unchanged at SHA-256 `f76bbe7a4daa4933b0be2db055
 - Independent read-only review of both T6 metric corrections: no remaining findings.
 - After locally integrating merged PR #6, the combined branch passed 229 tests; focused DeepSeek transport tests passed 15/15. The 5-run baseline/challenge artifacts are preserved under `.local/diagnosis/post-review-pr6-3492deb/`.
 - After safe error-detail and failure-usage recording was added: full suite 260 tests passed; `compileall`, evaluation CLI help, staged-diff review, and `git diff --check` passed. These checks were run before the latest online attempt.
+- After the post-truncation prompt revision: targeted diagnosis suite 10 tests passed, including the new compact-output prompt contract test; full suite 261 tests passed; `compileall`, both CLI help commands, and `git diff --check` passed. The full suite prints expected error messages from negative CLI tests while exiting successfully.
 
 ## T7 exact offline preparation
 
@@ -40,7 +41,7 @@ The separate `requests-6628-bug` smoke preserved the T7 run. The latest attempt 
 
 ## Remaining gates
 
-1. The original ten-case run remains partial and was not retried. The separately authorized one-sample smoke is complete with a truncated response; no further API request was made after it. Continue with offline output-contract and truncation work before scheduling another provider call.
+1. The original ten-case run remains partial and was not retried. The separately authorized one-sample smoke is complete with a truncated response; no further API request was made after it. The offline compact-output prompt revision is in place. Before a future provider request, prepare and inspect a separate plan with its new request fingerprints; do not modify the original ten-case plan or interpret the prompt change as proof that truncation is fixed.
 2. The partial record, zero-row review template, and offline score are complete. The quality evaluation remains inconclusive until a run returns usable model responses.
 3. PR #6 head `3492deb7c9971c06da48477f2dff6a8836cf2226` was merged into `codex/repo-doctor-v1` at `ec5041d3b98e07dc42532336e36ebe9ac2e82f12`. Both CI runs passed on Python 3.11, 3.12, and 3.13 (six green jobs total); the updated PR worktree also passed all 163 tests, compileall, CLI help, and whitespace checks. This is independent of the partial DeepSeek run; no further API request was sent.
 
