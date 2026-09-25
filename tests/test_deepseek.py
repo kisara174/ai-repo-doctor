@@ -99,6 +99,12 @@ class DeepSeekTests(unittest.TestCase):
         self.assertEqual(open_request.call_args.kwargs["timeout"], 60.0)
         self.assertEqual(request.get_header("Authorization"), "Bearer test-secret")
         body = json.loads(request.data.decode("utf-8"))
+        self.assertEqual(
+            request.data,
+            b'{"model": "deepseek-flash", "messages": [{"role": "system", "content": "System prompt"}, '
+            b'{"role": "user", "content": "User prompt"}], "stream": false, "max_tokens": 4096, '
+            b'"response_format": {"type": "json_object"}}',
+        )
         self.assertEqual(body["model"], "deepseek-flash")
         self.assertEqual(body["messages"], [
             {"role": "system", "content": "System prompt"},
@@ -107,6 +113,35 @@ class DeepSeekTests(unittest.TestCase):
         self.assertIs(body["stream"], False)
         self.assertEqual(body["max_tokens"], 4096)
         self.assertEqual(body["response_format"], {"type": "json_object"})
+        self.assertNotIn("thinking", body)
+
+    def test_complete_json_sends_explicit_thinking_mode(self):
+        response = self.fake_api_response('{"findings": []}')
+
+        with patch("urllib.request.OpenerDirector.open", return_value=response) as open_request:
+            complete_json(
+                "System prompt",
+                "User prompt",
+                api_key="test-secret",
+                model="deepseek-flash",
+                thinking_mode="disabled",
+            )
+
+        body = json.loads(open_request.call_args.args[0].data.decode("utf-8"))
+        self.assertEqual(body["thinking"], {"type": "disabled"})
+
+    def test_complete_json_rejects_unsupported_thinking_mode_before_transport(self):
+        with patch("urllib.request.OpenerDirector.open") as open_request:
+            with self.assertRaises(ValueError):
+                complete_json(
+                    "System prompt",
+                    "User prompt",
+                    api_key="test-secret",
+                    model="deepseek-flash",
+                    thinking_mode="balanced",
+                )
+
+        open_request.assert_not_called()
 
     def test_missing_usage_remains_none(self):
         with patch("urllib.request.OpenerDirector.open", return_value=self.fake_api_response(

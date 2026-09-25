@@ -125,7 +125,43 @@ class DiagnosisDataTests(unittest.TestCase):
             json.dumps(request, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest()
         self.assertEqual(prepared["plan"]["cases"][0]["request_sha256"], expected_request_hash)
+        self.assertNotIn("thinking_mode", prepared["plan"])
         open_request.assert_not_called()
+
+    def test_prepare_explicit_thinking_mode_is_fingerprinted_in_plan(self):
+        prepared = prepare_cases(
+            self.manifest,
+            self.repos_root,
+            "test-model",
+            120,
+            thinking_mode="disabled",
+        )
+
+        self.assertEqual(prepared["plan"]["thinking_mode"], "disabled")
+        system_prompt, user_prompt = build_diagnosis_prompts(prepared["contexts"]["bug-01"])
+        request = {
+            "system_prompt": system_prompt,
+            "user_prompt": user_prompt,
+            "requested_model": "test-model",
+            "max_tokens": 4096,
+            "stream": False,
+            "response_format": {"type": "json_object"},
+            "thinking": {"type": "disabled"},
+        }
+        expected_hash = hashlib.sha256(
+            json.dumps(request, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        self.assertEqual(prepared["plan"]["cases"][0]["request_sha256"], expected_hash)
+
+    def test_prepare_rejects_unsupported_thinking_mode(self):
+        with self.assertRaises(EvaluationDataError):
+            prepare_cases(
+                self.manifest,
+                self.repos_root,
+                "test-model",
+                120,
+                thinking_mode="balanced",
+            )
 
     def test_prepare_reuses_index_for_duplicate_snapshot_within_each_call(self):
         manifest = self.make_manifest()

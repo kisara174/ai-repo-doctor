@@ -73,6 +73,7 @@ def _prepare(args: argparse.Namespace) -> int:
         args.model,
         args.max_lines,
         manifest_sha256=manifest_hash,
+        thinking_mode=args.thinking_mode,
     )
     _write_prepared(output, prepared)
     print(f"Prepared {len(prepared['plan']['cases'])} cases in {output}")
@@ -298,6 +299,11 @@ def build_parser() -> argparse.ArgumentParser:
     prepare.add_argument("--repos-root", required=True)
     prepare.add_argument("--model", required=True)
     prepare.add_argument("--max-lines", type=int, default=120)
+    prepare.add_argument(
+        "--thinking-mode",
+        choices=("enabled", "disabled"),
+        help="explicitly set DeepSeek thinking mode (omitted by default)",
+    )
     prepare.add_argument("--out-dir", required=True)
     run = subparsers.add_parser("run", help="send an explicitly authorized diagnosis evaluation")
     run.add_argument("--plan-dir", required=True)

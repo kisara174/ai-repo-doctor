@@ -189,6 +189,36 @@ class DiagnosisScoreTests(unittest.TestCase):
             self.assertIsNone(row["duplicate_of_bucket"])
             self.assertIsNone(row["duplicate_of_finding_index"])
 
+    def test_explicit_thinking_mode_is_preserved_in_scored_report(self):
+        run = copy.deepcopy(self.inputs.run)
+        run["thinking_mode"] = "disabled"
+        review = copy.deepcopy(self.inputs.review)
+        review["run"] = run
+
+        report = score_records(self.inputs.manifest, self.inputs.records, review)
+        rendered = render_report(report)
+
+        self.assertEqual(report["thinking_mode"], "disabled")
+        self.assertIn("Thinking mode: `disabled`", rendered)
+
+    def test_score_rejects_unsupported_run_thinking_mode(self):
+        run = copy.deepcopy(self.inputs.run)
+        run["thinking_mode"] = "balanced"
+        review = copy.deepcopy(self.inputs.review)
+        review["run"] = run
+
+        with self.assertRaisesRegex(ValueError, "thinking_mode"):
+            score_records(self.inputs.manifest, self.inputs.records, review)
+
+    def test_score_rejects_non_string_run_thinking_mode(self):
+        run = copy.deepcopy(self.inputs.run)
+        run["thinking_mode"] = ["disabled"]
+        review = copy.deepcopy(self.inputs.review)
+        review["run"] = run
+
+        with self.assertRaisesRegex(ValueError, "thinking_mode"):
+            score_records(self.inputs.manifest, self.inputs.records, review)
+
     def test_hand_checked_metrics_separate_accuracy_grounding_and_request_failures(self):
         report = score_records(self.inputs.manifest, self.inputs.records, self.inputs.review)
 

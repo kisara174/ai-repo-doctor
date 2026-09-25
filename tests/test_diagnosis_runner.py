@@ -121,6 +121,51 @@ class DiagnosisRunnerTests(unittest.TestCase):
         self.assertEqual(set(user_payload), {"symbol", "blocks", "call_evidence"})
         self.assertNotIn("GROUND_TRUTH_SENTINEL", json.dumps(user_payload))
 
+    def test_explicit_thinking_mode_reaches_client_and_run_summary(self):
+        bundle = prepare_cases(
+            self.manifest,
+            self.fixture.repos_root,
+            "test-model",
+            120,
+            manifest_sha256=self.manifest_sha256,
+            thinking_mode="disabled",
+        )
+        client = Mock(return_value=DeepSeekResult("test-model", {"findings": []}))
+
+        summary, output_dir = self.run_with(
+            client=client,
+            plan=bundle["plan"],
+            contexts=bundle["contexts"],
+            output_name="thinking-disabled",
+        )
+
+        self.assertEqual(summary["thinking_mode"], "disabled")
+        self.assertEqual(json.loads((output_dir / "run.json").read_text())["thinking_mode"], "disabled")
+        self.assertEqual(client.call_count, 2)
+        self.assertEqual(client.call_args.kwargs["thinking_mode"], "disabled")
+
+    def test_changed_thinking_mode_with_stale_request_hash_is_rejected(self):
+        bundle = prepare_cases(
+            self.manifest,
+            self.fixture.repos_root,
+            "test-model",
+            120,
+            manifest_sha256=self.manifest_sha256,
+            thinking_mode="disabled",
+        )
+        plan = copy.deepcopy(bundle["plan"])
+        plan["thinking_mode"] = "enabled"
+        client = Mock()
+
+        output = self.assert_rejected_before_client(
+            client,
+            output_name="changed-thinking-mode",
+            plan=plan,
+            contexts=bundle["contexts"],
+        )
+
+        self.assertFalse(output.exists())
+
     def test_insufficient_call_budget_rejects_the_entire_run_before_client(self):
         client = Mock()
         output = self.assert_rejected_before_client(client, max_calls=1)

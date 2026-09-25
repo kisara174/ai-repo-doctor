@@ -38,6 +38,8 @@ _RUN_KEYS = {
     "state",
     "record_files",
 }
+_RUN_OPTIONAL_KEYS = {"thinking_mode"}
+_THINKING_MODES = {"enabled", "disabled"}
 _USAGE_KEYS = ("prompt_tokens", "completion_tokens", "total_tokens")
 _COUNT_ZEROES = {
     "accepted_tp": 0,
@@ -137,7 +139,10 @@ def make_review_template(records: list[dict]) -> dict:
 
 def _validate_run_and_records(manifest: dict, records: list[dict], run: dict) -> dict[str, dict]:
     validate_manifest(manifest)
-    if not isinstance(run, dict) or set(run) != _RUN_KEYS:
+    if not isinstance(run, dict) or set(run) not in (
+        _RUN_KEYS,
+        _RUN_KEYS | _RUN_OPTIONAL_KEYS,
+    ):
         _fail("review run metadata does not match the run schema")
     if type(run["schema_version"]) is not int or run["schema_version"] != 1:
         _fail("run schema_version must be 1")
@@ -149,6 +154,11 @@ def _validate_run_and_records(manifest: dict, records: list[dict], run: dict) ->
         _fail("run analyzer_commit must be a full Git SHA")
     if not isinstance(run["requested_model"], str) or not run["requested_model"].strip():
         _fail("run requested_model must be nonempty")
+    if "thinking_mode" in run and (
+        not isinstance(run["thinking_mode"], str)
+        or run["thinking_mode"] not in _THINKING_MODES
+    ):
+        _fail("run thinking_mode must be enabled or disabled")
     repeats = run["repeats"]
     max_calls = run["max_calls"]
     planned = run["planned_calls"]
@@ -566,7 +576,7 @@ def score_records(manifest: dict, records: list[dict], review: dict) -> dict:
     response_models = sorted({
         record["response_model"] for record in records if record["response_model"] is not None
     })
-    return {
+    report = {
         "schema_version": 1,
         "dataset_id": run["dataset_id"],
         "case_count": len(manifest_cases),
@@ -589,6 +599,9 @@ def score_records(manifest: dict, records: list[dict], review: dict) -> dict:
             "Precision excludes uncertain and duplicate findings; rejected true positives are diagnostic evidence only.",
         ],
     }
+    if "thinking_mode" in run:
+        report["thinking_mode"] = run["thinking_mode"]
+    return report
 
 
 def _markdown(value: object) -> str:
@@ -612,13 +625,17 @@ def render_report(report: dict) -> str:
         f"- Plan SHA-256: `{_markdown(report['plan_sha256'])}`",
         f"- Analyzer commit: `{_markdown(report['analyzer_commit'])}`",
         f"- Requested model: `{_markdown(report['requested_model'])}`",
+    ]
+    if "thinking_mode" in report:
+        lines.append(f"- Thinking mode: `{_markdown(report['thinking_mode'])}`")
+    lines.extend([
         f"- Response models: `{_markdown(', '.join(report['response_models']) or 'none')}`",
         f"- Samples: {report['case_count']}; case IDs: `{_markdown(', '.join(report['case_ids']))}`",
         f"- Repeats: {report['repeats']}; run state: `{_markdown(report['run_state'])}`",
         "",
         "Precision excludes uncertain and duplicate findings. Null means the denominator is zero.",
         "",
-    ]
+    ])
     summary = report['totals']
     if summary['completed_calls'] - summary['failed_calls'] == 0:
         lines.extend([

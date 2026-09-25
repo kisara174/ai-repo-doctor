@@ -72,3 +72,26 @@ snapshots and selected controls are correlated and intentionally chosen, so
 their results must not be generalized into an estimate of overall product
 quality, reliability, or security. Run/model output must remain separate from
 these frozen labels, and every finding requires manual review before scoring.
+
+## Optional DeepSeek thinking mode
+
+By default, the prepared plan omits the `thinking` request field. This keeps
+the serialized body and request fingerprint compatible with existing plans.
+For a plan that explicitly disables thinking, add `--thinking-mode disabled`:
+
+```sh
+python3 -m tools.evaluate_diagnosis prepare \
+  --manifest evaluation/diagnosis/manifest-v1.json \
+  --repos-root "$ROOT" \
+  --model deepseek-flash \
+  --max-lines 120 \
+  --thinking-mode disabled \
+  --out-dir .local/diagnosis/plan-thinking-disabled
+```
+
+Preparation is offline. The selected mode is saved in `plan.json` and included
+in every case's request fingerprint; changing or removing it invalidates the
+fingerprint. A later `run` uses the plan's mode and still requires
+`--allow-network`. It executes the plan's complete case list; `--max-calls`
+does not select a subset of a ten-case plan. DeepSeek documents thinking mode
+and the `thinking.type` values in its [Chat Completions API reference](https://api-docs.deepseek.com/api/create-chat-completion/).

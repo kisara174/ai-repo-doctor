@@ -26,6 +26,7 @@ class DiagnosisEvaluationCliTests(unittest.TestCase):
                     code = main([
                         "prepare", "--manifest", str(manifest_path),
                         "--repos-root", str(fixture.repos_root), "--model", "test-model",
+                        "--thinking-mode", "disabled",
                         "--out-dir", str(output),
                     ])
 
@@ -34,6 +35,7 @@ class DiagnosisEvaluationCliTests(unittest.TestCase):
             context = json.loads((output / "bug-01.json").read_text(encoding="utf-8"))
             self.assertEqual(plan["manifest_sha256"], hashlib.sha256(manifest_path.read_bytes()).hexdigest())
             self.assertEqual(plan["analyzer_commit"], "a" * 40)
+            self.assertEqual(plan["thinking_mode"], "disabled")
             self.assertEqual(context["symbol"], "app.py::broken")
             self.assertEqual(set(context), {"symbol", "blocks", "call_evidence"})
 

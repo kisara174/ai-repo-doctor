@@ -9,6 +9,7 @@ from dataclasses import dataclass
 API_URL = "https://api.deepseek.com/chat/completions"
 MAX_REQUEST_BYTES = 256 * 1024
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+_THINKING_MODES = frozenset({"enabled", "disabled"})
 DEEPSEEK_ERROR_CODES = frozenset({
     "timeout",
     "connection",
@@ -78,7 +79,21 @@ class DeepSeekError(Exception):
         self.usage = _safe_usage(usage)
 
 
-def _serialize_request_body(system_prompt: str, user_prompt: str, model: str) -> bytes:
+def _thinking_parameter(thinking_mode: str | None) -> dict | None:
+    if thinking_mode is None:
+        return None
+    if not isinstance(thinking_mode, str) or thinking_mode not in _THINKING_MODES:
+        raise ValueError("thinking_mode must be enabled or disabled")
+    return {"type": thinking_mode}
+
+
+def _serialize_request_body(
+    system_prompt: str,
+    user_prompt: str,
+    model: str,
+    *,
+    thinking_mode: str | None = None,
+) -> bytes:
     request_data = {
         "model": model,
         "messages": [
@@ -89,6 +104,9 @@ def _serialize_request_body(system_prompt: str, user_prompt: str, model: str) ->
         "max_tokens": 4096,
         "response_format": {"type": "json_object"},
     }
+    thinking = _thinking_parameter(thinking_mode)
+    if thinking is not None:
+        request_data["thinking"] = thinking
     return json.dumps(request_data, ensure_ascii=False).encode("utf-8")
 
 
@@ -106,9 +124,12 @@ def complete_json(
     api_key: str,
     model: str,
     timeout: float = 60.0,
+    thinking_mode: str | None = None,
 ) -> DeepSeekResult:
     """Send one non-streaming JSON request and parse the model response."""
-    request_body = _serialize_request_body(system_prompt, user_prompt, model)
+    request_body = _serialize_request_body(
+        system_prompt, user_prompt, model, thinking_mode=thinking_mode
+    )
     if len(request_body) > MAX_REQUEST_BYTES:
         raise DeepSeekError(
             "DeepSeek API request exceeds 256 KiB limit", code="request_too_large"

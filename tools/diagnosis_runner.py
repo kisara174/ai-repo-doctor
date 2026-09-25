@@ -18,6 +18,7 @@ from repo_doctor.deepseek import (
     DeepSeekError,
     DeepSeekResult,
     _serialize_request_body,
+    _thinking_parameter,
 )
 from repo_doctor.context import build_context
 from repo_doctor.diagnosis import (
@@ -131,6 +132,13 @@ def _validate_plan_and_contexts(
     model = plan.get("requested_model")
     if not isinstance(model, str) or not model.strip():
         raise EvaluationDataError("plan requested_model must be nonempty")
+    thinking_mode = plan.get("thinking_mode")
+    if "thinking_mode" in plan and thinking_mode is None:
+        raise EvaluationDataError("plan thinking_mode must be enabled or disabled")
+    try:
+        thinking = _thinking_parameter(thinking_mode)
+    except ValueError as exc:
+        raise EvaluationDataError("plan thinking_mode must be enabled or disabled") from exc
     max_lines = plan.get("max_lines")
     if type(max_lines) is not int or not 1 <= max_lines <= 120:
         raise EvaluationDataError("plan max_lines is outside the supported limit")
@@ -213,6 +221,8 @@ def _validate_plan_and_contexts(
             "stream": False,
             "response_format": {"type": "json_object"},
         }
+        if thinking is not None:
+            request["thinking"] = thinking
         request_hash = _canonical_hash(request)
         if plan_case.get("request_sha256") != request_hash:
             raise EvaluationDataError(f"{case_id}: request fingerprint changed")
@@ -255,6 +265,7 @@ def run_cases(
     prepared, model = _validate_plan_and_contexts(
         plan, contexts, manifest, repos_root, manifest_sha256
     )
+    thinking_mode = plan.get("thinking_mode")
     if any(api_key in system_prompt or api_key in user_prompt
            for _, _, _, system_prompt, user_prompt in prepared):
         raise EvaluationDataError("API key appears in prepared request context")
@@ -262,7 +273,9 @@ def run_cases(
     if planned_calls > max_calls:
         raise EvaluationDataError("planned calls exceed max_calls")
     for _, _, _, system_prompt, user_prompt in prepared:
-        if len(_serialize_request_body(system_prompt, user_prompt, model)) > MAX_REQUEST_BYTES:
+        if len(_serialize_request_body(
+            system_prompt, user_prompt, model, thinking_mode=thinking_mode
+        )) > MAX_REQUEST_BYTES:
             raise EvaluationDataError("prepared request exceeds 256 KiB limit")
 
     try:
@@ -290,6 +303,8 @@ def run_cases(
         "state": "running",
         "record_files": [],
     }
+    if thinking_mode is not None:
+        summary["thinking_mode"] = thinking_mode
     summary_path = output / "run.json"
     _write_json_atomic(summary_path, summary)
 
@@ -329,12 +344,10 @@ def run_cases(
                 error_usage = _safe_usage(None)
                 validated: dict = {"accepted": [], "rejected": []}
                 try:
-                    response = client(
-                        system_prompt,
-                        user_prompt,
-                        api_key=api_key,
-                        model=model,
-                    )
+                    client_options = {"api_key": api_key, "model": model}
+                    if thinking_mode is not None:
+                        client_options["thinking_mode"] = thinking_mode
+                    response = client(system_prompt, user_prompt, **client_options)
                 except Exception as exc:
                     status, error_code, http_status, error_detail, error_usage = (
                         _client_error_details(exc)

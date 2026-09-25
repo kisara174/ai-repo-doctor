@@ -17,7 +17,11 @@ from repo_doctor.diagnosis import (
     build_diagnosis_prompts,
     validate_context_budget,
 )
-from repo_doctor.deepseek import MAX_REQUEST_BYTES, _serialize_request_body
+from repo_doctor.deepseek import (
+    MAX_REQUEST_BYTES,
+    _serialize_request_body,
+    _thinking_parameter,
+)
 from repo_doctor.index import build_index
 from repo_doctor.model import RepoIndex
 from repo_doctor.source import read_source
@@ -241,6 +245,7 @@ def prepare_cases(
     max_lines: int,
     *,
     manifest_sha256: str | None = None,
+    thinking_mode: str | None = None,
 ) -> dict:
     """Build request-safe context and a reproducible plan without writing or networking."""
     validate_manifest(manifest)
@@ -248,6 +253,10 @@ def prepare_cases(
         raise EvaluationDataError("model must be nonempty text")
     if type(max_lines) is not int or not 1 <= max_lines <= MAX_CONTEXT_LINES:
         raise EvaluationDataError(f"max_lines must be between 1 and {MAX_CONTEXT_LINES}")
+    try:
+        thinking = _thinking_parameter(thinking_mode)
+    except ValueError as exc:
+        raise EvaluationDataError(str(exc)) from exc
     if manifest_sha256 is None:
         manifest_sha256 = _canonical_hash(manifest)
     if not isinstance(manifest_sha256, str) or re.fullmatch(r"[0-9a-f]{64}", manifest_sha256) is None:
@@ -292,7 +301,9 @@ def prepare_cases(
 
         if set(context) != {"symbol", "blocks", "call_evidence"}:
             raise EvaluationDataError(f"{case['id']}: prompt context contains unexpected fields")
-        if len(_serialize_request_body(system_prompt, user_prompt, model)) > MAX_REQUEST_BYTES:
+        if len(_serialize_request_body(
+            system_prompt, user_prompt, model, thinking_mode=thinking_mode
+        )) > MAX_REQUEST_BYTES:
             raise EvaluationDataError(f"{case['id']}: serialized request exceeds 256 KiB limit")
         context_hash = _canonical_hash(context)
         request_shape = {
@@ -303,6 +314,8 @@ def prepare_cases(
             "stream": False,
             "response_format": {"type": "json_object"},
         }
+        if thinking is not None:
+            request_shape["thinking"] = thinking
         prepared_cases.append({
             "id": case["id"],
             "repository_url": case["repository_url"],
@@ -327,4 +340,6 @@ def prepare_cases(
         "max_lines": max_lines,
         "cases": prepared_cases,
     }
+    if thinking_mode is not None:
+        plan["thinking_mode"] = thinking_mode
     return {"plan": plan, "contexts": contexts}
