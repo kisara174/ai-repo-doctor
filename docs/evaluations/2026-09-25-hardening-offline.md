@@ -58,4 +58,4 @@ Every context was checked against the manifest and plan: only `symbol`, `blocks`
 
 ## Limits and next gate
 
-This is an offline static-scanner regression, not a DeepSeek quality evaluation. It establishes no model correctness or recall claim. The earlier live attempt still has no valid model response and unknown billing. M06 remains a separate, one-request connectivity check; only a successful, reviewed response can unblock M07's manually scored evaluation.
+This is an offline static-scanner regression, not a DeepSeek quality evaluation. It establishes no model correctness or recall claim. The subsequent M06 live smoke made one request from an incorrect Requests checkout and returned a connection error with no valid response or usage data; billing is unknown and no retry was made. M07 remains blocked. See the [live smoke record](2026-09-25-live-smoke.md) for the full request audit and future gate.
