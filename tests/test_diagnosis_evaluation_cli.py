@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import tests.test_diagnosis_data as data_fixture
-from tools.diagnosis_data import prepare_cases
+from tools.diagnosis_data import EvaluationDataError, prepare_cases
 from tools.evaluate_diagnosis import main
 
 
@@ -22,11 +22,12 @@ class DiagnosisEvaluationCliTests(unittest.TestCase):
             manifest_path.write_text(json.dumps(fixture.manifest), encoding="utf-8")
             output = root / "prepared"
             with patch("tools.diagnosis_data._analyzer_commit", return_value="a" * 40):
-                code = main([
-                    "prepare", "--manifest", str(manifest_path),
-                    "--repos-root", str(fixture.repos_root), "--model", "test-model",
-                    "--out-dir", str(output),
-                ])
+                with patch("tools.evaluate_diagnosis._analyzer_commit", return_value="a" * 40):
+                    code = main([
+                        "prepare", "--manifest", str(manifest_path),
+                        "--repos-root", str(fixture.repos_root), "--model", "test-model",
+                        "--out-dir", str(output),
+                    ])
 
             self.assertEqual(code, 0)
             plan = json.loads((output / "plan.json").read_text(encoding="utf-8"))
@@ -35,6 +36,31 @@ class DiagnosisEvaluationCliTests(unittest.TestCase):
             self.assertEqual(plan["analyzer_commit"], "a" * 40)
             self.assertEqual(context["symbol"], "app.py::broken")
             self.assertEqual(set(context), {"symbol", "blocks", "call_evidence"})
+
+    def test_prepare_rechecks_analyzer_before_publishing_output(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest_path = root / "manifest.json"
+            manifest_path.write_text("{}\n", encoding="utf-8")
+            output = root / "prepared"
+            commit = "a" * 40
+            prepared = {"plan": {"analyzer_commit": commit, "cases": []}, "contexts": {}}
+            with patch("tools.evaluate_diagnosis.prepare_cases", return_value=prepared):
+                with patch(
+                    "tools.evaluate_diagnosis._analyzer_commit",
+                    side_effect=EvaluationDataError("analyzer commit changed during evaluation"),
+                    create=True,
+                ) as analyzer_commit:
+                    code = main([
+                        "prepare", "--manifest", str(manifest_path),
+                        "--repos-root", str(root), "--model", "test-model",
+                        "--out-dir", str(output),
+                    ])
+
+            self.assertEqual(code, 2)
+            analyzer_commit.assert_called_once_with(expected_commit=commit)
+            self.assertFalse(output.exists())
+            self.assertEqual({path.name for path in root.iterdir()}, {"manifest.json"})
 
     def test_prepare_refuses_an_existing_output_directory(self):
         fixture = data_fixture.DiagnosisDataTests()

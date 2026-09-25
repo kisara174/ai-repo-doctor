@@ -163,6 +163,8 @@
 
 **范围：** `tools/diagnosis_data.py`、`tools/evaluate_baseline.py` 及对应测试；若需共用 helper，主代理先明确新文件名与接口，禁止执行者自行扩模块。
 
+**主代理已确定的共享接口：** `tools/analyzer_provenance.py` 提供 `analyzer_snapshot(root: Path) -> tuple[str, bool]` 与 `require_clean_analyzer(root: Path, expected_commit: str | None = None) -> str`。前者返回完整 HEAD 和 dirty 状态，后者要求工作树 clean，并可校验预期 SHA。`tools/diagnosis_runner.py` 复用同一快照实现，避免 prepare、baseline、run 分别维护不同的 Git 状态规则。
+
 **契约：**
 
 - 正式 prepare/baseline 在生成前确认分析器 HEAD 与工作树状态可归因；未提交 tracked 修改和未忽略 untracked 源码导致拒绝。忽略目录 `.local` 不因此被清空或提交。

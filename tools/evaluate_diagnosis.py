@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path, PurePosixPath
 
 from repo_doctor.deepseek import complete_json
-from .diagnosis_data import EvaluationDataError, prepare_cases
+from .diagnosis_data import EvaluationDataError, _analyzer_commit, prepare_cases
 from .diagnosis_runner import run_cases
 from .diagnosis_score import make_review_template, render_report, score_records
 
@@ -51,6 +51,7 @@ def _write_prepared(output: Path, prepared: dict) -> None:
         )
         if os.path.lexists(output):
             raise EvaluationDataError("output directory already exists")
+        _analyzer_commit(expected_commit=prepared["plan"]["analyzer_commit"])
         os.rename(temporary, output)
     except OSError as exc:
         raise EvaluationDataError("cannot atomically publish prepared output") from exc

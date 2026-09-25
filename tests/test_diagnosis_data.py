@@ -30,6 +30,11 @@ class DiagnosisDataTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
+        self.analyzer_commit = "a" * 40
+        self._analyzer_patcher = patch(
+            "tools.diagnosis_data._analyzer_commit", return_value=self.analyzer_commit
+        )
+        self._analyzer_patcher.start()
         self.repos_root = self.root / "repos"
         self.repo = self.repos_root / "fixture"
         self.repo.mkdir(parents=True)
@@ -52,6 +57,7 @@ class DiagnosisDataTests(unittest.TestCase):
         self.manifest = self.make_manifest()
 
     def tearDown(self):
+        self._analyzer_patcher.stop()
         self.temporary.cleanup()
 
     def make_manifest(self, *, file="app.py", symbol="app.py::broken", commit=None, digest=None):
@@ -96,6 +102,7 @@ class DiagnosisDataTests(unittest.TestCase):
         self.assertNotIn("GROUND_TRUTH_SENTINEL", serialized)
         self.assertNotIn("ground_truth", serialized)
         self.assertEqual(prepared["plan"]["cases"][0]["source_lines"], 2)
+        self.assertEqual(prepared["plan"]["analyzer_commit"], self.analyzer_commit)
         self.assertEqual(prepared["plan"]["cases"][0]["context_sha256"], hashlib.sha256(
             json.dumps(context, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest())
@@ -113,6 +120,19 @@ class DiagnosisDataTests(unittest.TestCase):
         ).hexdigest()
         self.assertEqual(prepared["plan"]["cases"][0]["request_sha256"], expected_request_hash)
         open_request.assert_not_called()
+
+    def test_prepare_rejects_analyzer_head_change_after_generation(self):
+        with patch(
+            "tools.diagnosis_data._analyzer_commit",
+            side_effect=[
+                self.analyzer_commit,
+                EvaluationDataError("analyzer commit changed during evaluation"),
+            ],
+        ) as analyzer_commit:
+            with self.assertRaisesRegex(EvaluationDataError, "changed"):
+                prepare_cases(self.manifest, self.repos_root, "test-model", 120)
+
+        self.assertEqual(analyzer_commit.call_count, 2)
 
     def test_manifest_accepts_a_valid_local_fixture(self):
         validate_manifest(self.manifest)

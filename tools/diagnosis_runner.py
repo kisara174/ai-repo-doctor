@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import subprocess
 import tempfile
 import time
 from datetime import datetime, timezone
@@ -26,6 +25,7 @@ from repo_doctor.diagnosis import (
     validate_diagnosis_payload,
 )
 from repo_doctor.index import build_index
+from .analyzer_provenance import AnalyzerProvenanceError, analyzer_snapshot
 from .diagnosis_data import (
     EvaluationDataError,
     _canonical_hash,
@@ -38,25 +38,9 @@ from .diagnosis_data import (
 def _analyzer_snapshot() -> tuple[str, bool]:
     root = Path(__file__).resolve().parents[1]
     try:
-        commit = subprocess.run(
-            ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        ).stdout.strip()
-        dirty = bool(subprocess.run(
-            ["git", "-C", str(root), "status", "--porcelain=v1", "--untracked-files=all"],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=20,
-        ).stdout.strip())
-    except (OSError, subprocess.SubprocessError) as exc:
-        raise EvaluationDataError("cannot verify analyzer Git state") from exc
-    if re.fullmatch(r"[0-9a-f]{40}", commit) is None:
-        raise EvaluationDataError("analyzer Git commit is not a full SHA")
-    return commit, dirty
+        return analyzer_snapshot(root)
+    except AnalyzerProvenanceError as exc:
+        raise EvaluationDataError(str(exc)) from exc
 
 
 def _canonical_json(value: object) -> str:

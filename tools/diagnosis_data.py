@@ -20,6 +20,7 @@ from repo_doctor.diagnosis import (
 from repo_doctor.deepseek import MAX_REQUEST_BYTES, _serialize_request_body
 from repo_doctor.index import build_index
 from repo_doctor.source import read_source
+from .analyzer_provenance import AnalyzerProvenanceError, require_clean_analyzer
 
 
 class EvaluationDataError(ValueError):
@@ -164,22 +165,12 @@ def validate_manifest(data: dict) -> None:
             raise EvaluationDataError(f"pair {pair_id} must share repository and issue ID")
 
 
-def _analyzer_commit() -> str:
+def _analyzer_commit(expected_commit: str | None = None) -> str:
     root = Path(__file__).resolve().parents[1]
     try:
-        completed = subprocess.run(
-            ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        raise EvaluationDataError("cannot determine analyzer Git commit") from exc
-    commit = completed.stdout.strip()
-    if re.fullmatch(r"[0-9a-f]{40}", commit) is None:
-        raise EvaluationDataError("analyzer Git commit is not a full SHA")
-    return commit
+        return require_clean_analyzer(root, expected_commit=expected_commit)
+    except AnalyzerProvenanceError as exc:
+        raise EvaluationDataError(str(exc)) from exc
 
 
 def _git(checkout: Path, *args: str) -> str:
@@ -319,6 +310,7 @@ def prepare_cases(
         })
         contexts[case["id"]] = context
 
+    _analyzer_commit(expected_commit=analyzer_commit)
     plan = {
         "schema_version": 1,
         "dataset_id": manifest["dataset_id"],
