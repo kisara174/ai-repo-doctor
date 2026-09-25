@@ -85,6 +85,6 @@ Run: `python3 tools/evaluate_diagnosis.py prepare --help`
 Run: `git diff --check`
 Expected: all tests and commands exit successfully; no provider or target-repository code is invoked.
 
-- [ ] **Step 9: Review and commit the implementation**
+- [x] **Step 9: Review and commit the implementation**
 
 Inspect the full diff for default-body/hash stability, exact parameter handling, and no live calls. Commit the plan, code, tests, and evaluation README update with message `feat: support DeepSeek thinking mode in evaluation`. Then write the implementation commit SHA into the two status/evaluation docs, inspect that diff, run `git diff --check`, and commit those status updates separately.
