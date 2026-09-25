@@ -243,6 +243,7 @@ class DiagnosisScoreTests(unittest.TestCase):
             {"error_code": "http", "http_status": True},
             {"error_code": "http", "http_status": 429},
             {"error_code": "invalid_response"},
+            {"error_detail": "raw provider response"},
         ]
         for metadata in invalid_metadata:
             with self.subTest(metadata=metadata):
@@ -258,6 +259,28 @@ class DiagnosisScoreTests(unittest.TestCase):
         report = score_records(self.inputs.manifest, records, self.inputs.review)
 
         self.assertEqual(report["totals"]["failed_calls"], 1)
+
+    def test_scoring_accepts_allowlisted_response_diagnostic_and_failure_usage(self):
+        baseline = score_records(
+            self.inputs.manifest, copy.deepcopy(self.inputs.records), self.inputs.review
+        )
+        records = copy.deepcopy(self.inputs.records)
+        records[-1].update(
+            status="invalid_response",
+            error="invalid_response",
+            error_code="invalid_response",
+            error_detail="invalid_content_json",
+            usage={"prompt_tokens": 31, "completion_tokens": 7, "total_tokens": 38},
+        )
+
+        report = score_records(self.inputs.manifest, records, self.inputs.review)
+
+        self.assertEqual(report["totals"]["failed_calls"], 1)
+        self.assertEqual(report["totals"]["observed_token_totals"], {
+            "prompt_tokens": baseline["totals"]["observed_token_totals"]["prompt_tokens"] + 21,
+            "completion_tokens": baseline["totals"]["observed_token_totals"]["completion_tokens"] + 5,
+            "total_tokens": baseline["totals"]["observed_token_totals"]["total_tokens"] + 26,
+        })
 
     def test_unresolved_attempts_are_excluded_from_completed_call_failure_rate(self):
         records = [self.inputs.make_record("bug-1", accepted=(0,))]

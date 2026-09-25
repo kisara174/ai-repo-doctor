@@ -313,6 +313,31 @@ class DeepSeekTests(unittest.TestCase):
                 self.call_client()
         self.assertEqual(getattr(raised.exception, "code", None), "invalid_response")
 
+    def test_invalid_content_json_preserves_safe_reason_and_token_usage(self):
+        response = self.fake_api_response(
+            "{broken",
+            usage={"prompt_tokens": 31, "completion_tokens": 7, "total_tokens": 38,
+                   "provider_private_field": "must not be retained"},
+        )
+        with patch("urllib.request.OpenerDirector.open", return_value=response):
+            with self.assertRaises(DeepSeekError) as raised:
+                self.call_client()
+
+        self.assertEqual(raised.exception.code, "invalid_response")
+        self.assertEqual(raised.exception.error_detail, "invalid_content_json")
+        self.assertEqual(raised.exception.usage, {
+            "prompt_tokens": 31, "completion_tokens": 7, "total_tokens": 38,
+        })
+        self.assertNotIn("provider_private_field", repr(raised.exception.usage))
+
+    def test_invalid_outer_json_has_safe_reason_and_no_usage(self):
+        with patch("urllib.request.OpenerDirector.open", return_value=FakeResponse(b"not json")):
+            with self.assertRaises(DeepSeekError) as raised:
+                self.call_client()
+
+        self.assertEqual(raised.exception.error_detail, "invalid_envelope_json")
+        self.assertIsNone(raised.exception.usage)
+
     def test_model_array_is_rejected(self):
         with patch("urllib.request.OpenerDirector.open", return_value=self.fake_api_response("[]")):
             with self.assertRaisesRegex(DeepSeekError, "must be a JSON object") as raised:

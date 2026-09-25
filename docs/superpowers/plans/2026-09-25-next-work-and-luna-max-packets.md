@@ -135,7 +135,7 @@
 
 - `DeepSeekError` 增加受控错误码和可选 HTTP status；兼容现有 `DeepSeekError("message")`，默认类别 unknown。
 - 类别覆盖 timeout、connection、http、invalid_response、request_too_large、response_too_large、unknown；HTTP 状态保留整数，不从响应体推断余额或账户状态。
-- 顶层 record.status 继续使用已有 success/provider_error/invalid_response。旧 schema1 文件继续可读；新增可选诊断字段只能存错误码、HTTP status。主代理明确 schema 兼容策略并给测试，不能依赖报错全文字符串分类。
+- 顶层 record.status 继续使用已有 success/provider_error/invalid_response。旧 schema1 文件继续可读；可选诊断字段仅允许错误码、固定 allowlist 的 error_detail、HTTP status。invalid_response 可以保留经过白名单过滤的 token usage。主代理明确 schema 兼容策略并给测试，不能依赖报错全文字符串分类。
 - 不持久化 exception repr、URL/proxy 信息、headers、key、HTTP body 或任意提供商原文。
 - 不改变失败停止、无自动重试语义；不把网络错误当成模型错答。
 

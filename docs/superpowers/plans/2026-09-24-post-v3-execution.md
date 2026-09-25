@@ -110,7 +110,7 @@ context_sha256 = sha256(json.dumps(context_payload, ensure_ascii=False, sort_key
 
 每次实际调用生成单独 JSON：case_id、repeat_index（从 1 开始）、request_sha256、context_sha256、analyzer_commit、target_commit、requested_model、response_model、started_at、elapsed_seconds、status、usage、accepted、rejected、error。
 
-status 为 success / provider_error / invalid_response；error 只用工具自定义的短错误类别，不保存原始异常、Authorization、环境变量或 HTTP body。usage 只允许 prompt_tokens、completion_tokens、total_tokens，缺失或非法值记 null。服务方未返回有效 usage 时，不猜数值、不把 null 当零费用。
+status 为 success / provider_error / invalid_response；error 只用工具自定义的短错误类别，不保存原始异常、Authorization、环境变量或 HTTP body。可选 error_detail 只能取客户端定义的固定错误细节枚举；HTTP status 仅存整数状态码。能解析到 provider envelope 时，即使 completion 内容无效，也可保留经白名单过滤的 usage。usage 只允许 prompt_tokens、completion_tokens、total_tokens，缺失或非法值记 null。服务方未返回有效 usage 时，不猜数值、不把 null 当零费用。
 
 延迟用 time.perf_counter 测量调用，不包含 clone/扫描。运行记录可保留 findings，不能保留完整原始 provider envelope。离线错误记录不等于 provider 调用成功。
 

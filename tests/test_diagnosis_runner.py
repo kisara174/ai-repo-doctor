@@ -262,6 +262,26 @@ class DiagnosisRunnerTests(unittest.TestCase):
         self.assertEqual(record.get("error_code"), "invalid_response")
         self.assertIsNone(record.get("http_status"))
 
+    def test_invalid_response_records_only_allowlisted_reason_and_safe_usage(self):
+        error = DeepSeekError(
+            "private response text TEST_SECRET_SENTINEL",
+            code="invalid_response",
+            error_detail="invalid_content_json",
+            usage={"prompt_tokens": 31, "completion_tokens": 7, "total_tokens": 38,
+                   "private_field": "must not be retained"},
+        )
+        client = Mock(side_effect=error)
+
+        summary, output_dir = self.run_with(client=client)
+
+        record = json.loads((output_dir / summary["record_files"][0]).read_text())
+        self.assertEqual(record["error_detail"], "invalid_content_json")
+        self.assertEqual(record["usage"], {
+            "prompt_tokens": 31, "completion_tokens": 7, "total_tokens": 38,
+        })
+        self.assertNotIn("private response text", json.dumps(record))
+        self.assertNotIn("private_field", json.dumps(record))
+
     def test_error_message_does_not_determine_the_failure_category(self):
         client = Mock(side_effect=DeepSeekError("DeepSeek response content was not valid JSON"))
 

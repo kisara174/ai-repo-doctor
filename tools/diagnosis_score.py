@@ -6,7 +6,7 @@ import math
 import re
 from statistics import median
 
-from repo_doctor.deepseek import DEEPSEEK_ERROR_CODES
+from repo_doctor.deepseek import DEEPSEEK_ERROR_CODES, DEEPSEEK_ERROR_DETAILS
 from .diagnosis_data import EvaluationDataError, validate_manifest
 from .diagnosis_score_math import calculate_repeat_metrics
 
@@ -219,15 +219,22 @@ def _validate_run_and_records(manifest: dict, records: list[dict], run: dict) ->
             not isinstance(error_code, str) or error_code not in DEEPSEEK_ERROR_CODES
         ):
             _fail(f"{case_id}: error_code is not an allowed diagnostic code")
+        error_detail = record.get("error_detail")
+        if error_detail is not None and (
+            not isinstance(error_detail, str) or error_detail not in DEEPSEEK_ERROR_DETAILS
+        ):
+            _fail(f"{case_id}: error_detail is not an allowed diagnostic detail")
         http_status = record.get("http_status")
         if http_status is not None and (
             type(http_status) is not int or not 100 <= http_status <= 599
         ):
             _fail(f"{case_id}: http_status must be an HTTP status code or null")
         if record["status"] == "success":
-            if error_code is not None or http_status is not None:
+            if error_code is not None or error_detail is not None or http_status is not None:
                 _fail(f"{case_id}: successful record cannot contain error diagnostics")
         else:
+            if error_detail is not None and record["status"] != "invalid_response":
+                _fail(f"{case_id}: error_detail requires invalid_response status")
             if record["status"] == "invalid_response" and error_code not in (None, "invalid_response"):
                 _fail(f"{case_id}: invalid_response status has inconsistent error_code")
             if error_code == "invalid_response" and record["status"] != "invalid_response":

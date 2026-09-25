@@ -13,6 +13,7 @@ from typing import Callable
 
 from repo_doctor.deepseek import (
     DEEPSEEK_ERROR_CODES,
+    DEEPSEEK_ERROR_DETAILS,
     MAX_REQUEST_BYTES,
     DeepSeekError,
     DeepSeekResult,
@@ -57,9 +58,13 @@ def _safe_usage(value: object) -> dict[str, int | None]:
     return result
 
 
-def _client_error_details(error: Exception) -> tuple[str, str, int | None]:
+def _client_error_details(
+    error: Exception,
+) -> tuple[str, str, int | None, str | None, dict[str, int | None]]:
     code = "unknown"
     http_status = None
+    error_detail = None
+    usage = _safe_usage(None)
     if isinstance(error, DeepSeekError):
         candidate_code = getattr(error, "code", None)
         if isinstance(candidate_code, str) and candidate_code in DEEPSEEK_ERROR_CODES:
@@ -69,8 +74,16 @@ def _client_error_details(error: Exception) -> tuple[str, str, int | None]:
             http_status = candidate_status
         elif code == "http":
             code = "unknown"
+        candidate_detail = getattr(error, "error_detail", None)
+        if (
+            code == "invalid_response"
+            and isinstance(candidate_detail, str)
+            and candidate_detail in DEEPSEEK_ERROR_DETAILS
+        ):
+            error_detail = candidate_detail
+        usage = _safe_usage(getattr(error, "usage", None))
     status = "invalid_response" if code == "invalid_response" else "provider_error"
-    return status, code, http_status
+    return status, code, http_status, error_detail, usage
 
 
 def _write_json_atomic(path: Path, value: dict) -> None:
@@ -312,6 +325,8 @@ def run_cases(
                 error = None
                 error_code = None
                 http_status = None
+                error_detail = None
+                error_usage = _safe_usage(None)
                 validated: dict = {"accepted": [], "rejected": []}
                 try:
                     response = client(
@@ -321,7 +336,9 @@ def run_cases(
                         model=model,
                     )
                 except Exception as exc:
-                    status, error_code, http_status = _client_error_details(exc)
+                    status, error_code, http_status, error_detail, error_usage = (
+                        _client_error_details(exc)
+                    )
                     error = status
                 elapsed = time.perf_counter() - started
 
@@ -346,7 +363,7 @@ def run_cases(
                         error_code = "invalid_response"
 
                 response_model = response.model if status == "success" and response else None
-                usage = _safe_usage(response.usage if response else None)
+                usage = _safe_usage(response.usage if response else error_usage)
                 record = {
                     "case_id": case_id,
                     "repeat_index": repeat_index,
@@ -364,6 +381,7 @@ def run_cases(
                     "rejected": validated["rejected"] if status == "success" else [],
                     "error": error,
                     "error_code": error_code,
+                    "error_detail": error_detail,
                     "http_status": http_status,
                 }
                 serialized_record = _canonical_json(record)
