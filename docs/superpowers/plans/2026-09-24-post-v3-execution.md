@@ -122,6 +122,10 @@ status 为 success / provider_error / invalid_response；error 只用工具自�
 
 prepare-review 为每个 success record 的 accepted 和 rejected finding 生成一行：case_id、repeat_index、bucket、finding_index、verdict、matched_issue_id、rationale、reviewer。verdict 初始 pending；人工填写 tp / fp / uncertain / duplicate。额外 duplicate 必须指定其 canonical finding，不能指向另一个 duplicate。
 
+复核文件顶层保存 `schema_version`、`run`（从 `run.json` 复制数据集/manifest/plan 哈希、重复次数、计划/尝试/完成调用数、状态和显式 `record_files`）以及 `rows`。每行增加 `duplicate_of_bucket` 与 `duplicate_of_finding_index`；它们仅在 verdict 为 duplicate 时填写，指向同一个 case/repeat 下 verdict 为 tp 的非 duplicate canonical finding。duplicate 还必须填与 canonical finding 相同的 `matched_issue_id`。评分 CLI 必须将复核文件的 run 元数据与磁盘 `run.json` 逐字段比对，并用 manifest 原始字节 SHA 与 run 哈希核对；CLI 和打分器都只接受 `record_files` 列出的记录。run 仍为 running 或 `record_files` 与完成计数不符时拒绝评分。partial run 可以评分，但报告必须分别显示已完成失败、未完成尝试和未尝试请求。
+
+对每个 `by_repeat`，`all_requested_bug_cases` = 冻结 manifest 中 bug case 数；它是该轮的端到端分母，不乘 repeats，也不跨轮合并结果。提前停止后该轮尚未发送的 bug call 仍计入分母，并由 `not_attempted_calls` 单独揭示。条件 recall 只以该轮成功返回的 bug call 为分母。总体调用失败率定义为已完成调用中的失败比例（`failed_calls / completed_calls`）；尚未完成的尝试不算已完成失败，必须通过 `unresolved_calls` 单独显示。
+
 必须复核所有 finding。匹配以根因、触发条件和结果为依据，不能用标题相似度或模型自己判断代替人工。grounded 不等于正确。fixed/control 只表示已知问题修复或未标注，不代表没有其它缺陷；发现额外真实问题先标 uncertain，由主代理裁决并新建数据集版本，不能倒改本轮标签提高分数。
 
 评分输出约定：顶层 schema_version=1、dataset_id、manifest_sha256、by_repeat、totals、limitations。每个 by_repeat 元素包含 repeat_index、counts、metrics。counts 的字段为 accepted_tp、accepted_fp、uncertain、duplicate、accepted_count、rejected_count、detected_known_bug_cases、successful_bug_cases、all_requested_bug_cases、successful_control_cases_with_accepted_fp、successful_fixed_and_control_cases、failed_calls、rejected_true_positive。metrics 使用下面公式中的五个名称。totals 仅汇总请求/资源数量，不把多轮结果冒充独立 case。
@@ -141,8 +145,8 @@ control_false_alarm_rate = ratio(successful_control_cases_with_accepted_fp,
                                  successful_fixed_and_control_cases)
 ~~~
 
-- 同一个 case/repeat/issue 的多个发现只能命中一次；额外 finding 单列 duplicate。
-- uncertain 不计入 TP/FP，但必须展示数量及其占比；precision 必须标注“排除 uncertain/duplicate 后”。
+- 同一个 case/repeat/issue 的多个发现只能命中一次；额外 finding 单列 duplicate，并显式指向同轮 canonical TP finding。
+- uncertain 不计入 TP/FP，但必须展示数量及其占比；precision 必须标注“排除 uncertain/duplicate 后”。uncertain/duplicate rate 的分母是所有成功请求的 accepted 与 rejected findings 总数，分母为 0 时为 null。
 - provider_error/invalid_response 不算“没有缺陷”，显示调用失败率；条件 recall 和端到端检出率同时报告。
 - rejected findings 即使人工认为根因正确，也不能算 accepted_tp；单列 rejected_true_positive 诊断证据门禁损失。
 - 每次 repeat 分别报告；重复请求不是新增独立样本。bug/fixed 配对也不是独立随机抽样。
@@ -232,12 +236,12 @@ python -m repo_doctor diagnose --help
 **文件：** evaluation/diagnosis/manifest-v1.json、README.md；不修改旧 baseline/challenge。
 **任务性质：** 外部事实和缺陷判断，不委派受限执行器。
 
-- [ ] 在已有公开 Click、Requests、Flask 中优先寻找 4 个有明确修复提交和公开讨论的普通逻辑缺陷；不足再选其它公开 Python 项目，记录选择理由。不选需要运行外部服务才能理解或依赖秘密数据的问题。
-- [ ] 每个缺陷收集修复前、修复后两个快照，构成 8 个 case；另选 2 个有明确契约、未标注目标缺陷的 control。至少覆盖 2 个仓库；不要凭空制造“已知缺陷”。
-- [ ] 每个案例必须能在 120 行/64 KiB 内呈现理解根因所需的上下文。符号和必要语义无法包含时更换案例，不放宽 V3 限额。
-- [ ] 所有样本由主代理先读源码和上游修复说明，再写 ground_truth。**冻结标签后才看模型结果。** 找不到足够可确认案例时交付候选清单并停止，不让简单模型补造。
-- [ ] 单独 checkout 每个 commit；只读源码，记录完整 SHA、许可证标识、永久链接和 fingerprint。README 记录样本是定向选择、可能存在公开数据记忆偏差。
-- [ ] 文件冻结后记录 manifest 文件字节 SHA-256；版本后续改变必须成为 manifest-v2.json，不能覆盖 v1。
+- [x] 在已有公开 Click、Requests、Flask 中优先寻找 4 个有明确修复提交和公开讨论的普通逻辑缺陷；不足再选其它公开 Python 项目，记录选择理由。不选需要运行外部服务才能理解或依赖秘密数据的问题。已确认 Click #3084/#3152、Click #1921/#2006、Requests #6628/#6629、Requests #7432/#7433；四项均可从源码和上游 issue/PR 静态理解，未运行外部服务。
+- [x] 每个缺陷收集修复前、修复后两个快照，构成 8 个 case；另选 2 个有明确契约、未标注目标缺陷的 control。至少覆盖 2 个仓库；不要凭空制造“已知缺陷”。Click 与 Requests 各贡献两个真实 bug/fixed 对；另有 IntRange clamp 与 HTTPBasicAuth 两个有文档/源码契约的 control。
+- [x] 每个案例必须能在 120 行/64 KiB 内呈现理解根因所需的上下文。符号和必要语义无法包含时更换案例，不放宽 V3 限额。AI Repo Doctor 静态 scanner 在全部 10 个案例唯一解析目标符号，parse_errors=0；目标块均覆盖指纹范围，准备上下文不超过 120 行、5,132 bytes。
+- [x] 所有样本由主代理先读源码和上游修复说明，再写 ground_truth。**冻结标签后才看模型结果。** 找不到足够可确认案例时交付候选清单并停止，不让简单模型补造。完成逐项源码、上游 issue/PR 和回归测试复核；没有查看模型结果或发起 live 请求。
+- [x] 单独 checkout 每个 commit；只读源码，记录完整 SHA、许可证标识、永久链接和 fingerprint。README 记录样本是定向选择、可能存在公开数据记忆偏差。8 个不同 SHA 各有独立干净 checkout；Click 为 BSD-3-Clause、Requests 为 Apache-2.0；逐 case 写入精确代码 permalink 与经独立复核的 source fingerprint。
+- [x] 文件冻结后记录 manifest 文件字节 SHA-256；版本后续改变必须成为 manifest-v2.json，不能覆盖 v1。`evaluation/diagnosis/manifest-v1.json` 为 17,139 bytes，SHA-256 `f76bbe7a4daa4933b0be2db0552a740a7147ddc8923ed7ed91bc04bdfc78f31f`，并记入数据集 README 和执行状态。
 
 **验收：** 10 个唯一 case，4 对 bug/fixed、2 个 control；每个 case 审核状态 approved，路径/指纹/符号可验证。
 **交付前 gate：** 主代理审完真实标签；较简单模型只可按已批准表格机械录入，不能自行定性。
@@ -248,8 +252,9 @@ python -m repo_doctor diagnose --help
 **文件：** tools/diagnosis_data.py、tools/evaluate_diagnosis.py、tests/test_diagnosis_data.py、tests/test_diagnosis_evaluation_cli.py、.gitignore。
 **接口：** validate_manifest(data: dict) -> None；prepare_cases(manifest: dict, repos_root: Path, model: str, max_lines: int) -> dict。后者返回 {plan: dict, contexts: dict[str, dict]}，自己不写文件。CLI 原子发布完整准备目录。
 
-- [ ] 写 fixture：app.py 中 def broken(): return 1 / 0，再写一个不会加入上下文的 unrelated 函数；临时 Git 仓库 commit；manifest 标注只在本地 fixture 内存在。
-- [ ] 写并运行以下行为测试，确认因缺少实现失败：合法 fixture 成功；HEAD 错误、dirty/untracked、指纹错误、重复 ID、../、绝对路径、symlink 逃逸均拒绝；未知/歧义符号拒绝；超过预算拒绝。
+- [x] 写 fixture：app.py 中 def broken(): return 1 / 0，再写一个不会加入上下文的 unrelated 函数；临时 Git 仓库 commit；manifest 标注只在本地 fixture 内存在。首轮定向测试因缺少 T3 模块而失败，随后实现并通过。
+- [x] 写并运行以下行为测试，确认因缺少实现失败：合法 fixture 成功；HEAD 错误、dirty/untracked、指纹错误、重复 ID、../、绝对路径、symlink 逃逸均拒绝；未知/歧义符号拒绝；超过预算拒绝。20 项 T3 定向测试通过。代码审查后补充 malformed URL 和 bug/fixed pair 一致性校验，并加入回归测试。
+- [x] 请求隔离：fixture ground_truth 使用 GROUND_TRUTH_SENTINEL；prepared context 仅含 symbol、blocks、call_evidence；urlopen mock 未被调用。
 - [ ] 请求隔离测试示例：
 
 ~~~python
@@ -262,10 +267,10 @@ self.assertEqual(set(context), {"symbol", "blocks", "call_evidence"})
 
 manifest 的 ground_truth 写入 GROUND_TRUTH_SENTINEL；测试 case id 使用 bug-01。导入 unittest.mock.patch 拦截 urllib.request.urlopen，assert_not_called，证明 prepare 没有发请求。
 
-- [ ] 复用已有 build_index、build_context、validate_context_budget、build_diagnosis_prompts；使用其 JSON allowlist 生成 context。读取源码复用安全读取机制；不要只靠字符串前缀判断路径。
-- [ ] CLI 加 prepare，支持 --manifest、--repos-root、--model（必填非空）、--max-lines（默认 120）、--out-dir。输出目录已存在退出 2；错误不留下看似成功的 plan。
-- [ ] .gitignore 新增 /.local/diagnosis/，不要忽略整个 evaluation 目录。
-- [ ] 运行：
+- [x] 复用已有 build_index、build_context、validate_context_budget、build_diagnosis_prompts；使用其 JSON allowlist 生成 context。读取源码复用安全读取机制；不要只靠字符串前缀判断路径。
+- [x] CLI 加 prepare，支持 --manifest、--repos-root、--model（必填非空）、--max-lines（默认 120）、--out-dir。输出目录已存在退出 2；错误不留下看似成功的 plan。
+- [x] .gitignore 新增 /.local/diagnosis/，不要忽略整个 evaluation 目录。
+- [x] 运行：
 
 ~~~bash
 python3 -m unittest tests.test_diagnosis_data tests.test_diagnosis_evaluation_cli -v
@@ -274,7 +279,7 @@ python3 -m unittest discover -s tests -q
 git diff --check
 ~~~
 
-**验收：** 不需要 API Key 即可准备；所有无效输入在网络前失败；标签不进入请求；计划与上下文有稳定哈希。
+**验收：** 不需要 API Key 即可准备；所有无效输入在网络前失败；标签不进入请求；计划与上下文有稳定哈希。真实冻结清单已离线准备 10 个上下文，最大 120 行 / 5,132 字节，原始 manifest SHA-256 与冻结值一致；没有请求 API。
 **提交：** eval: prepare bounded diagnosis contexts offline。
 
 ## 6. 任务 T4：只增加可选 token 用量元数据
@@ -282,9 +287,9 @@ git diff --check
 **文件：** repo_doctor/deepseek.py、tests/test_deepseek.py。
 **接口：** DeepSeekResult 保持前两个位置参数 model、payload，末尾新增 usage: dict[str, int | None] | None = None。旧 DeepSeekResult(model, payload) 构造必须继续有效；不改变 diagnose JSON 顶层字段。
 
-- [ ] 先写测试：有效 usage 原样提取三个允许字段；缺失 usage 为 None；负数、bool、字符串值分别转为 null；额外字段不透传。未给 usage 的既有成功测试仍通过。
-- [ ] 最小解析：只从 API envelope 的 usage 字典提取白名单字段；合法值必须 type(value) is int 且 value>=0。不增加 raw envelope 保存。
-- [ ] 全部 transport 测试必须 mock URL；检查原 timeout、错误脱敏、单次请求等测试继续通过。
+- [x] 先写测试：有效 usage 原样提取三个允许字段；缺失 usage 为 None；负数、bool、字符串值分别转为 null；额外字段不透传。未给 usage 的既有成功测试仍通过。新测试先因 DeepSeekResult 不接受 usage 而失败，再完成实现。
+- [x] 最小解析：只从 API envelope 的 usage 字典提取白名单字段；合法值必须 type(value) is int 且 value>=0。不增加 raw envelope 保存。
+- [x] 全部 transport 测试必须 mock URL；检查原 timeout、错误脱敏、单次请求等测试继续通过。
 
 ~~~bash
 python3 -m unittest tests.test_deepseek tests.test_cli -v
@@ -301,13 +306,13 @@ python3 -m unittest discover -s tests -q
 
 CLI：run --plan-dir --manifest --repos-root --out-dir --repeats --max-calls --allow-network。repeats 只允许 1–3；max-calls 正整数，cases*repeats 超限时整个运行拒绝，而不是跑前几个。--allow-network 缺省时返回 2，不调用 client。
 
-- [ ] 先写离线 mock 测试：缺开关、缺 key、预算不够、上下文哈希改变、manifest/analysis SHA 改变、目标 dirty/HEAD 不匹配、输出目录存在，全部 assert_not_called。
-- [ ] 调用前重新校验 manifest、每个 checkout、分析器干净状态/commit、context 哈希与请求指纹；有效负载只来自冻结 context，不从标签拼 prompt。
-- [ ] 顺序执行，最多一个请求在途，不重试。一次 provider 或响应格式失败则写失败记录并停止余下任务；结果明确 partial，CLI 返回 2。accepted/rejected 都是有效实验结果，不因为 evidence rejection 中断下一 case。
-- [ ] 在发请求前创建整个实验的锁定目录与状态文件；每次请求前写 started，完成后临时文件+replace 写记录。保留中断状态，不自动再次发送 started 未完成的请求。
-- [ ] 通过 validate_diagnosis_payload 校验证据；将 accepted/rejected 与 token usage、延迟、模型名写入记录。保存的源码来自已审核公开 context，避免保存 HTTP envelope/环境变量。
-- [ ] 两个 case、repeats=1、max_calls=2 的 mock 成功测试应恰好调用两次并生成两份记录；首次 401/timeout/无效 JSON 时只有一次调用。扫描所有记录，不得出现测试密钥 TEST_SECRET_SENTINEL。
-- [ ] 退出码：0=计划内全部请求成功并形成记录（允许 finding 被拒绝）；2=配置/输入错误或 partial。不要复制 diagnose 的 rejected=1 到 runner。
+- [x] 先写离线 mock 测试：缺开关、缺 key、预算不够、上下文哈希改变、manifest/analysis SHA 改变、目标 dirty/HEAD 不匹配、输出目录存在，全部 assert_not_called。
+- [x] 调用前重新校验 manifest、每个 checkout、分析器干净状态/commit、context 哈希与请求指纹；有效负载只来自冻结 context，不从标签拼 prompt。
+- [x] 顺序执行，最多一个请求在途，不重试。一次 provider 或响应格式失败则写失败记录并停止余下任务；结果明确 partial，CLI 返回 2。accepted/rejected 都是有效实验结果，不因为 evidence rejection 中断下一 case。
+- [x] 在发请求前创建整个实验的锁定目录与状态文件；每次请求前写 started，完成后临时文件+replace 写记录。保留中断状态，不自动再次发送 started 未完成的请求。
+- [x] 通过 validate_diagnosis_payload 校验证据；将 accepted/rejected 与 token usage、延迟、模型名写入记录。保存的源码来自已审核公开 context，避免保存 HTTP envelope/环境变量。
+- [x] 两个 case、repeats=1、max_calls=2 的 mock 成功测试应恰好调用两次并生成两份记录；首次 401/timeout/无效 JSON 时只有一次调用。扫描所有记录，不得出现测试密钥 TEST_SECRET_SENTINEL。
+- [x] 退出码：0=计划内全部请求成功并形成记录（允许 finding 被拒绝）；2=配置/输入错误或 partial。不要复制 diagnose 的 rejected=1 到 runner。
 
 ~~~bash
 python3 -m unittest tests.test_diagnosis_runner tests.test_diagnosis_evaluation_cli -v
@@ -317,6 +322,8 @@ python3 -m unittest discover -s tests -q
 **验收：** 预算校验在第一请求之前、失败不重试、记录可追踪、密钥不落盘、全部测试离线。
 **提交：** eval: run explicitly authorized diagnosis requests。
 
+**T5 实际复核：** 定向 runner/CLI 测试 24 项通过；全量测试 203 项通过；compileall、run CLI help、diff whitespace 检查通过。只对 Python 可捕获中断写 `partial`；如果已原子发布响应记录，会按当前请求 payload 核对并补入 `record_files` 后再退出。未完成的请求保留 `.inflight` 标记，输出目录仍不可复用。独立只读审查的两项中断窗口问题均已修正并复审通过；未发起真实 API 请求。
+
 ## 8. 任务 T6：离线复核模板与评分
 
 **文件：** tools/diagnosis_score.py、tools/evaluate_diagnosis.py、tests/test_diagnosis_score.py。
@@ -324,16 +331,18 @@ python3 -m unittest discover -s tests -q
 
 CLI 增加 prepare-review --run-dir --out-file，以及 score --manifest --run-dir --review --json-out --markdown-out。prepare-review 可以生成 pending；score 遇到 pending/缺行/重复行/未知 finding index/manifest 哈希不匹配时返回 2，保持旧报告原样。
 
-- [ ] 写手算 fixture：3 个 bug case 中 2 个 success（仅一个命中）、1 个 provider_error；2 个 control success（一个有 FP）；accepted 共 1 TP、1 FP、1 uncertain、1 duplicate；另有 1 个 rejected finding。
-- [ ] 断言：precision=1/2；条件 recall=1/2；端到端检出率=1/3；grounding_rate=4/5；control_false_alarm_rate=1/2；uncertain=1、duplicate=1、failed_calls=1。为无 findings/无正例/全失败分别断言相关比率为 null，不能写成 100%。
-- [ ] 实现第 1.6 节定义的计算；报告同时展示原始分子分母、样本 ID、版本/哈希、每轮结果、token 缺失数、延迟原值与中位数，避免仅有一个总分。
-- [ ] rejected TP 单列；模糊问题不强塞 TP。输出中的 reviewer/rationale 缺失同样拒绝 score。
-- [ ] 原子写 JSON/Markdown，路径相同或覆盖已有报告需要显式新文件名；失败不部分覆盖旧结果。
+- [x] 写手算 fixture：3 个 bug case 中 2 个 success（仅一个命中）、1 个 provider_error；2 个 control success（一个有 FP）；accepted 共 1 TP、1 FP、1 uncertain、1 duplicate；另有 1 个 rejected finding。
+- [x] 断言：precision=1/2；条件 recall=1/2；端到端检出率=1/3；grounding_rate=4/5；control_false_alarm_rate=1/2；uncertain=1、duplicate=1、failed_calls=1。为无 findings/无正例/全失败分别断言相关比率为 null，不能写成 100%。
+- [x] 实现第 1.6 节定义的计算；报告同时展示原始分子分母、样本 ID、版本/哈希、每轮结果、token 缺失数、延迟原值与中位数，避免仅有一个总分。
+- [x] rejected TP 单列；模糊问题不强塞 TP。输出中的 reviewer/rationale 缺失同样拒绝 score。
+- [x] 原子写 JSON/Markdown，路径相同或覆盖已有报告需要显式新文件名；失败不部分覆盖旧结果。
 
 ~~~bash
 python3 -m unittest tests.test_diagnosis_score tests.test_diagnosis_evaluation_cli -v
 python3 -m unittest discover -s tests -q
 ~~~
+
+T6 追加审查修正：每轮 E2E 分母按该轮的 bug case 数计算；总体失败率的分母为 completed_calls，未完成尝试单列。定向测试 28 项、全量测试 221 项通过；compileall、三个 CLI help 和 `git diff --check` 通过。只读复审确认两个指标口径及回归覆盖无遗留问题。
 
 **验收：** 合成数据指标等于手算；人工判断无法被默认值绕过；离线可反复生成同样的计数。
 **提交：** eval: score human-reviewed diagnosis results。
@@ -342,9 +351,9 @@ python3 -m unittest discover -s tests -q
 
 **前提：** T0–T6 已验收，代码提交干净，模型可用性核查完成。下面命令调用新建工具；在 T3–T6 实现前不存在，不要提前运行。
 
-- [ ] 新终端中由用户配置 DEEPSEEK_API_KEY；执行者只检查是否非空，不打印或写入文件。
-- [ ] 主代理读官方文档，记录模型 ID、查询日期、价格单位和相关链接于本地实验 notes。模型 ID 通过 --model 传递；计费额度与输出 token 上限一并告知用户。
-- [ ] 冻结配置：每次 120 行、1 次重复、10 个 case，最多 10 个请求；不自动扩大模型列表或案例数。先 prepare，审查所有实际上传 context 后，再申请这 10 次请求的上传/付费授权。已有同范围授权有效，不重复确认。
+- [x] 用户配置 `DEEPSEEK_API_KEY`；只检查了存在性和基本格式，没有打印或写入 key。登录 zsh 可加载钥匙串值。
+- [x] 主代理核对官方文档并将模型 ID、查询日期、价格单位和链接记录在本地 `.local/diagnosis/provider-notes-2026-09-25.md`；使用模型 ID `deepseek-flash`，并记录当前 thinking 默认与 4096 输出 token 上限。
+- [x] 固定 120 行、1 次重复、10 个 case、最多 10 个请求；在 `.local/diagnosis/plan-v1` 离线 prepare，并逐项检查十份实际提示词及哈希。准确上传内容已列入本地 notes 和公开的状态报告；用户已授权原定上传与计费范围。
 
 ~~~bash
 export DIAGNOSIS_CHECKOUTS=/tmp/ai-repo-doctor-diagnosis-checkouts
@@ -352,33 +361,33 @@ export DIAGNOSIS_CHECKOUTS=/tmp/ai-repo-doctor-diagnosis-checkouts
 python3 -m tools.evaluate_diagnosis prepare --manifest evaluation/diagnosis/manifest-v1.json --repos-root "$DIAGNOSIS_CHECKOUTS" --model "$DEEPSEEK_MODEL" --max-lines 120 --out-dir .local/diagnosis/plan-v1
 ~~~
 
-- [ ] 用户授权后执行一次首轮。以下命令逐条执行并检查返回码；run 返回 2 时停止，交主代理处理 partial，不能接着把它按完整实验评分：
+- [x] 用户授权后执行一次首轮。冻结分析器提交为 `5044a94b37631f19b8547ba568b235b4fa9e695f`；首个 case `click-3084-bug` 返回 `provider_error`，run 状态为 `partial`，1/10 已尝试、9 个未发送。没有重试或继续发送。
 
 ~~~bash
 python3 -m tools.evaluate_diagnosis run --plan-dir .local/diagnosis/plan-v1 --manifest evaluation/diagnosis/manifest-v1.json --repos-root "$DIAGNOSIS_CHECKOUTS" --out-dir .local/diagnosis/run-v1-r1 --repeats 1 --max-calls 10 --allow-network
 python3 -m tools.evaluate_diagnosis prepare-review --run-dir .local/diagnosis/run-v1-r1 --out-file .local/diagnosis/run-v1-r1/review.json
 ~~~
 
-- [ ] 请求失败时保留 partial 记录，主代理调查账户/模型/响应格式问题。禁止循环重跑整个实验。没有密钥或授权时，只完成离线交付，不写“真实评估通过”。
-- [ ] 由主代理/人工逐条填写 review.json，引用上游材料和已有上下文解释。发现真实但未标注问题时标 uncertain，不改本轮 frozen manifest。
-- [ ] 评分：
+- [x] 请求失败后保留 partial 记录，并完成不产生 API 请求的诊断。记录只保留通用 `provider_error`，无法确定是 HTTP 拒绝还是连接失败；登录 shell 的 key 基本格式与本机代理 TCP 可达性通过。按用户要求，本轮不追加 API 调用；须先核对供应商账号状态及可能扣费，再决定是否重新授权运行。
+- [x] 生成 `review.json`；模板为 0 行，因为没有成功响应或 findings，无需逐条人工裁定。没有把无响应解释为模型发现。
+- [x] 对 partial run 离线评分：1/1 已完成调用失败，9 个未尝试；端到端检出为 0/4（完整分母下的运行结果，不代表模型质量），其他质量比率为 null。报告没有宣称真实模型评估通过。
 
 ~~~bash
 python3 -m tools.evaluate_diagnosis score --manifest evaluation/diagnosis/manifest-v1.json --run-dir .local/diagnosis/run-v1-r1 --review .local/diagnosis/run-v1-r1/review.json --json-out .local/diagnosis/run-v1-r1/report.json --markdown-out .local/diagnosis/run-v1-r1/report.md
 ~~~
 
 - [ ] 如需测随机波动，另授权额外 20 次，使用新的目录 run-v1-r2-r3、--repeats 2、--max-calls 20；不要把这两轮称作 20 个新样本。只进行主代理明确批准的追加实验。
-- [ ] token 费用只按执行时核实的计费规则估计；缓存/思考 token 等信息不足时把价格估计设为 null，以服务方账单为准。请求数量上限不是精确金额硬上限。
+- [x] 已按官方计费规则核对费用：最多 40,960 个生成 token 的输出部分峰值价约 $0.05；输入 token/cache split 未知，总费用估计设为 null，以服务方账单为准，并向用户说明请求数上限不是金额硬上限。
 
 **验收：** 每个请求可对应到冻结源码/上下文/模型/人工复核，结果可离线复算；报告明确真实成功、失败和未运行数。
 
 ## 10. 任务 T8：结果交付、缺陷修复和后续分支
 
-**文件：** docs/evaluations/2026-09-24-diagnosis-v1.md（若实际执行日期不同，使用实际日期）；README.md。完整 run 数据默认留在 .local，公开报告需主代理检查源码许可、引用范围和敏感信息。
+**文件：** docs/evaluations/2026-09-25-diagnosis-v1.md；README.md。完整 run 数据默认留在 .local，公开报告需主代理检查源码许可、引用范围和敏感信息。
 
-- [ ] 报告写清：实际执行日期、分析器提交、数据集哈希、模型响应名、样本/请求数、各项分子分母、错误/uncertain/duplicate 数、token/耗时、两个代表性案例和限制。
-- [ ] 加上离线复算命令；不能承诺再调用云端会生成逐字相同答案。未获 live 授权时，交付“基础设施完成，真实结果待运行”的状态报告。
-- [ ] 根据下面的固定规则选择下一步，不让简单模型自行扩展产品：
+- [x] 报告写明实际离线执行日期、分析器提交、数据集哈希、请求模型、样本/计划/实际请求数，以及每个无法计算的指标、错误/uncertain/duplicate、token/耗时均不可用的原因；另含两个代表性输入案例和评估限制。未运行时响应模型明确记为不可用。
+- [x] 加入离线复算命令；不承诺再次调用云端会生成逐字相同答案。由于尚未获得 live 授权，交付“基础设施完成，真实结果待运行”的状态报告。
+- [x] 未获得任何模型观察值，不生成质量结论或扩大产品；下一步保持在固定样本、模型和预算范围，等待明确授权后再运行：
 
 | 观察 | 下一步 |
 |---|---|
@@ -389,11 +398,13 @@ python3 -m tools.evaluate_diagnosis score --manifest evaluation/diagnosis/manife
 | 漏报 | 先区分上下文不足与模型推理不足；不凭一例换模型或扩大预算 |
 | 小样本表现稳定 | 收集新的独立公开样本再扩样；暂不宣称总体质量达标 |
 
-- [ ] 修复任何新代码缺陷：先写可复现失败测试、最小修复、定向测试、全量测试、单独提交。不得为提高分数更改本轮标签。
-- [ ] 最终离线测试和 CI 矩阵通过，主代理读最终 diff、报告和具体失败样本。PR 标题围绕最终交付，不写聊天过程。
-- [ ] 已授权推送则更新对应 PR；合并按当时有效授权执行。这个计划不授予未来 PR 无条件合并权限。
+- [x] 修复复核中发现的指标口径缺陷，并通过新增回归测试和全量测试；未更改冻结标签。当前未发现其他待修代码缺陷。
+- [x] PR #6 的最新代码在 Python 3.11、3.12、3.13 的两次 CI runs 上全部通过；合并前工作树全量测试 163 项通过，compileall、CLI help 和 `git diff --check` 通过。
+- [x] PR #6 已按先前授权推送更新并合并到 `codex/repo-doctor-v1`。PR head `3492deb7c9971c06da48477f2dff6a8836cf2226`，merge commit `ec5041d3b98e07dc42532336e36ebe9ac2e82f12`，base `aa2a84243fe122a2b7a89b955598b039fcc62345`；合并前状态为 CLEAN 且 CI 全绿。
 
 **候选后续方向（本轮不自动实施）：** 扩大独立样本；按评估结果改进上下文；有明确需求再做批量诊断、交互界面或自动修复。自动补丁涉及新的执行边界，必须另行设计。
+
+**最终离线回归（2026-09-25）：** baseline-v1、challenge-v1 和 challenge-v2 各运行 5 次，三组 probe 均无 mismatch；所有冻结 probe 与历史结果的 metrics/probes 相同。PR 合并没有触发或重试 DeepSeek API 请求。完整 JSON/Markdown 记录保存在忽略目录 `.local/diagnosis/post-review-pr6-3492deb/`。将 PR #6 合并基线本地并入诊断评估分支后，15 项 DeepSeek 传输测试与完整 229 项测试均通过，compileall、CLI help 和 whitespace 检查通过。
 
 ## 11. 提交与交付批次
 
@@ -455,3 +466,7 @@ Open PR URL and base branch:
 - [ ] live 已授权执行并有记录，或明确标注尚未执行。
 - [ ] 公开报告与原始数据一致，未把小样本/重复请求当总体质量证明。
 - [ ] 用户收到具体产物路径、PR、已完成范围及仍需人工判断的事项。
+
+## 2026-09-25 CI evidence scope clarification
+
+PR #6 CI applies to PR head `3492deb7c9971c06da48477f2dff6a8836cf2226`. It does not validate the unpublished diagnosis-evaluation changes. The integrated evaluation branch has a historical local result of 229 passing tests; that result is not a fresh CI result. Before publishing or merging the evaluation changes, record the actual evaluation PR head SHA and its own Python 3.11/3.12/3.13 CI results. This clarification does not change the stopped live run or establish model quality.

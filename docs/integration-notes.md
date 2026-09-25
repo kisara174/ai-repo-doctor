@@ -53,4 +53,20 @@ GitHub Actions 在被检查的 head `dd34f2cb1a74379ccbfb275cd1daf6bae73dd240` �
 - Python 3.12：[job 107656247589](https://github.com/kisara174/ai-repo-doctor/actions/runs/36006602740/job/107656247589)
 - Python 3.13：[job 107656248817](https://github.com/kisara174/ai-repo-doctor/actions/runs/36006602740/job/107656248817)
 
-`gh pr checks 6` 还确认了 pull_request run `36006656104` 的三个版本均通过。没有配置 secrets；测试和评估均未发起 DeepSeek 请求。PR 仍保持 open，未执行合并。
+`gh pr checks 6` 还确认了 pull_request run `36006656104` 的三个版本均通过。没有配置 secrets；测试和评估均未发起 DeepSeek 请求。当时 PR 尚未合并；后续状态见下节。
+
+
+## PR #6 final integration update
+
+Checked after merge: GitHub reports PR #6 `MERGED` at `2026-09-24T17:56:34Z`. The PR head was `3492deb7c9971c06da48477f2dff6a8836cf2226`; the merge commit is `ec5041d3b98e07dc42532336e36ebe9ac2e82f12` on `codex/repo-doctor-v1`. The merge tree (`6a441892287e3e1c6aeb79f8f8a0107cd7851d0e`) is identical to the tested PR head tree.
+
+Both CI runs for the final PR head passed on all supported Python versions:
+
+- Push run `36037698415`: [Python 3.11](https://github.com/kisara174/ai-repo-doctor/actions/runs/36037698415/job/107761795588), [Python 3.12](https://github.com/kisara174/ai-repo-doctor/actions/runs/36037698415/job/107761795645), [Python 3.13](https://github.com/kisara174/ai-repo-doctor/actions/runs/36037698415/job/107761795529).
+- Pull-request run `36037704725`: [Python 3.11](https://github.com/kisara174/ai-repo-doctor/actions/runs/36037704725/job/107761817293), [Python 3.12](https://github.com/kisara174/ai-repo-doctor/actions/runs/36037704725/job/107761817011), [Python 3.13](https://github.com/kisara174/ai-repo-doctor/actions/runs/36037704725/job/107761817440).
+
+After merging the base locally into `codex/diagnosis-evaluation`, the combined branch passed 229 tests, including 23 targeted data/CLI offline tests and 15 DeepSeek transport tests. The live diagnosis run remains partial (`provider_error` on its first request); this merge and evaluation made no additional provider calls. The evaluation branch and its report remain local and have not been published.
+
+## 2026-09-25 CI evidence scope clarification
+
+PR #6 CI applies to PR head `3492deb7c9971c06da48477f2dff6a8836cf2226`. It does not validate the unpublished diagnosis-evaluation changes. The integrated evaluation branch has a historical local result of 229 passing tests; that result is not a fresh CI result. Before publishing or merging the evaluation changes, record the actual evaluation PR head SHA and its own Python 3.11/3.12/3.13 CI results. This clarification does not change the stopped live run or establish model quality.

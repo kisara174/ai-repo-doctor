@@ -18,6 +18,11 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit
 
+if __package__:
+    from .analyzer_provenance import AnalyzerProvenanceError, require_clean_analyzer
+else:
+    from analyzer_provenance import AnalyzerProvenanceError, require_clean_analyzer
+
 
 class EvaluationError(ValueError):
     """An evaluation input cannot be used as trustworthy evidence."""
@@ -300,6 +305,14 @@ def _git_read(repo: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
+def _analyzer_commit(expected_commit: str | None = None) -> str:
+    project_root = Path(__file__).resolve().parents[1]
+    try:
+        return require_clean_analyzer(project_root, expected_commit=expected_commit)
+    except AnalyzerProvenanceError as exc:
+        raise EvaluationError(str(exc)) from exc
+
+
 def validate_snapshot(repo: Path, expected_commit: str) -> None:
     """Require a clean Git checkout rooted at the expected immutable commit."""
     try:
@@ -553,7 +566,9 @@ def validate_baseline_pins(manifest: dict[str, object]) -> None:
     validate_dataset_pins(manifest)
 
 
-def _write_reports(outputs: list[tuple[Path, str]]) -> None:
+def _write_reports(
+    outputs: list[tuple[Path, str]], *, analyzer_commit: str | None = None
+) -> None:
     """Stage both reports and restore earlier destinations on a replace failure."""
     staged: dict[Path, Path] = {}
     backups: dict[Path, Path] = {}
@@ -575,6 +590,8 @@ def _write_reports(outputs: list[tuple[Path, str]]) -> None:
                 ) as handle:
                     backups[destination] = Path(handle.name)
                 shutil.copyfile(destination, backups[destination])
+        if analyzer_commit is not None:
+            _analyzer_commit(expected_commit=analyzer_commit)
         for destination, _ in outputs:
             os.replace(staged[destination], destination)
             installed.append(destination)
@@ -608,17 +625,18 @@ def main(argv: list[str] | None = None) -> int:
         validate_dataset_pins(manifest)
         roots = preflight_repositories(manifest, args.repos_root)
         project_root = Path(__file__).resolve().parents[1]
+        analyzer_commit = _analyzer_commit()
         results = []
         for entry in manifest["repositories"]:
             results.append({"entry": entry, **evaluate_snapshot(
                 entry, roots[entry["id"]], project_root, args.runs
             )})
-        report = build_report(manifest, results, _git_read(project_root, "rev-parse", "HEAD"),
-                              args.runs)
-        _write_reports([
+        report = build_report(manifest, results, analyzer_commit, args.runs)
+        outputs = [
             (args.json_out, json.dumps(report, ensure_ascii=False, indent=2) + "\n"),
             (args.markdown_out, render_markdown(report)),
-        ])
+        ]
+        _write_reports(outputs, analyzer_commit=analyzer_commit)
     except (EvaluationError, OSError) as exc:
         print(f"baseline evaluation failed: {exc}", file=sys.stderr)
         return 2

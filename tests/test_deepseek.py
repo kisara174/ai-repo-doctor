@@ -5,6 +5,7 @@ import urllib.error
 import urllib.request
 from unittest.mock import Mock, patch
 
+import repo_doctor.deepseek as deepseek_module
 from repo_doctor.deepseek import (
     DeepSeekError,
     DeepSeekResult,
@@ -20,15 +21,19 @@ class FakeResponse:
             if isinstance(payload, bytes)
             else json.dumps(payload).encode("utf-8")
         )
+        self.read_sizes = []
+        self.closed = False
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        self.closed = True
         return False
 
-    def read(self):
-        return self.payload
+    def read(self, size=-1):
+        self.read_sizes.append(size)
+        return self.payload if size < 0 else self.payload[:size]
 
 
 class DeepSeekTests(unittest.TestCase):
@@ -40,9 +45,8 @@ class DeepSeekTests(unittest.TestCase):
             model="deepseek-flash",
         )
 
-    def fake_api_response(self, content, finish_reason="stop"):
-        return FakeResponse(
-            {
+    def fake_api_response(self, content, finish_reason="stop", usage=None, include_usage=True):
+        envelope = {
                 "id": "completion-id",
                 "object": "chat.completion",
                 "created": 1710000000,
@@ -68,7 +72,11 @@ class DeepSeekTests(unittest.TestCase):
                     "completion_tokens_details": {"reasoning_tokens": 0},
                 },
             }
-        )
+        if usage is not None:
+            envelope["usage"] = usage
+        elif not include_usage:
+            envelope.pop("usage")
+        return FakeResponse(envelope)
 
     def test_complete_json_sends_one_non_streaming_json_request(self):
         response = self.fake_api_response('{"findings": []}')
@@ -81,7 +89,10 @@ class DeepSeekTests(unittest.TestCase):
                 model="deepseek-flash",
             )
 
-        self.assertEqual(result, DeepSeekResult("deepseek-flash", {"findings": []}))
+        self.assertEqual(result, DeepSeekResult(
+            "deepseek-flash", {"findings": []},
+            {"prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5},
+        ))
         open_request.assert_called_once()
         request = open_request.call_args.args[0]
         self.assertEqual(request.full_url, "https://api.deepseek.com/chat/completions")
@@ -96,6 +107,42 @@ class DeepSeekTests(unittest.TestCase):
         self.assertIs(body["stream"], False)
         self.assertEqual(body["max_tokens"], 4096)
         self.assertEqual(body["response_format"], {"type": "json_object"})
+
+    def test_missing_usage_remains_none(self):
+        with patch("urllib.request.OpenerDirector.open", return_value=self.fake_api_response(
+            '{"findings": []}', include_usage=False
+        )):
+            result = self.call_client()
+
+        self.assertIsNone(result.usage)
+
+    def test_invalid_usage_values_become_null_and_extra_fields_are_omitted(self):
+        response = self.fake_api_response(
+            '{"findings": []}',
+            usage={
+                "prompt_tokens": -1,
+                "completion_tokens": True,
+                "total_tokens": "5",
+                "reasoning_tokens": 8,
+            },
+        )
+        with patch("urllib.request.OpenerDirector.open", return_value=response):
+            result = self.call_client()
+
+        self.assertEqual(result.usage, {
+            "prompt_tokens": None,
+            "completion_tokens": None,
+            "total_tokens": None,
+        })
+
+    def test_old_two_argument_result_construction_keeps_usage_optional(self):
+        result = DeepSeekResult("deepseek-flash", {"findings": []})
+        self.assertIsNone(result.usage)
+
+    def test_legacy_error_construction_defaults_to_unknown_category(self):
+        error = DeepSeekError("legacy message")
+        self.assertEqual(getattr(error, "code", None), "unknown")
+        self.assertIsNone(getattr(error, "http_status", None))
 
     def test_http_error_is_sanitized_and_not_retried(self):
         response_body = io.BytesIO(b"test-secret")
@@ -113,6 +160,8 @@ class DeepSeekTests(unittest.TestCase):
         open_request.assert_called_once()
         self.assertNotIn("test-secret", str(raised.exception))
         self.assertTrue(response_body.closed)
+        self.assertEqual(getattr(raised.exception, "code", None), "http")
+        self.assertEqual(getattr(raised.exception, "http_status", None), 401)
 
     def test_redirect_handler_refuses_redirects_and_client_installs_it(self):
         request = urllib.request.Request(
@@ -150,7 +199,7 @@ class DeepSeekTests(unittest.TestCase):
     def test_oversized_request_is_rejected_before_opening_transport(self):
         with patch("urllib.request.OpenerDirector.open") as open_request:
             open_request.return_value = self.fake_api_response('{"findings": []}')
-            with self.assertRaisesRegex(DeepSeekError, "request exceeds"):
+            with self.assertRaisesRegex(DeepSeekError, "request exceeds") as raised:
                 complete_json(
                     "System prompt",
                     "x" * (300 * 1024),
@@ -159,6 +208,61 @@ class DeepSeekTests(unittest.TestCase):
                 )
 
         open_request.assert_not_called()
+        self.assertEqual(getattr(raised.exception, "code", None), "request_too_large")
+
+    def test_request_wire_bytes_accept_exact_limit_and_reject_one_byte_over(self):
+        limit = getattr(deepseek_module, "MAX_REQUEST_BYTES", None)
+        serializer = getattr(deepseek_module, "_serialize_request_body", None)
+        if not isinstance(limit, int) or not callable(serializer):
+            self.fail("wire request serializer and byte limit are not available")
+
+        base = serializer("system", "", "model")
+        remaining = limit - len(base)
+        user_prompt = "x" * (remaining - 2) + "é"
+        expected_body = serializer("system", user_prompt, "model")
+        self.assertEqual(len(expected_body), limit)
+
+        response = self.fake_api_response('{"findings": []}')
+        with patch("urllib.request.OpenerDirector.open", return_value=response) as open_request:
+            complete_json("system", user_prompt, api_key="test-secret", model="model")
+        self.assertEqual(open_request.call_args.args[0].data, expected_body)
+
+        with patch("urllib.request.OpenerDirector.open") as open_request:
+            with self.assertRaisesRegex(DeepSeekError, "request exceeds") as raised:
+                complete_json(
+                    "system", user_prompt + "x", api_key="test-secret", model="model"
+                )
+        open_request.assert_not_called()
+        self.assertEqual(raised.exception.code, "request_too_large")
+
+    def test_response_exact_limit_is_accepted_with_a_bounded_read(self):
+        limit = getattr(deepseek_module, "MAX_RESPONSE_BYTES", None)
+        if not isinstance(limit, int):
+            self.fail("bounded response limit is not available")
+        valid = b'{"model":"deepseek-flash","choices":[{"finish_reason":"stop","message":{"content":"{}"}}]}'
+        response = FakeResponse(valid + b" " * (limit - len(valid)))
+
+        with patch("urllib.request.OpenerDirector.open", return_value=response):
+            result = self.call_client()
+
+        self.assertEqual(result.payload, {})
+        self.assertEqual(response.read_sizes, [limit + 1])
+        self.assertTrue(response.closed)
+
+    def test_response_one_byte_over_limit_is_rejected_before_json_decode(self):
+        limit = getattr(deepseek_module, "MAX_RESPONSE_BYTES", None)
+        if not isinstance(limit, int):
+            self.fail("bounded response limit is not available")
+        valid = b'{"model":"deepseek-flash","choices":[{"finish_reason":"stop","message":{"content":"{}"}}]}'
+        response = FakeResponse(valid + b" " * (limit + 1 - len(valid)))
+
+        with patch("urllib.request.OpenerDirector.open", return_value=response):
+            with self.assertRaisesRegex(DeepSeekError, "response exceeds") as raised:
+                self.call_client()
+
+        self.assertEqual(raised.exception.code, "response_too_large")
+        self.assertEqual(response.read_sizes, [limit + 1])
+        self.assertTrue(response.closed)
 
     def test_url_error_does_not_leak_its_reason(self):
         with patch(
@@ -169,6 +273,7 @@ class DeepSeekTests(unittest.TestCase):
                 self.call_client()
 
         self.assertNotIn("test-secret", str(raised.exception))
+        self.assertEqual(getattr(raised.exception, "code", None), "connection")
 
     def test_timeout_error_does_not_leak_its_message(self):
         with patch("urllib.request.OpenerDirector.open", side_effect=TimeoutError("test-secret")):
@@ -176,42 +281,49 @@ class DeepSeekTests(unittest.TestCase):
                 self.call_client()
 
         self.assertNotIn("test-secret", str(raised.exception))
+        self.assertEqual(getattr(raised.exception, "code", None), "timeout")
 
     def test_invalid_api_envelope_json_is_rejected(self):
         with patch("urllib.request.OpenerDirector.open", return_value=FakeResponse(b"not json")):
-            with self.assertRaisesRegex(DeepSeekError, "invalid JSON"):
+            with self.assertRaisesRegex(DeepSeekError, "invalid JSON") as raised:
                 self.call_client()
+        self.assertEqual(getattr(raised.exception, "code", None), "invalid_response")
 
     def test_missing_completion_is_rejected(self):
         with patch(
             "urllib.request.OpenerDirector.open",
             return_value=FakeResponse({"model": "deepseek-flash", "choices": []}),
         ):
-            with self.assertRaisesRegex(DeepSeekError, "completion"):
+            with self.assertRaisesRegex(DeepSeekError, "completion") as raised:
                 self.call_client()
+        self.assertEqual(getattr(raised.exception, "code", None), "invalid_response")
 
     def test_empty_message_content_is_rejected(self):
         with patch("urllib.request.OpenerDirector.open", return_value=self.fake_api_response("  ")):
-            with self.assertRaisesRegex(DeepSeekError, "empty response"):
+            with self.assertRaisesRegex(DeepSeekError, "empty response") as raised:
                 self.call_client()
+        self.assertEqual(getattr(raised.exception, "code", None), "invalid_response")
 
     def test_malformed_model_json_is_rejected(self):
         with patch(
             "urllib.request.OpenerDirector.open",
             return_value=self.fake_api_response("{broken"),
         ):
-            with self.assertRaisesRegex(DeepSeekError, "not valid JSON"):
+            with self.assertRaisesRegex(DeepSeekError, "not valid JSON") as raised:
                 self.call_client()
+        self.assertEqual(getattr(raised.exception, "code", None), "invalid_response")
 
     def test_model_array_is_rejected(self):
         with patch("urllib.request.OpenerDirector.open", return_value=self.fake_api_response("[]")):
-            with self.assertRaisesRegex(DeepSeekError, "must be a JSON object"):
+            with self.assertRaisesRegex(DeepSeekError, "must be a JSON object") as raised:
                 self.call_client()
+        self.assertEqual(getattr(raised.exception, "code", None), "invalid_response")
 
     def test_truncated_model_response_is_rejected(self):
         with patch(
             "urllib.request.OpenerDirector.open",
             return_value=self.fake_api_response("{}", "length"),
         ):
-            with self.assertRaisesRegex(DeepSeekError, "truncated"):
+            with self.assertRaisesRegex(DeepSeekError, "truncated") as raised:
                 self.call_client()
+        self.assertEqual(getattr(raised.exception, "code", None), "invalid_response")
