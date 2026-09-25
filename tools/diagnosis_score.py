@@ -589,6 +589,17 @@ def render_report(report: dict) -> str:
         "Precision excludes uncertain and duplicate findings. Null means the denominator is zero.",
         "",
     ]
+    summary = report['totals']
+    if summary['completed_calls'] - summary['failed_calls'] == 0:
+        lines.extend([
+            'No successful model response was recorded; quality conclusions are unavailable.',
+            '',
+        ])
+    elif report['run_state'] != 'complete':
+        lines.extend([
+            'This run is partial; unattempted requests are reported separately.',
+            '',
+        ])
     labels = {
         "precision": "Precision (excluding uncertain and duplicate)",
         "recall": "Conditional recall",
@@ -621,7 +632,7 @@ def render_report(report: dict) -> str:
             "",
             f"Requested bug cases: {_markdown(', '.join(repeat['samples']['requested_bug_case_ids']) or 'none')}",
             f"Detected bug cases: {_markdown(', '.join(repeat['samples']['detected_bug_case_ids']) or 'none')}",
-            f"Latency median: {_format_ratio(repeat['latency_median_seconds'])} seconds; "
+            f"Request elapsed median (including failed calls): {_format_ratio(repeat['latency_median_seconds'])} seconds; "
             f"raw seconds: {_markdown(', '.join(map(str, repeat['latency_values_seconds'])) or 'none')}.",
             f"Token usage missing in {repeat['missing_usage_records']} completed records; "
             f"observed token totals: {_markdown(repeat['observed_token_totals'])}.",
@@ -651,7 +662,7 @@ def render_report(report: dict) -> str:
         f"{totals['call_failure_rate_inputs']['denominator']}).",
         f"Missing usage: {totals['missing_usage_records']} records; "
         f"observed totals: {_markdown(totals['observed_token_totals'])}.",
-        f"Latency median: {_format_ratio(totals['latency_median_seconds'])} seconds.",
+        f"Request elapsed median (including failed calls): {_format_ratio(totals['latency_median_seconds'])} seconds.",
         "",
         "## Limitations",
         "",

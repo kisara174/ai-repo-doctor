@@ -39,3 +39,10 @@ jobs:
 
       - name: Check diagnosis CLI help
         run: python -m repo_doctor diagnose --help
+
+      - name: Check diagnosis evaluation CLI help
+        run: |
+          python -m tools.evaluate_diagnosis prepare --help
+          python -m tools.evaluate_diagnosis run --help
+          python -m tools.evaluate_diagnosis prepare-review --help
+          python -m tools.evaluate_diagnosis score --help

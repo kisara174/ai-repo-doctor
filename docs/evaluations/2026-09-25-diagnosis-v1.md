@@ -2,22 +2,22 @@
 
 ## Status
 
-**Infrastructure complete; real model results are pending.** This is a status report, not a successful model evaluation. No DeepSeek request was sent, no model output exists, and no human finding review or score has been produced.
+**Infrastructure complete; the first live run stopped with a provider error.** This is a partial run, not a completed model evaluation. The offline scorer produced failure accounting, but no valid model response was recorded. The review template has zero rows because there were no findings to adjudicate.
 
 | Item | Status |
 | --- | --- |
-| Evaluation date | 2026-09-25; offline preparation and review only |
+| Evaluation date | 2026-09-25; offline preparation and one live attempt |
 | Analyzer commit | `5044a94b37631f19b8547ba568b235b4fa9e695f` |
 | Dataset | `diagnosis-v1`; frozen manifest SHA-256 `f76bbe7a4daa4933b0be2db0552a740a7147ddc8923ed7ed91bc04bdfc78f31f` |
 | Prepared plan | `.local/diagnosis/plan-v1`; canonical plan SHA-256 `9a657f2a6ca92481e6dda07212adb9b3503713956201c7006863a54a8ac36b56` |
 | Requested model | `deepseek-flash` (the currently documented API ID for DeepSeek-V4.1-Flash); this is not an observed response model |
-| Response model | Not available; no call was made |
-| Planned / completed requests | 10 / 0; 10 remain unrun |
-| Model findings / score | Not available; all finding and metric fields are unscored, not zero |
-| Errors, uncertain findings, duplicates | Not available; no model response was reviewed |
-| Tokens / latency | No usage or latency observations exist |
+| Response model | Not available; the attempted request returned no usable response |
+| Planned / attempted / successful responses | 10 / 1 / 0; 9 requests were not attempted |
+| Model findings / score | 0 findings returned; quality ratios are undefined. End-to-end detection is 0/4 in this incomplete run and is not a model-quality estimate |
+| Errors, uncertain findings, duplicates | 1 `provider_error` among 1 completed call; 9 requests were not attempted |
+| Tokens / latency | Usage is unavailable (`null`); the failed request took 0.0346 seconds, not a model-response latency |
 
-The API key presence check found `DEEPSEEK_API_KEY` unset in the process used for preparation. Only presence was checked; the value was not displayed or persisted. The live run also remains behind a one-time approval gate for the exact upload contents, model, request cap, and usage-based billing scope.
+The initial preparation process did not have `DEEPSEEK_API_KEY`. The key is now available to a zsh login shell; its value was never displayed or written to the repository. The first live request was attempted from that shell and recorded only as `provider_error`. The client deliberately stores a generic error category, so the record does not distinguish an HTTP rejection from a connection failure. No automatic retry occurred, and the other nine requests were not sent. The user approved the original ten-request scope; any additional attempt requires fresh authorization. Billing for the failed request cannot be determined from the run record.
 
 ## Scope and reviewed request contents
 
@@ -57,29 +57,10 @@ These illustrate the selected test inputs only; they are not AI findings or eval
 
 ## Limits and next step
 
-Ten directed cases are a small exploratory sample, not a random sample of repositories. Bug/fixed pairs are correlated, controls cover only selected behavior, and public issue/fix material may have appeared in model training data. No overall product-quality or reliability claim can be made. Since there are no responses, precision, conditional recall, end-to-end detection, grounding, control false-alarm rate, errors, uncertain findings, duplicates, token usage, and latency are all **not available**, not zero.
+Ten directed cases are a small exploratory sample, not a random sample of repositories. Bug/fixed pairs are correlated, controls cover only selected behavior, and public issue/fix material may have appeared in model training data. No overall product-quality or reliability claim can be made. The partial scorer reports precision, conditional recall, grounding, control false-alarm rate, uncertain rate, and duplicate rate as undefined because there were no successful responses. End-to-end detection is 0/4 under the frozen all-bug-case denominator, but this reflects that no case returned a usable response; it is not evidence of model performance. The completed-call failure rate is 1/1, and 9 requests were not attempted.
 
-The next step is one user-approved run with this exact model, these ten request hashes, one repeat, at most ten calls, 4,096 max output tokens each, and no retries. The current environment lacks `DEEPSEEK_API_KEY`. After approval and key configuration, the result can be reviewed and rescored offline:
+The first attempt is preserved locally in `.local/diagnosis/run-v1-r1`; its one record is `provider_error`, with no returned usage data. The local record does not reveal whether the provider rejected the request or a connection failed. The key's presence/format and the configured local proxy's TCP reachability were checked, but these checks do not establish provider authorization or account balance.
 
-```bash
-python3 -m tools.evaluate_diagnosis run \
-  --plan-dir .local/diagnosis/plan-v1 \
-  --manifest evaluation/diagnosis/manifest-v1.json \
-  --repos-root /tmp/ai-repo-doctor-diagnosis-checkouts \
-  --out-dir .local/diagnosis/run-v1-r1 \
-  --repeats 1 --max-calls 10 --allow-network
+Before another run, verify the DeepSeek account/key status and review whether the failed attempt incurred any charge. A fresh run requires new approval because the original no-retry run has already attempted one request. It must use a new output directory and a clean checkout at the frozen analyzer commit `5044a94b37631f19b8547ba568b235b4fa9e695f`. Since the prepared plan is ignored by Git, pass its absolute path from the preparation checkout. After a successful run, generate the manual review template and complete that review before scoring.
 
-python3 -m tools.evaluate_diagnosis prepare-review \
-  --run-dir .local/diagnosis/run-v1-r1 \
-  --out-file .local/diagnosis/run-v1-r1/review.json
-
-# Manually complete and review review.json before scoring.
-python3 -m tools.evaluate_diagnosis score \
-  --manifest evaluation/diagnosis/manifest-v1.json \
-  --run-dir .local/diagnosis/run-v1-r1 \
-  --review .local/diagnosis/run-v1-r1/review.json \
-  --json-out .local/diagnosis/run-v1-r1/report.json \
-  --markdown-out .local/diagnosis/run-v1-r1/report.md
-```
-
-No push or merge was performed. The existing PR #6 remains open; integration and its CI matrix are separate from this local report.
+**Integration status (separate from this diagnosis run).** PR #6 was merged into `codex/repo-doctor-v1` at merge commit `ec5041d3b98e07dc42532336e36ebe9ac2e82f12`, with all Python 3.11–3.13 CI jobs passing. The reviewed PR head was `3492deb7c9971c06da48477f2dff6a8836cf2226`. This code integration does not change or retry the recorded provider-error request. This report and the raw `.local` run artifacts remain local and unpublished.

@@ -104,6 +104,38 @@ class DiagnosisScoreMathTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     calculate_repeat_metrics(malformed)
 
+    def test_all_rejected_findings_keep_precision_undefined(self):
+        counts = dict.fromkeys(make_counts(), 0)
+        counts.update(rejected_count=2, successful_bug_cases=1,
+                      all_requested_bug_cases=1)
+        metrics = calculate_repeat_metrics(counts)['metrics']
+        self.assertIsNone(metrics['precision'])
+        self.assertEqual(metrics['recall'], 0.0)
+        self.assertEqual(metrics['end_to_end_detection'], 0.0)
+        self.assertEqual(metrics['grounding_rate'], 0.0)
+        self.assertEqual(metrics['uncertain_rate'], 0.0)
+        self.assertEqual(metrics['duplicate_rate'], 0.0)
+        self.assertIsNone(metrics['control_false_alarm_rate'])
+
+    def test_uncertain_only_is_not_counted_as_false_positive(self):
+        counts = dict.fromkeys(make_counts(), 0)
+        counts.update(accepted_count=2, uncertain=2,
+                      successful_bug_cases=1, all_requested_bug_cases=1)
+        result = calculate_repeat_metrics(counts)
+        self.assertIsNone(result['metrics']['precision'])
+        self.assertEqual(result['metrics']['grounding_rate'], 1.0)
+        self.assertEqual(result['metrics']['uncertain_rate'], 1.0)
+        self.assertEqual(result['metrics']['recall'], 0.0)
+        self.assertEqual(result['counts']['accepted_fp'], 0)
+
+    def test_returned_counts_do_not_alias_caller_counts(self):
+        counts = make_counts()
+        result = calculate_repeat_metrics(counts)
+        result['counts']['accepted_tp'] = 99
+        self.assertEqual(counts['accepted_tp'], 1)
+        counts['accepted_fp'] = 88
+        self.assertEqual(result['counts']['accepted_fp'], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

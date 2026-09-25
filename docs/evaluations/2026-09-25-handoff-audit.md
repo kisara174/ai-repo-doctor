@@ -1,0 +1,38 @@
+# Handoff audit — 2026-09-25
+
+## Workspace snapshot
+
+- Worktree: `/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor`
+- Branch: `codex/diagnosis-evaluation`
+- HEAD at audit: `fba3d86a1304923898e89e57404f827b0c67e695`
+- `git diff --check`: passed before this audit file was created.
+- No repository-local `AGENTS.md` appeared in `rg --files -g AGENTS.md`; the user-provided AGENTS instructions govern this work.
+
+## Existing user/worktree changes reviewed and preserved
+
+1. `docs/evaluations/2026-09-25-diagnosis-v1.md` updates the report from “no request yet” to the recorded first `provider_error`, one attempted request, nine unattempted requests, null usage, unknown billing, and no model-quality conclusion. It also removes stale execution commands and separates PR integration from diagnosis results.
+2. `docs/execution-status.md` records the local merge HEAD, the one failed live attempt, offline partial scoring, the historical 229-test result, and the distinction between the PR #6 CI and the diagnosis branch.
+3. `docs/integration-notes.md` records PR #6's merge/head/tree and its two six-job CI runs, plus historical local verification of the integrated diagnosis branch. The branch remains unpublished according to this existing note.
+4. `docs/superpowers/plans/2026-09-24-post-v3-execution.md` marks the previously pending live attempt, partial review/score, and PR #6 integration gates complete, while retaining the provider-error and no-quality-conclusion caveats.
+
+These are pre-existing edits. This audit did not rewrite them. A fifth untracked file, `docs/superpowers/plans/2026-09-25-next-work-and-luna-max-packets.md`, is the current planning deliverable.
+
+## Evidence boundaries
+
+- The recorded 229 tests and PR #6's six CI jobs are historical evidence from earlier work; they were not rerun in this audit.
+- PR #6 head `3492deb7c9971c06da48477f2dff6a8836cf2226` is already merged. Its CI does not validate subsequent diagnosis-evaluation branch changes.
+- The live run recorded one `provider_error`, no valid model response, and nine unattempted calls. This does not establish model quality; failed-call billing remains unknown.
+- No project tests, compile checks, provider requests, pushes, or merges were performed for this audit.
+
+## Progress after the audit
+
+| Task | State | Evidence |
+| --- | --- | --- |
+| M00 | Complete | This audit recorded the starting SHA and preserved four pre-existing documentation changes. |
+| L01 | Complete (primary-agent fallback) | README updated; packet text assertions and `git diff --check -- README.md` passed. Luna dispatch was attempted but the platform returned `agent thread limit reached`. |
+| L02 | Complete (primary-agent fallback) | The same CI-scope clarification was appended once to each of the three specified files; text assertions and path-scoped `git diff --check` passed. |
+| L03 | Complete (primary-agent fallback) | Seven score-math tests passed, including the three added cases; path-scoped `git diff --check` passed. |
+| L04 | Complete (primary-agent fallback) | Four new report-presentation tests and all 25 `test_diagnosis_score*.py` tests passed; path-scoped `git diff --check` passed. |
+| M01 | Local commit created; PR delivery pending | CI now checks help for all four evaluation subcommands. Full suite: 236 tests passed; compileall, all seven CLI help commands, and repository `git diff --check` passed. Remote default is still `ec5041d3b98e07dc42532336e36ebe9ac2e82f12`; no remote diagnosis-evaluation branch or historical PR exists. No provider request was made. |
+
+Luna executor dispatch remains unavailable in this task because of the reported agent-thread limit. The primary agent applied only the fixed L01–L04 packets and independently reviewed their resulting diff. The locally validated changes are committed. Next: publish the evaluation branch, open a PR, and verify CI for its actual head. Do not merge without explicit authorization for this PR and its actual head.

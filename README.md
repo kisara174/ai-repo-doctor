@@ -101,7 +101,11 @@ python3 -m repo_doctor impact /path/to/python-repo 'app/services/user.py::UserSe
 
 ## 诊断评估
 
-本项目的固定样本评估状态与限制见[诊断评估报告](docs/evaluations/2026-09-25-diagnosis-v1.md)。该报告当前记录离线基础设施完成、真实模型结果待授权运行。
+本项目的固定样本评估状态与限制见[诊断评估报告](docs/evaluations/2026-09-25-diagnosis-v1.md)。离线评估基础设施已完成；一次获批的真实运行在首个请求发生 provider_error 后停止，其余九个请求未发送。当前没有有效模型响应，因此尚不能得出诊断质量结论；失败请求的费用未知。
+
+评估命令 `tools.evaluate_diagnosis` 需要在本项目源码目录中执行；当前发行包仅包含 `repo_doctor`，不包含 `tools`。
+
+数据保存范围按命令区分：普通 `diagnose` 命令不保存请求、源码或模型响应；评估工具会把经审查的公开样本上下文、运行记录和评分产物写入指定的本地输出目录。实验产物使用被 Git 忽略的 `.local` 目录，不能把这些产物当作普通诊断命令的默认行为。
 
 详细设计见 [V2 设计文档](docs/superpowers/specs/2026-09-24-repo-doctor-v2-design.md) 和 [V3 设计文档](docs/superpowers/specs/2026-09-24-repo-doctor-v3-design.md)。
 

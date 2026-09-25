@@ -351,9 +351,9 @@ T6 追加审查修正：每轮 E2E 分母按该轮的 bug case 数计算；总�
 
 **前提：** T0–T6 已验收，代码提交干净，模型可用性核查完成。下面命令调用新建工具；在 T3–T6 实现前不存在，不要提前运行。
 
-- [ ] 用户在新终端配置 `DEEPSEEK_API_KEY`；执行者只检查是否非空，不打印或写入文件。2026-09-25 检查结果：当前进程未配置。
+- [x] 用户配置 `DEEPSEEK_API_KEY`；只检查了存在性和基本格式，没有打印或写入 key。登录 zsh 可加载钥匙串值。
 - [x] 主代理核对官方文档并将模型 ID、查询日期、价格单位和链接记录在本地 `.local/diagnosis/provider-notes-2026-09-25.md`；使用模型 ID `deepseek-flash`，并记录当前 thinking 默认与 4096 输出 token 上限。
-- [x] 固定 120 行、1 次重复、10 个 case、最多 10 个请求；在 `.local/diagnosis/plan-v1` 离线 prepare，并逐项检查十份实际提示词及哈希。准确上传内容已列入本地 notes 和公开的状态报告；一次性上传/计费授权仍待用户。
+- [x] 固定 120 行、1 次重复、10 个 case、最多 10 个请求；在 `.local/diagnosis/plan-v1` 离线 prepare，并逐项检查十份实际提示词及哈希。准确上传内容已列入本地 notes 和公开的状态报告；用户已授权原定上传与计费范围。
 
 ~~~bash
 export DIAGNOSIS_CHECKOUTS=/tmp/ai-repo-doctor-diagnosis-checkouts
@@ -361,16 +361,16 @@ export DIAGNOSIS_CHECKOUTS=/tmp/ai-repo-doctor-diagnosis-checkouts
 python3 -m tools.evaluate_diagnosis prepare --manifest evaluation/diagnosis/manifest-v1.json --repos-root "$DIAGNOSIS_CHECKOUTS" --model "$DEEPSEEK_MODEL" --max-lines 120 --out-dir .local/diagnosis/plan-v1
 ~~~
 
-- [ ] 用户授权后执行一次首轮。以下命令逐条执行并检查返回码；run 返回 2 时停止，交主代理处理 partial，不能接着把它按完整实验评分：
+- [x] 用户授权后执行一次首轮。冻结分析器提交为 `5044a94b37631f19b8547ba568b235b4fa9e695f`；首个 case `click-3084-bug` 返回 `provider_error`，run 状态为 `partial`，1/10 已尝试、9 个未发送。没有重试或继续发送。
 
 ~~~bash
 python3 -m tools.evaluate_diagnosis run --plan-dir .local/diagnosis/plan-v1 --manifest evaluation/diagnosis/manifest-v1.json --repos-root "$DIAGNOSIS_CHECKOUTS" --out-dir .local/diagnosis/run-v1-r1 --repeats 1 --max-calls 10 --allow-network
 python3 -m tools.evaluate_diagnosis prepare-review --run-dir .local/diagnosis/run-v1-r1 --out-file .local/diagnosis/run-v1-r1/review.json
 ~~~
 
-- [ ] 请求失败时保留 partial 记录，主代理调查账户/模型/响应格式问题。禁止循环重跑整个实验。没有密钥或授权时，只完成离线交付，不写“真实评估通过”。
-- [ ] 由主代理/人工逐条填写 review.json，引用上游材料和已有上下文解释。发现真实但未标注问题时标 uncertain，不改本轮 frozen manifest。
-- [ ] 评分：
+- [x] 请求失败后保留 partial 记录，并完成不产生 API 请求的诊断。记录只保留通用 `provider_error`，无法确定是 HTTP 拒绝还是连接失败；登录 shell 的 key 基本格式与本机代理 TCP 可达性通过。按用户要求，本轮不追加 API 调用；须先核对供应商账号状态及可能扣费，再决定是否重新授权运行。
+- [x] 生成 `review.json`；模板为 0 行，因为没有成功响应或 findings，无需逐条人工裁定。没有把无响应解释为模型发现。
+- [x] 对 partial run 离线评分：1/1 已完成调用失败，9 个未尝试；端到端检出为 0/4（完整分母下的运行结果，不代表模型质量），其他质量比率为 null。报告没有宣称真实模型评估通过。
 
 ~~~bash
 python3 -m tools.evaluate_diagnosis score --manifest evaluation/diagnosis/manifest-v1.json --run-dir .local/diagnosis/run-v1-r1 --review .local/diagnosis/run-v1-r1/review.json --json-out .local/diagnosis/run-v1-r1/report.json --markdown-out .local/diagnosis/run-v1-r1/report.md
@@ -399,10 +399,12 @@ python3 -m tools.evaluate_diagnosis score --manifest evaluation/diagnosis/manife
 | 小样本表现稳定 | 收集新的独立公开样本再扩样；暂不宣称总体质量达标 |
 
 - [x] 修复复核中发现的指标口径缺陷，并通过新增回归测试和全量测试；未更改冻结标签。当前未发现其他待修代码缺陷。
-- [ ] T6 最终离线测试已通过；GitHub Python 3.11–3.13 CI 尚未对 T6 提交运行。主代理需在获准推送后核对 CI、最终 diff 和报告。
-- [ ] 已授权推送则更新对应 PR；合并按当时有效授权执行。这个计划不授予未来 PR 无条件合并权限。
+- [x] PR #6 的最新代码在 Python 3.11、3.12、3.13 的两次 CI runs 上全部通过；合并前工作树全量测试 163 项通过，compileall、CLI help 和 `git diff --check` 通过。
+- [x] PR #6 已按先前授权推送更新并合并到 `codex/repo-doctor-v1`。PR head `3492deb7c9971c06da48477f2dff6a8836cf2226`，merge commit `ec5041d3b98e07dc42532336e36ebe9ac2e82f12`，base `aa2a84243fe122a2b7a89b955598b039fcc62345`；合并前状态为 CLEAN 且 CI 全绿。
 
 **候选后续方向（本轮不自动实施）：** 扩大独立样本；按评估结果改进上下文；有明确需求再做批量诊断、交互界面或自动修复。自动补丁涉及新的执行边界，必须另行设计。
+
+**最终离线回归（2026-09-25）：** baseline-v1、challenge-v1 和 challenge-v2 各运行 5 次，三组 probe 均无 mismatch；所有冻结 probe 与历史结果的 metrics/probes 相同。PR 合并没有触发或重试 DeepSeek API 请求。完整 JSON/Markdown 记录保存在忽略目录 `.local/diagnosis/post-review-pr6-3492deb/`。将 PR #6 合并基线本地并入诊断评估分支后，15 项 DeepSeek 传输测试与完整 229 项测试均通过，compileall、CLI help 和 whitespace 检查通过。
 
 ## 11. 提交与交付批次
 
@@ -464,3 +466,7 @@ Open PR URL and base branch:
 - [ ] live 已授权执行并有记录，或明确标注尚未执行。
 - [ ] 公开报告与原始数据一致，未把小样本/重复请求当总体质量证明。
 - [ ] 用户收到具体产物路径、PR、已完成范围及仍需人工判断的事项。
+
+## 2026-09-25 CI evidence scope clarification
+
+PR #6 CI applies to PR head `3492deb7c9971c06da48477f2dff6a8836cf2226`. It does not validate the unpublished diagnosis-evaluation changes. The integrated evaluation branch has a historical local result of 229 passing tests; that result is not a fresh CI result. Before publishing or merging the evaluation changes, record the actual evaluation PR head SHA and its own Python 3.11/3.12/3.13 CI results. This clarification does not change the stopped live run or establish model quality.
