@@ -4,7 +4,23 @@ Plan: `docs/superpowers/plans/2026-09-24-post-v3-execution.md`
 
 Branch / worktree: `codex/diagnosis-evaluation` / `/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor`
 
-Latest analyzer code commit: `b8974505d35611a806a4388176df4e46f156754c` (`feat: support DeepSeek thinking mode in evaluation`). The final compact-output prompt revision and fourth single-sample smoke remain separately recorded; no provider request has used the new disabled thinking mode. No push or merge was performed.
+Latest analyzer code commit: `5de005997b213cb7050ad4503af7f2a0c1dfaa88`
+(`feat: add bounded single-case diagnosis smoke`). No push or merge was performed.
+
+## Current checkpoint — 2026-09-27
+
+The new `run --case-id` path passed 275 offline tests and sent one authorized
+thinking-disabled request for `requests-6628-bug`. It completed in 2.128 seconds,
+using 1,558 prompt / 498 completion / 2,056 total tokens. Two findings passed local
+evidence checks; neither identified the frozen serialization bug. Primary source
+review marked one uncertain and one false positive. No dataset score was made.
+The single-case result is refused by the dataset scoring CLI.
+
+See [the experiment report](evaluations/2026-09-27-thinking-disabled-smoke.md)
+for exact hashes, review rationale, output limitations, and the next paired/control
+experiment. No additional provider request followed this smoke. The ten-case run
+is still partial. Everything below is the historical September 25 checkpoint,
+including its then-pending thinking-disabled experiment and historical test counts.
 
 ## Phase
 

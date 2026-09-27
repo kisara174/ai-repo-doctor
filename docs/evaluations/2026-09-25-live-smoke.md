@@ -1,6 +1,14 @@
 # DeepSeek single-sample online attempts — 2026-09-25
 
-## Latest result
+## Later result — 2026-09-27
+
+A fifth pinned-sample request with thinking disabled completed without truncation.
+Two findings passed evidence checks but neither identified the known defect;
+primary review marked one uncertain and one false positive. See
+[the new experiment report](2026-09-27-thinking-disabled-smoke.md).
+The sections below preserve the September 25 checkpoint.
+
+## September 25 result
 
 The fourth user-authorized smoke sent exactly one request for `requests-6628-bug`, using the final compact-output prompt revision. The API response envelope was readable, but the completion ended with `finish_reason=length` at the client's 4,096-token output limit. The client recorded `invalid_response` with safe detail `truncated` and usage of 1,583 prompt, 4,096 completion, and 5,679 total tokens. Elapsed time was 17.361 seconds.
 
