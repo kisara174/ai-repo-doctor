@@ -133,6 +133,7 @@ def _run(args: argparse.Namespace) -> int:
         output_dir=Path(args.out_dir),
         manifest=manifest,
         manifest_sha256=manifest_hash,
+        case_id=args.case_id,
     )
     print(
         f"Run {summary['state']}: {summary['attempted_calls']}/{summary['planned_calls']} "
@@ -275,6 +276,8 @@ def _prepare_review(args: argparse.Namespace) -> int:
 def _score(args: argparse.Namespace) -> int:
     manifest, manifest_sha256 = _read_manifest(Path(args.manifest))
     run, records, _ = _load_run_bundle(Path(args.run_dir))
+    if "selected_case_id" in run:
+        raise EvaluationDataError("single-case smoke cannot be scored as a dataset evaluation")
     review = _read_json_object(Path(args.review), "review file")
     if run.get("manifest_sha256") != manifest_sha256:
         raise EvaluationDataError("run manifest SHA-256 does not match the supplied manifest bytes")
@@ -313,6 +316,10 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--repeats", type=int, default=1)
     run.add_argument("--max-calls", type=int, required=True)
     run.add_argument("--allow-network", action="store_true")
+    run.add_argument(
+        "--case-id",
+        help="send one selected case once as a smoke test; cannot be scored as a dataset run",
+    )
     prepare_review = subparsers.add_parser(
         "prepare-review", help="create a pending manual review template from a run"
     )

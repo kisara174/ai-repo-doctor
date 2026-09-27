@@ -243,6 +243,7 @@ def run_cases(
     output_dir: Path,
     manifest: dict | None = None,
     manifest_sha256: str | None = None,
+    case_id: str | None = None,
 ) -> dict:
     """Preflight a complete run, then call the provider sequentially without retries."""
     if type(repeats) is not int or not 1 <= repeats <= 3:
@@ -265,6 +266,14 @@ def run_cases(
     prepared, model = _validate_plan_and_contexts(
         plan, contexts, manifest, repos_root, manifest_sha256
     )
+    if case_id is not None:
+        if not isinstance(case_id, str) or not case_id:
+            raise EvaluationDataError("case_id must be nonempty text")
+        if repeats != 1:
+            raise EvaluationDataError("single-case smoke requires repeats=1")
+        prepared = [item for item in prepared if item[0]["id"] == case_id]
+        if len(prepared) != 1:
+            raise EvaluationDataError("selected case ID is not in the prepared plan")
     thinking_mode = plan.get("thinking_mode")
     if any(api_key in system_prompt or api_key in user_prompt
            for _, _, _, system_prompt, user_prompt in prepared):
@@ -305,6 +314,8 @@ def run_cases(
     }
     if thinking_mode is not None:
         summary["thinking_mode"] = thinking_mode
+    if case_id is not None:
+        summary["selected_case_id"] = case_id
     summary_path = output / "run.json"
     _write_json_atomic(summary_path, summary)
 

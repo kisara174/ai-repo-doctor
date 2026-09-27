@@ -92,6 +92,19 @@ python3 -m tools.evaluate_diagnosis prepare \
 Preparation is offline. The selected mode is saved in `plan.json` and included
 in every case's request fingerprint; changing or removing it invalidates the
 fingerprint. A later `run` uses the plan's mode and still requires
-`--allow-network`. It executes the plan's complete case list; `--max-calls`
+`--allow-network`. Without `--case-id`, it executes the plan's complete case list; `--max-calls`
 does not select a subset of a ten-case plan. DeepSeek documents thinking mode
 and the `thinking.type` values in its [Chat Completions API reference](https://api-docs.deepseek.com/api/create-chat-completion/).
+
+## Single-case smoke
+
+Use `run --case-id requests-6628-bug --repeats 1 --max-calls 1` with the
+usual plan, manifest, repositories, output, and `--allow-network` arguments
+to send exactly one case from a fully validated prepared bundle. Unknown IDs
+and repeats other than one are rejected before transport. Requests are never
+retried. `--max-calls` alone still does not select a subset.
+
+The run records `selected_case_id` and the full prepared plan hash. Review
+preparation is supported, but `score` rejects this smoke as a dataset run.
+A complete response and locally accepted evidence do not establish diagnostic
+accuracy; inspect the findings against the pinned source and ground truth.

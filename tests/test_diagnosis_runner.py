@@ -93,6 +93,35 @@ class DiagnosisRunnerTests(unittest.TestCase):
         client.assert_not_called()
         return output_dir
 
+    def test_selected_case_sends_once_and_preserves_full_plan_hash(self):
+        client = Mock(return_value=DeepSeekResult("test-model", {"findings": []}))
+        summary, output = self.run_with(client=client, case_id="bug-02", max_calls=1)
+        self.assertEqual(client.call_count, 1)
+        self.assertEqual(summary["planned_calls"], 1)
+        self.assertEqual(summary["selected_case_id"], "bug-02")
+        self.assertEqual(summary["plan_sha256"], diagnosis_runner_module._canonical_hash(self.plan))
+        record = json.loads((output / summary["record_files"][0]).read_text())
+        self.assertEqual(record["case_id"], "bug-02")
+        self.assertEqual(record["request_sha256"], self.plan["cases"][1]["request_sha256"])
+
+    def test_selected_case_rejects_unknown_id_or_repeats_before_transport(self):
+        for changes in ({"case_id": "missing"}, {"case_id": ""},
+                        {"case_id": "bug-02", "repeats": 2}):
+            with self.subTest(changes=changes):
+                self.assert_rejected_before_client(Mock(), **changes)
+
+    def test_selected_case_still_validates_the_complete_bundle(self):
+        contexts = copy.deepcopy(self.contexts)
+        contexts["bug-01"]["symbol"] = "tampered"
+        self.assert_rejected_before_client(Mock(), case_id="bug-02", contexts=contexts)
+
+    def test_selected_case_provider_failure_is_not_retried(self):
+        client = Mock(side_effect=DeepSeekError("connection"))
+        summary, _ = self.run_with(client=client, case_id="bug-02", max_calls=1)
+        self.assertEqual(client.call_count, 1)
+        self.assertEqual(summary["state"], "partial")
+        self.assertEqual(summary["attempted_calls"], 1)
+
     def test_two_valid_cases_make_exactly_two_requests_and_write_safe_records(self):
         client = Mock(return_value=DeepSeekResult(
             "test-model",

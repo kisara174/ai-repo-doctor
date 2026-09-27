@@ -12,6 +12,17 @@ from tools.evaluate_diagnosis import main
 
 
 class DiagnosisEvaluationCliTests(unittest.TestCase):
+    def test_score_refuses_single_case_smoke_before_reading_review(self):
+        with patch("tools.evaluate_diagnosis._read_manifest", return_value=({}, "hash")):
+            with patch("tools.evaluate_diagnosis._load_run_bundle",
+                       return_value=({"selected_case_id": "bug-01"}, [], Path("run"))):
+                with patch("tools.evaluate_diagnosis._read_json_object") as read_review:
+                    code = main(["score", "--manifest", "manifest.json", "--run-dir", "run",
+                                 "--review", "review.json", "--json-out", "report.json",
+                                 "--markdown-out", "report.md"])
+        self.assertEqual(code, 2)
+        read_review.assert_not_called()
+
     def test_prepare_atomically_writes_plan_and_context(self):
         fixture = data_fixture.DiagnosisDataTests()
         fixture.setUp()
@@ -154,7 +165,7 @@ class DiagnosisEvaluationCliTests(unittest.TestCase):
                             "--manifest", str(manifest_path),
                             "--repos-root", str(fixture.repos_root),
                             "--out-dir", str(root / "run"), "--max-calls", "1",
-                            "--allow-network",
+                            "--allow-network", "--case-id", "bug-01",
                         ])
 
             self.assertEqual(code, 0)
@@ -162,6 +173,7 @@ class DiagnosisEvaluationCliTests(unittest.TestCase):
             self.assertEqual(run_cases.call_args.kwargs["manifest_sha256"], hashlib.sha256(
                 manifest_path.read_bytes()
             ).hexdigest())
+            self.assertEqual(run_cases.call_args.kwargs["case_id"], "bug-01")
             self.assertTrue(callable(run_cases.call_args.kwargs["client"]))
             open_request.assert_not_called()
 
