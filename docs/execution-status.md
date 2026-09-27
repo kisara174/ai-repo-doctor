@@ -16,11 +16,7 @@ evidence checks; neither identified the frozen serialization bug. Primary source
 review marked one uncertain and one false positive. No dataset score was made.
 The single-case result is refused by the dataset scoring CLI.
 
-See [the experiment report](evaluations/2026-09-27-thinking-disabled-smoke.md)
-for exact hashes, review rationale, output limitations, and the next paired/control
-experiment. No additional provider request followed this smoke. The ten-case run
-is still partial. Everything below is the historical September 25 checkpoint,
-including its then-pending thinking-disabled experiment and historical test counts.
+See [the experiment report](evaluations/2026-09-27-thinking-disabled-smoke.md) and [the paired fixed/control report](evaluations/2026-09-27-paired-control.md) for hashes and source review. The two follow-up requests both completed; all three newly reviewed findings were false positives. The context omitted exception ancestors and a local import binding, which explains the control NameError claim and is consistent with the missed serialization defect. The ten-case run remains partial. Everything below is the historical September 25 checkpoint, including its then-pending thinking-disabled experiment and historical test counts.
 
 ## Phase
 
