@@ -305,6 +305,17 @@ class DiagnosisDataTests(unittest.TestCase):
         with self.assertRaisesRegex(EvaluationDataError, "fingerprint"):
             prepare_cases(manifest, self.repos_root, "test-model", 120)
 
+    def test_flask_holdout_dataset_id_is_supported(self):
+        manifest = self.make_manifest()
+        manifest["dataset_id"] = "diagnosis-flask-holdout-v1"
+        validate_manifest(manifest)
+        prepared = prepare_cases(manifest, self.repos_root, "test-model", 120)
+        self.assertEqual(prepared["plan"]["dataset_id"], manifest["dataset_id"])
+
+        manifest["dataset_id"] = "diagnosis-unreviewed-v1"
+        with self.assertRaisesRegex(EvaluationDataError, "dataset_id"):
+            validate_manifest(manifest)
+
     def test_manifest_rejects_duplicate_case_ids(self):
         manifest = self.make_manifest()
         manifest["cases"].append(dict(manifest["cases"][0]))

@@ -86,8 +86,10 @@ def validate_manifest(data: dict) -> None:
     root = _object(data, "manifest")
     if type(root.get("schema_version")) is not int or root["schema_version"] != 1:
         raise EvaluationDataError("manifest.schema_version must be 1")
-    if root.get("dataset_id") != "diagnosis-v1":
-        raise EvaluationDataError('manifest.dataset_id must be "diagnosis-v1"')
+    if root.get("dataset_id") not in {"diagnosis-v1", "diagnosis-flask-holdout-v1"}:
+        raise EvaluationDataError(
+            'manifest.dataset_id must be "diagnosis-v1" or "diagnosis-flask-holdout-v1"'
+        )
     cases = root.get("cases")
     if not isinstance(cases, list) or not cases:
         raise EvaluationDataError("manifest.cases must be a nonempty list")
