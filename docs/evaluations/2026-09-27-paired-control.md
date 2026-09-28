@@ -33,3 +33,9 @@ The prior baseline, fixed case, and control requests all completed with disabled
 Add deterministic, bounded context neighbors for direct class bases and resolvable repository-local import bindings. Preserve current target-first ordering, deduplicate existing neighbors, exclude unresolved third-party imports, and spend from the same line budget. Keep the fixed prompt and validator unchanged for the first experiment. Tests should show the Requests exception context includes its local ancestor chain and compatibility decoder implementation, and that the control includes the `basestring` binding; unrelated imports remain excluded and all additions respect the existing 120-line and 64-KiB limits.
 
 This changes prepared contexts and request fingerprints, so old plans must remain untouched and the paired samples must be freshly prepared for the next experiment. Review the actual context diff before making another provider call.
+
+## Follow-up
+
+The context change landed in `6791483`. Its bounded offline audit and three
+single-case outcomes are recorded in [the follow-up report](2026-09-28-context-expansion.md).
+The result remains exploratory; the bug case returned invalid model content.
