@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "dataset_id": "diagnosis-v1",
+  "cases": [
+    {
+      "id": "click-3084-bug",
+      "pair_id": "pallets-click-3084",
+      "repository_url": "https://github.com/pallets/click",
+      "checkout_id": "click-7f7bbe4569ea",
+      "commit": "7f7bbe4569ea68e8dabee232eade069ef3310aea",
+      "symbol": "src/click/core.py::Option.__init__",
+      "label": "bug",
+      "issue_id": "pallets/click#3084",
+      "source": {
+        "file": "src/click/core.py",
+        "start_line": 2760,
+        "end_line": 2812,
+        "sha256": "da95e4a99647d86168ceb49eb1fff9432f63a36f9e7fc5298992b0934dc91fa5"
+      },
+      "ground_truth": "Known defect from Click issue #3084. Trigger: an option is declared with is_flag=False, a non-UNSET flag_value, and an explicit default, then is invoked without an argument. In this snapshot Option.__init__ derives _flag_needs_value only from whether the default is UNSET; the explicit default therefore makes the parser require an argument even though flag_value supplies the standalone value. The reported CLI error is that the option requires an argument instead of using flag_value. Accept a finding that identifies this condition and the broken zero-value invocation. Do not count claims that a separately supplied option value should be ignored or that every is_flag=False option must behave as a flag.",
+      "references": [
+        "https://github.com/pallets/click/issues/3084",
+        "https://github.com/pallets/click/pull/3152",
+        "https://github.com/pallets/click/commit/ebcd548d50662bc8fa4f8b9ec7fe13cb8310bfaa",
+        "https://github.com/pallets/click/blob/7f7bbe4569ea68e8dabee232eade069ef3310aea/src/click/core.py#L2760-L2812"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-24T14:06:15Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "click-3084-fixed",
+      "pair_id": "pallets-click-3084",
+      "repository_url": "https://github.com/pallets/click",
+      "checkout_id": "click-ebcd548d5066",
+      "commit": "ebcd548d50662bc8fa4f8b9ec7fe13cb8310bfaa",
+      "symbol": "src/click/core.py::Option.__init__",
+      "label": "fixed",
+      "issue_id": "pallets/click#3084",
+      "source": {
+        "file": "src/click/core.py",
+        "start_line": 2760,
+        "end_line": 2812,
+        "sha256": "b55101fda7b563b8a5bee8c0901723d0f245a37cf60f80ed9117db0312b15634"
+      },
+      "ground_truth": "Fixed snapshot for Click issue #3084. The contract is that is_flag=False with flag_value permits the option to be omitted, passed alone (yielding flag_value), or passed with one explicit value (yielding that value); if omitted, the declared default applies. The fix considers both an explicit flag_value and an unset default when setting _flag_needs_value. The upstream regression tests cover string and integer options with zero or one arguments. Accept only findings that demonstrate a violation of this contract in the shown implementation; do not report the repaired issue as still present or claim that flag_value overrides an explicit value.",
+      "references": [
+        "https://github.com/pallets/click/issues/3084",
+        "https://github.com/pallets/click/pull/3152",
+        "https://github.com/pallets/click/commit/ebcd548d50662bc8fa4f8b9ec7fe13cb8310bfaa",
+        "https://github.com/pallets/click/blob/ebcd548d50662bc8fa4f8b9ec7fe13cb8310bfaa/src/click/core.py#L2760-L2812"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-24T14:06:15Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "click-1921-bug",
+      "pair_id": "pallets-click-1921",
+      "repository_url": "https://github.com/pallets/click",
+      "checkout_id": "click-76cc18d1f0bd",
+      "commit": "76cc18d1f0bd5854f14526e3ccbce631d8344cce",
+      "symbol": "src/click/types.py::Path.convert",
+      "label": "bug",
+      "issue_id": "pallets/click#1921",
+      "source": {
+        "file": "src/click/types.py",
+        "start_line": 830,
+        "end_line": 891,
+        "sha256": "8750a6a49c8dc69739dd94b7c5add4b94a480dfdcbad429c5921f0ffd7062f3d"
+      },
+      "ground_truth": "Known defect from Click issue #1921. Trigger: Path(resolve_path=True) receives a relative symlink whose target is relative to the symlink's containing directory. This implementation replaces rv with os.readlink(rv), then calls os.path.realpath(rv) on the relative target alone, which interprets it relative to the process working directory. A valid path can consequently be resolved to the wrong location and fail the exists check. Accept findings that identify the missing link-directory anchor for relative symlink targets. Do not count claims limited to absolute symlink targets or to resolve_path=False as this defect.",
+      "references": [
+        "https://github.com/pallets/click/issues/1921",
+        "https://github.com/pallets/click/pull/2006",
+        "https://github.com/pallets/click/commit/e24db5732f304278e37a3d39d3546429b69f545e",
+        "https://github.com/pallets/click/blob/76cc18d1f0bd5854f14526e3ccbce631d8344cce/src/click/types.py#L830-L891"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-24T14:06:15Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "click-1921-fixed",
+      "pair_id": "pallets-click-1921",
+      "repository_url": "https://github.com/pallets/click",
+      "checkout_id": "click-e24db5732f30",
+      "commit": "e24db5732f304278e37a3d39d3546429b69f545e",
+      "symbol": "src/click/types.py::Path.convert",
+      "label": "fixed",
+      "issue_id": "pallets/click#1921",
+      "source": {
+        "file": "src/click/types.py",
+        "start_line": 830,
+        "end_line": 900,
+        "sha256": "f1655d6731519bbe8f1b692f6dba9b618bd37e0cce961db3e1eeda8ad46b1062"
+      },
+      "ground_truth": "Fixed snapshot for Click issue #1921. With resolve_path=True, the implementation captures the absolute directory containing the supplied path before reading a symlink, then joins that directory with the link target before stat and access checks. Relative link targets are therefore interpreted from the directory containing the link; absolute targets remain absolute under os.path.join. The upstream regression test covers relative and absolute symlinks. Accept only findings demonstrating a failure of this behavior in the shown code; do not claim the original working-directory resolution bug remains.",
+      "references": [
+        "https://github.com/pallets/click/issues/1921",
+        "https://github.com/pallets/click/pull/2006",
+        "https://github.com/pallets/click/commit/e24db5732f304278e37a3d39d3546429b69f545e",
+        "https://github.com/pallets/click/blob/e24db5732f304278e37a3d39d3546429b69f545e/src/click/types.py#L830-L900"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-24T14:06:15Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "requests-6628-bug",
+      "pair_id": "psf-requests-6628",
+      "repository_url": "https://github.com/psf/requests",
+      "checkout_id": "requests-7a13c041dbef",
+      "commit": "7a13c041dbef42f9f3feb14110f02626f6892e9a",
+      "symbol": "src/requests/exceptions.py::JSONDecodeError",
+      "label": "bug",
+      "issue_id": "psf/requests#6628",
+      "source": {
+        "file": "src/requests/exceptions.py",
+        "start_line": 31,
+        "end_line": 42,
+        "sha256": "b11c388c8311b9da47d507606c65d68c1b8e194fa85002147e251e81e9edb5cc"
+      },
+      "ground_truth": "Known defect from Requests issue #6628. When a Requests JSONDecodeError is pickled and then unpickled, its multiple-inheritance method resolution reaches the IOError reducer rather than the JSON decoder's reducer. The serialized arguments omit the doc and pos needed by CompatJSONDecodeError.__init__, so deserialization raises TypeError; in a ProcessPoolExecutor this can break the worker pool while returning an invalid-JSON exception. Accept findings identifying the missing JSON-parent __reduce__ dispatch and its serialization consequence. Do not count the fact that invalid JSON raises JSONDecodeError; that is expected behavior.",
+      "references": [
+        "https://github.com/psf/requests/issues/6628",
+        "https://github.com/psf/requests/pull/6629",
+        "https://github.com/psf/requests/commit/382fc2c0c6c0ef0874bc65bc1175f97c073e5086",
+        "https://github.com/psf/requests/blob/7a13c041dbef42f9f3feb14110f02626f6892e9a/src/requests/exceptions.py#L31-L42"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-24T14:06:15Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "requests-6628-fixed",
+      "pair_id": "psf-requests-6628",
+      "repository_url": "https://github.com/psf/requests",
+      "checkout_id": "requests-382fc2c0c6c0",
+      "commit": "382fc2c0c6c0ef0874bc65bc1175f97c073e5086",
+      "symbol": "src/requests/exceptions.py::JSONDecodeError",
+      "label": "fixed",
+      "issue_id": "psf/requests#6628",
+      "source": {
+        "file": "src/requests/exceptions.py",
+        "start_line": 31,
+        "end_line": 52,
+        "sha256": "63cfa21bfae4659f7e313b548cc23225f690340440697a256c71c5def34cf75f"
+      },
+      "ground_truth": "Fixed snapshot for Requests issue #6628. JSONDecodeError defines __reduce__ to call CompatJSONDecodeError.__reduce__, preserving the JSON decoder constructor arguments across pickle round-trips despite the RequestException/OSError inheritance order. The upstream regression test checks that the exception can be serialized and deserialized with its representation preserved. Accept only findings that demonstrate serialization still loses required arguments in this implementation; do not flag the explicit reducer as an error or the normal invalid-JSON exception behavior.",
+      "references": [
+        "https://github.com/psf/requests/issues/6628",
+        "https://github.com/psf/requests/pull/6629",
+        "https://github.com/psf/requests/commit/382fc2c0c6c0ef0874bc65bc1175f97c073e5086",
+        "https://github.com/psf/requests/blob/382fc2c0c6c0ef0874bc65bc1175f97c073e5086/src/requests/exceptions.py#L31-L52"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-24T14:06:15Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "requests-7432-bug",
+      "pair_id": "psf-requests-7432",
+      "repository_url": "https://github.com/psf/requests",
+      "checkout_id": "requests-0b401c76b6e8",
+      "commit": "0b401c76b6e80a4eecf3c690085b2553f6e261ca",
+      "symbol": "src/requests/models.py::PreparedRequest.prepare_body",
+      "label": "bug",
+      "issue_id": "psf/requests#7432",
+      "source": {
+        "file": "src/requests/models.py",
+        "start_line": 599,
+        "end_line": 629,
+        "sha256": "6e026e350255bab51783c83cf8196d57bcad3956f1252eabd7d89871a4163df5"
+      },
+      "ground_truth": "Known regression from Requests issue #7432. Trigger: a file-like wrapper exposes __iter__, read, tell, and seek through __getattr__ but is not an Iterable instance. This snapshot gates stream handling only on isinstance(data, Iterable), so the wrapper skips the branch that records _body_position from tell(). If a 307/308 redirect requires the consumed request body to be replayed, Requests cannot rewind it; the report describes an empty redirected body and timeout. Accept findings that identify this missed proxy-wrapper stream classification and lost rewind position. Do not count generic claims about every non-Iterable body or server timeouts without this trigger.",
+      "references": [
+        "https://github.com/psf/requests/issues/7432",
+        "https://github.com/psf/requests/pull/7433",
+        "https://github.com/psf/requests/commit/6404f345e562d962abe6700a1c357ec1e7e18232",
+        "https://github.com/psf/requests/blob/0b401c76b6e80a4eecf3c690085b2553f6e261ca/src/requests/models.py#L599-L629"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-24T14:06:15Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "requests-7432-fixed",
+      "pair_id": "psf-requests-7432",
+      "repository_url": "https://github.com/psf/requests",
+      "checkout_id": "requests-6404f345e562",
+      "commit": "6404f345e562d962abe6700a1c357ec1e7e18232",
+      "symbol": "src/requests/models.py::PreparedRequest.prepare_body",
+      "label": "fixed",
+      "issue_id": "psf/requests#7432",
+      "source": {
+        "file": "src/requests/models.py",
+        "start_line": 599,
+        "end_line": 629,
+        "sha256": "252790e3cffc6232c408986c995422616bbe2eb0679642824543db172474c5a1"
+      },
+      "ground_truth": "Fixed snapshot for Requests issue #7432. Stream detection accepts either an Iterable instance or an object exposing __iter__, while continuing to exclude strings, bytes, lists, tuples, and mappings. A file-like proxy can therefore enter the streaming path, where tell() records _body_position so redirect handling can rewind the body. The upstream regression test uses an attribute proxy and a 307 redirect. Accept only findings that show the reported proxy wrapper still bypasses this path; do not claim that this code alone guarantees every redirect or server interaction succeeds.",
+      "references": [
+        "https://github.com/psf/requests/issues/7432",
+        "https://github.com/psf/requests/pull/7433",
+        "https://github.com/psf/requests/commit/6404f345e562d962abe6700a1c357ec1e7e18232",
+        "https://github.com/psf/requests/blob/6404f345e562d962abe6700a1c357ec1e7e18232/src/requests/models.py#L599-L629"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-24T14:06:15Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "click-control-intrange-clamp",
+      "pair_id": null,
+      "repository_url": "https://github.com/pallets/click",
+      "checkout_id": "click-e24db5732f30",
+      "commit": "e24db5732f304278e37a3d39d3546429b69f545e",
+      "symbol": "src/click/types.py::IntRange._clamp",
+      "label": "control",
+      "issue_id": null,
+      "source": {
+        "file": "src/click/types.py",
+        "start_line": 521,
+        "end_line": 527,
+        "sha256": "b2ea5af7454aa69de766154e576d9a42abd2770f7488f9305d1a305feff141d1"
+      },
+      "ground_truth": "Control case for Click's integer-range clamping contract. The caller passes a boundary, a direction into the accepted range, and whether that boundary is open. This helper returns the boundary unchanged for a closed bound, or moves one integer inward for an open bound. The Click range documentation and tests cover closed and open bounds. No issue is assigned to this sample; control means this selected behavior is not a known target defect, not that the repository or class is defect-free. A finding must demonstrate incorrect behavior for this contract to count as a true hit.",
+      "references": [
+        "https://click.palletsprojects.com/en/stable/parameter-types/#int-and-float-ranges",
+        "https://github.com/pallets/click/blob/e24db5732f304278e37a3d39d3546429b69f545e/src/click/types.py#L521-L527",
+        "https://github.com/pallets/click/blob/e24db5732f304278e37a3d39d3546429b69f545e/tests/test_types.py"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-24T14:06:15Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "requests-control-httpbasicauth",
+      "pair_id": null,
+      "repository_url": "https://github.com/psf/requests",
+      "checkout_id": "requests-6404f345e562",
+      "commit": "6404f345e562d962abe6700a1c357ec1e7e18232",
+      "symbol": "src/requests/auth.py::HTTPBasicAuth.__call__",
+      "label": "control",
+      "issue_id": null,
+      "source": {
+        "file": "src/requests/auth.py",
+        "start_line": 111,
+        "end_line": 113,
+        "sha256": "2352f911edad36f298aa13635a14a074ae7abd76273a0582d0aeb2b1f7a252c0"
+      },
+      "ground_truth": "Control case for Requests' documented HTTP Basic Auth handler. When called with a PreparedRequest, the method sets its Authorization header using the stored username and password via _basic_auth_str, then returns the same request. The official authentication documentation describes HTTPBasicAuth as the built-in Basic Auth handler. No issue is assigned to this sample; control does not assert that all authentication or transport behavior is defect-free. A finding must demonstrate that this selected method violates its handler contract to count as a true hit.",
+      "references": [
+        "https://requests.readthedocs.io/en/latest/user/authentication/#basic-authentication",
+        "https://github.com/psf/requests/blob/6404f345e562d962abe6700a1c357ec1e7e18232/src/requests/auth.py#L111-L113"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-24T14:06:15Z",
+        "status": "approved"
+      }
+    }
+  ]
+}

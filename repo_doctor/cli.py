@@ -138,6 +138,8 @@ def _print_context(payload: dict) -> None:
             print(f"  {description} at {edge['evidence_file']}:{edge['line']}")
     if payload["omitted_symbols"]:
         print(f"\n{payload['omitted_symbols']} related symbols omitted by the source-line budget.")
+    if payload.get("omitted_imports", 0):
+        print(f"{payload['omitted_imports']} import bindings omitted by the source-line budget.")
 
 
 def _print_impact(payload: dict) -> None:

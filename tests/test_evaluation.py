@@ -738,6 +738,62 @@ class ReportTests(unittest.TestCase):
                 "--markdown-out", str(json_out),
             ]), 2)
 
+    def test_cli_rechecks_analyzer_commit_before_publishing_reports(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            json_out = root / "report.json"
+            markdown_out = root / "report.md"
+            json_out.write_text("old JSON", encoding="utf-8")
+            markdown_out.write_text("old Markdown", encoding="utf-8")
+            args = ["--repos-root", str(root), "--json-out", str(json_out),
+                    "--markdown-out", str(markdown_out), "--runs", "1"]
+            manifest = _manifest()
+            commit = "a" * 40
+            with patch.object(evaluate_baseline, "load_manifest", return_value=manifest):
+                with patch.object(evaluate_baseline, "validate_dataset_pins"):
+                    with patch.object(
+                        evaluate_baseline, "preflight_repositories",
+                        return_value={"fixture": root},
+                    ):
+                        with patch.object(
+                            evaluate_baseline, "evaluate_snapshot",
+                            return_value={"scan": {}, "durations_seconds": [],
+                                          "scan_hashes": []},
+                        ):
+                            with patch.object(
+                                evaluate_baseline, "build_report",
+                                return_value={"dataset_id": "baseline-v1"},
+                            ):
+                                with patch.object(
+                                    evaluate_baseline, "render_markdown",
+                                    return_value="# report\n",
+                                ):
+                                    with patch.object(
+                                        evaluate_baseline, "_analyzer_commit",
+                                        side_effect=[
+                                            commit,
+                                            evaluate_baseline.EvaluationError(
+                                                "analyzer commit changed during evaluation"
+                                            ),
+                                        ],
+                                        create=True,
+                                    ) as analyzer_commit:
+                                        with patch.object(
+                                            evaluate_baseline, "_write_reports",
+                                            wraps=evaluate_baseline._write_reports,
+                                        ) as write_reports:
+                                            code = evaluate_baseline.main(args)
+
+            self.assertEqual(code, 2)
+            self.assertEqual(analyzer_commit.call_count, 2)
+            analyzer_commit.assert_called_with(expected_commit=commit)
+            write_reports.assert_called_once()
+            self.assertEqual(json_out.read_text(encoding="utf-8"), "old JSON")
+            self.assertEqual(markdown_out.read_text(encoding="utf-8"), "old Markdown")
+            self.assertEqual({path.name for path in root.iterdir()}, {
+                "report.json", "report.md",
+            })
+
     def test_two_report_replacement_rolls_back_first_on_second_failure(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
