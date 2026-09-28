@@ -3,12 +3,13 @@
 Updated 2026-09-28. This file is the current project checkpoint; dated reports
 below preserve the earlier experiments.
 
-**Active branch/worktree:** `codex/stability-value-v0.2` at
+**Active branch/worktree:** `codex/diagnosis-holdout-v0.3` at
 `/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor`.
-This branch includes the `420495b` fixed/control false-alarm rate correction,
-offline request preview, SHA-256 pinning, selected-source freshness checks,
-and reproducible JSON Schema evaluation. A later regression fix handles an
-invalid source encoding cookie after the provider call without a traceback.
+The previous stability branch was merged in
+[PR #8](https://github.com/kisara174/ai-repo-doctor/pull/8) at `5d72890`.
+The current branch freezes a separate Flask holdout and records one incomplete
+prompt-variant comparison. The experimental prompt was reverted; the current
+product prompt matches the PR #8 baseline.
 The prior evaluation branch
 was integrated at `86d1022`; its context implementation commit was
 `6791483f9045487285e72aebad2eee7134ce4424`. Focused context
@@ -25,8 +26,8 @@ checkout has separate untracked V3 documents and was left untouched.
 | V1 | Read-only Python repository scan; symbol, import, and static call index; bounded `context`; reverse `impact`; evidence `validate`. | Static relationships are conservative and do not execute target code. |
 | V2 | Decorator and overload metadata, explicit local reexports, bounded Click command-registration relationships, and richer static call resolution. | `call_edges` and `semantic_edges` remain distinct. Dynamic dispatch is outside the current precision claim. |
 | V3 | Optional, explicit `diagnose` call to DeepSeek with bounded selected source; local finding evidence checks and safe error handling. | Source quotations can be validated without proving the model's behavioral conclusion. No automatic patching. |
-| Evaluation | Frozen ten-case diagnosis manifest, offline preparation, one-case and full-plan runners, manual-review template, scoring, reproducible hashes, and offline CI workflow. | The original ten-case online run is partial; no valid ten-case quality score exists. |
-| Latest context change | Local class ancestor definitions and used module import bindings may join the selected source blocks within the same line budget. | Focused fixture covers ancestry order, relevant imports, and the shared budget; current branch passed the full offline suite and PR CI. |
+| Evaluation | Frozen ten-case diagnosis manifest, a separate six-case Flask holdout, offline preparation, one-case and full-plan runners, manual-review template, scoring, reproducible hashes, and offline CI workflow. | The original Chat ten-case online run is partial; later JSON Schema ten-case and Flask baseline runs are complete with primary-only review. |
+| Latest context change | Local class ancestor definitions and used module import bindings may join the selected source blocks within the same line budget. | Focused fixture covers ancestry order, relevant imports, and the shared budget; PR #8 passed the full offline suite and CI. |
 | Distribution | The `0.1.0` wheel installs `repo-doctor` in a clean virtual environment; the public repository can serve as a pip source after integration. | Wheel contents and installed `scan`, `context`, `impact`, and `validate` were checked outside the source tree. The evaluation-only `tools` package is intentionally absent from the wheel. |
 
 The original post-V3 plan's T0–T6 implementation and T7 offline preparation
@@ -63,13 +64,20 @@ record of that run.
   and one rejected false positive. The corrected fixed/control false-alarm
   count is 3/6. See the
   [ten-case baseline](evaluations/2026-09-28-schema-ten-case-baseline.md).
+- At analyzer commit `14da7b4`, a new pinned Flask six-case baseline completed
+  6/6 calls. Primary review found no match among three known bug cases, six
+  accepted false positives, two uncertain findings, and false alarms on all
+  three fixed cases. A preregistered prompt variant at `c206da6` stopped
+  after its first call returned `invalid_content_json`; five calls were not
+  attempted. The prompt was reverted at `d66ec4c`. See the
+  [Flask holdout report](evaluations/2026-09-28-flask-holdout.md).
 
 The earlier exploratory calls used one selected case at a time and cannot be
 scored as dataset coverage. The original Chat ten-case run remains partial
 and unchanged; the new JSON Schema ten-case run is complete and has a primary
-review, but no independent second review. Neither estimates general model
-quality. Model token usage is recorded where available; actual billing is
-not inferred.
+review, but no independent second review. The Flask baseline also has only
+primary review and is too small to estimate general model quality. Model
+token usage is recorded where available; actual billing is not inferred.
 
 ## Verification scope
 
@@ -83,13 +91,17 @@ not inferred.
   3.11, 3.12, and 3.13 jobs in both push and pull-request CI runs. Each job
   built and smoke-tested the installed wheel. See PR #7 for the CI result on
   its final integration head.
+- PR #8 head `2ffd9fe093f1057631ed1d314307e88a5710b441` passed all Python
+  3.11, 3.12, and 3.13 jobs in push and pull-request CI. Its local suite
+  passed 313 tests; reviewer-found source-encoding mutation was fixed before
+  integration.
 - Pinned target repository code, tests, and dependencies were not executed or
   installed during these diagnosis experiments. The API key and raw provider
   response bodies were not saved in the evaluation artifacts.
 
 ## Next gates
 
-The current stability sequence has completed the offline/local parts of P0:
+The stability sequence completed these P0 and P1 gates:
 
 - `doctor` now checks local readiness by default and optional DeepSeek model
   access only when requested (`7239c4c`, `3900bac`).
@@ -117,13 +129,14 @@ The current stability sequence has completed the offline/local parts of P0:
   `091dc2d`; the corrected score is a later offline derivation from unchanged
   run records and completed primary review.
 
-The next evidence gate is an independently selected holdout and a single
-falsifiable prompt or context change aimed at known-defect detection and
-unsupported claims. Do not tune only against the now-visible ten cases or
-switch the default protocol from this exploratory baseline. Preserve the
-frozen manifest and prior partial runs, and use new output directories for
-subsequent experiments. The branch still needs current-head CI before
-integration.
+The next evidence gate is to improve the safe classification of malformed
+provider output and context completeness, then evaluate on further unseen
+cases. The Flask holdout fulfilled the independent-sample gate, but the
+pre-registered prompt comparison is incomplete and cannot justify a prompt
+change. Do not tune only against the now-visible ten-case and Flask samples
+or switch the default protocol. Preserve both frozen manifests and all partial
+run records. The current branch still needs final diff review and current-head
+CI before integration.
 
 The earlier [post-V3 execution plan](superpowers/plans/2026-09-24-post-v3-execution.md),
 [handoff audit](evaluations/2026-09-25-handoff-audit.md), and

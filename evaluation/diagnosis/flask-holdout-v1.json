@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "dataset_id": "diagnosis-flask-holdout-v1",
+  "cases": [
+    {
+      "id": "flask-4170-bug",
+      "pair_id": "pallets-flask-4170",
+      "repository_url": "https://github.com/pallets/flask",
+      "checkout_id": "flask-c3f923d0e0ab",
+      "commit": "c3f923d0e0aba3ed5b6013c5d022021e4ae059cf",
+      "symbol": "src/flask/cli.py::call_factory",
+      "label": "bug",
+      "issue_id": "pallets/flask#4170",
+      "source": {
+        "file": "src/flask/cli.py",
+        "start_line": 89,
+        "end_line": 119,
+        "sha256": "d447f6ee712f5eacf74b29b063430393d380434e8a41285505e1d0300f4da7e0"
+      },
+      "ground_truth": "Known Flask issue #4170. Trigger: the CLI discovers a create_app factory whose sole parameter is **kwargs, with no positional args supplied. inspect reports that variadic keyword parameter's default as Parameter.empty; this code treats it as one required positional parameter and appends script_info to args. Calling a factory that only accepts **kwargs then raises TypeError, and CLI loading reports that it could not call the factory. Accept only a finding linking the VAR_KEYWORD misclassification to the erroneous positional argument and factory failure. The normal script_info keyword path for a named parameter is not this defect.",
+      "references": [
+        "https://github.com/pallets/flask/issues/4170",
+        "https://github.com/pallets/flask/pull/4174",
+        "https://github.com/pallets/flask/commit/ef3a82a2820082f7d9f2ca963c9dff7eb1ea9687",
+        "https://github.com/pallets/flask/blob/c3f923d0e0aba3ed5b6013c5d022021e4ae059cf/src/flask/cli.py#L89-L119"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-28T14:42:22Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "flask-4170-fixed",
+      "pair_id": "pallets-flask-4170",
+      "repository_url": "https://github.com/pallets/flask",
+      "checkout_id": "flask-ef3a82a28200",
+      "commit": "ef3a82a2820082f7d9f2ca963c9dff7eb1ea9687",
+      "symbol": "src/flask/cli.py::call_factory",
+      "label": "fixed",
+      "issue_id": "pallets/flask#4170",
+      "source": {
+        "file": "src/flask/cli.py",
+        "start_line": 89,
+        "end_line": 122,
+        "sha256": "62dd30fd819d88e6ce54f77399a977799382c9941dc4d9d0537dfc1e5ff27ecf"
+      },
+      "ground_truth": "Fixed snapshot for Flask issue #4170. call_factory checks that a sole empty-default parameter is not VAR_KEYWORD before appending positional script_info, so a create_app(**kwargs) factory is called with no spurious positional arg. The upstream regression test discovers a static create_app(**kwargs) factory and receives a Flask app. Accept only a finding showing a violation of that selected factory contract in this snapshot; do not claim that the original VAR_KEYWORD bug persists.",
+      "references": [
+        "https://github.com/pallets/flask/issues/4170",
+        "https://github.com/pallets/flask/pull/4174",
+        "https://github.com/pallets/flask/commit/ef3a82a2820082f7d9f2ca963c9dff7eb1ea9687",
+        "https://github.com/pallets/flask/blob/ef3a82a2820082f7d9f2ca963c9dff7eb1ea9687/tests/test_cli.py#L77-L84"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-28T14:42:22Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "flask-5391-bug",
+      "pair_id": "pallets-flask-5391",
+      "repository_url": "https://github.com/pallets/flask",
+      "checkout_id": "flask-3435d2ff1589",
+      "commit": "3435d2ff1589eb0c1a85cc294a20985910a1a606",
+      "symbol": "src/flask/cli.py::SeparatedPathType.convert",
+      "label": "bug",
+      "issue_id": "pallets/flask#5391",
+      "source": {
+        "file": "src/flask/cli.py",
+        "start_line": 851,
+        "end_line": 861,
+        "sha256": "2f5433429fc2279c131d3a0e02a7621c228342292209527e2c6ad59703d73582"
+      },
+      "ground_truth": "Known Flask issue #5391. Trigger: on Python before 3.12, flask run receives a path-list option such as --extra-files or --exclude-patterns. SeparatedPathType.convert invokes no-argument super() inside a list comprehension; the separate comprehension scope lacks the method's implicit class/instance context, so option conversion raises TypeError rather than returning validated paths. Python 3.12 changed comprehension scope, so the defect is version-dependent. Accept findings identifying this specific scope/exception path. Do not count generic path-separator or file-existence concerns as this issue.",
+      "references": [
+        "https://github.com/pallets/flask/issues/5391",
+        "https://github.com/pallets/flask/pull/5393",
+        "https://github.com/pallets/flask/commit/d7209a957004d4758f32fd8b2f89da11f5fe5718",
+        "https://github.com/pallets/flask/blob/3435d2ff1589eb0c1a85cc294a20985910a1a606/src/flask/cli.py#L851-L861"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-28T14:42:22Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "flask-5391-fixed",
+      "pair_id": "pallets-flask-5391",
+      "repository_url": "https://github.com/pallets/flask",
+      "checkout_id": "flask-d7209a957004",
+      "commit": "d7209a957004d4758f32fd8b2f89da11f5fe5718",
+      "symbol": "src/flask/cli.py::SeparatedPathType.convert",
+      "label": "fixed",
+      "issue_id": "pallets/flask#5391",
+      "source": {
+        "file": "src/flask/cli.py",
+        "start_line": 851,
+        "end_line": 863,
+        "sha256": "4e7c63eca412e2011eb711ff409e2fd4fe283745f8dab01fd8475913b13cfe7c"
+      },
+      "ground_truth": "Fixed snapshot for Flask issue #5391. The method binds super().convert before entering the list comprehension, so path conversion no longer needs no-argument super() inside the separate comprehension scope on Python before 3.12. The upstream test constructs the run command context with --exclude-patterns and asserts the converted path list. Accept only a demonstrated violation of this selected behavior; do not report the repaired comprehension-scope bug as present.",
+      "references": [
+        "https://github.com/pallets/flask/issues/5391",
+        "https://github.com/pallets/flask/pull/5393",
+        "https://github.com/pallets/flask/commit/d7209a957004d4758f32fd8b2f89da11f5fe5718",
+        "https://github.com/pallets/flask/blob/d7209a957004d4758f32fd8b2f89da11f5fe5718/tests/test_cli.py#L684-L686"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-28T14:42:22Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "flask-5786-bug",
+      "pair_id": "pallets-flask-5786",
+      "repository_url": "https://github.com/pallets/flask",
+      "checkout_id": "flask-5addaf833b2e",
+      "commit": "5addaf833b2e8c7a616f89dd8ad5a44b07d7c000",
+      "symbol": "src/flask/testing.py::FlaskClient.open",
+      "label": "bug",
+      "issue_id": "pallets/flask#5786",
+      "source": {
+        "file": "src/flask/testing.py",
+        "start_line": 204,
+        "end_line": 247,
+        "sha256": "92bfe86f26e0d4df42a236919305ddaae0f5477b15470fcbf807122475923f4f"
+      },
+      "ground_truth": "Known Flask issue #5786. Trigger: inside `with client`, a request follows a redirect whose target changes the session. Preserved request contexts are appended in visit order, but FlaskClient.open pops and reenters them newest first; the oldest context becomes current after open returns, so a session lookup can see the redirecting response state rather than the final target state. The upstream test expects both redirect and target session keys. Accept only findings connecting reverse context restoration to the wrong current session after a followed redirect; do not count claims about real HTTP server sessions or unrelated cookie behavior.",
+      "references": [
+        "https://github.com/pallets/flask/issues/5786",
+        "https://github.com/pallets/flask/pull/5797",
+        "https://github.com/pallets/flask/commit/24824ff666e096c4c07d0b75a889088571afe4a6",
+        "https://github.com/pallets/flask/blob/5addaf833b2e8c7a616f89dd8ad5a44b07d7c000/src/flask/testing.py#L204-L247"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-28T14:42:22Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "flask-5786-fixed",
+      "pair_id": "pallets-flask-5786",
+      "repository_url": "https://github.com/pallets/flask",
+      "checkout_id": "flask-24824ff666e0",
+      "commit": "24824ff666e096c4c07d0b75a889088571afe4a6",
+      "symbol": "src/flask/testing.py::FlaskClient.open",
+      "label": "fixed",
+      "issue_id": "pallets/flask#5786",
+      "source": {
+        "file": "src/flask/testing.py",
+        "start_line": 204,
+        "end_line": 247,
+        "sha256": "8e98d535a52474242bf50a64ddd15a0ff84439be148f88891b114fbe8ce3229d"
+      },
+      "ground_truth": "Fixed snapshot for Flask issue #5786. FlaskClient.open enters preserved contexts in append order and then clears the list; after following a redirect under `with client`, the latest target context is current and its session values are visible. The upstream regression test reads keys written by both the redirecting and target endpoints. Accept only a demonstrated violation of this selected contract; do not claim the original reverse-restoration defect remains.",
+      "references": [
+        "https://github.com/pallets/flask/issues/5786",
+        "https://github.com/pallets/flask/pull/5797",
+        "https://github.com/pallets/flask/commit/24824ff666e096c4c07d0b75a889088571afe4a6",
+        "https://github.com/pallets/flask/blob/24824ff666e096c4c07d0b75a889088571afe4a6/tests/test_testing.py#L141-L155"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-28T14:42:22Z",
+        "status": "approved"
+      }
+    }
+  ]
+}
