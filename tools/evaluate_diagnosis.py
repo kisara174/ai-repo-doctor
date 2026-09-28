@@ -74,6 +74,7 @@ def _prepare(args: argparse.Namespace) -> int:
         args.max_lines,
         manifest_sha256=manifest_hash,
         thinking_mode=args.thinking_mode,
+        response_format=args.response_format,
     )
     _write_prepared(output, prepared)
     print(f"Prepared {len(prepared['plan']['cases'])} cases in {output}")
@@ -306,6 +307,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--thinking-mode",
         choices=("enabled", "disabled"),
         help="explicitly set DeepSeek thinking mode (omitted by default)",
+    )
+    prepare.add_argument(
+        "--response-format", choices=("chat-json", "json-schema"), default="chat-json",
+        help="provider output protocol; json-schema uses the Responses API",
     )
     prepare.add_argument("--out-dir", required=True)
     run = subparsers.add_parser("run", help="send an explicitly authorized diagnosis evaluation")

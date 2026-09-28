@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from repo_doctor.diagnosis import build_diagnosis_prompts
+from repo_doctor.deepseek import _serialize_schema_request_body
 from repo_doctor.index import build_index
 from tools.diagnosis_data import (
     EvaluationDataError,
@@ -127,6 +128,37 @@ class DiagnosisDataTests(unittest.TestCase):
         self.assertEqual(prepared["plan"]["cases"][0]["request_sha256"], expected_request_hash)
         self.assertNotIn("thinking_mode", prepared["plan"])
         open_request.assert_not_called()
+
+    def test_schema_prepare_fingerprints_exact_responses_body_offline(self):
+        with patch("urllib.request.OpenerDirector.open") as open_request:
+            prepared = prepare_cases(
+                self.manifest, self.repos_root, "test-model", 120,
+                response_format="json-schema",
+            )
+
+        plan = prepared["plan"]
+        self.assertEqual(plan["schema_version"], 2)
+        self.assertEqual(plan["response_format"], "json-schema")
+        self.assertNotIn("thinking_mode", plan)
+        prompts = build_diagnosis_prompts(prepared["contexts"]["bug-01"])
+        wire = _serialize_schema_request_body(*prompts, "test-model")
+        self.assertEqual(json.loads(wire)["text"]["format"]["type"], "json_schema")
+        self.assertEqual(
+            plan["cases"][0]["request_sha256"], hashlib.sha256(wire).hexdigest()
+        )
+        open_request.assert_not_called()
+
+    def test_schema_prepare_rejects_incompatible_thinking_and_unknown_format(self):
+        with self.assertRaises(EvaluationDataError):
+            prepare_cases(
+                self.manifest, self.repos_root, "test-model", 120,
+                response_format="json-schema", thinking_mode="disabled",
+            )
+        with self.assertRaises(EvaluationDataError):
+            prepare_cases(
+                self.manifest, self.repos_root, "test-model", 120,
+                response_format="unknown",
+            )
 
     def test_prepare_explicit_thinking_mode_is_fingerprinted_in_plan(self):
         prepared = prepare_cases(
