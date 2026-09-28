@@ -455,7 +455,6 @@ def score_records(manifest: dict, records: list[dict], review: dict) -> dict:
         counts["all_requested_bug_cases"] = len(requested_bug_cases)
         successful_bug_records = []
         successful_fixed_control_records = []
-        successful_control_records = []
         failed_case_ids = []
         for record in repeat_records:
             case = case_by_id[record["case_id"]]
@@ -466,8 +465,6 @@ def score_records(manifest: dict, records: list[dict], review: dict) -> dict:
                 if case["label"] in ("fixed", "control"):
                     counts["successful_fixed_and_control_cases"] += 1
                     successful_fixed_control_records.append(record)
-                if case["label"] == "control":
-                    successful_control_records.append(record)
             else:
                 counts["failed_calls"] += 1
                 failed_case_ids.append(case["id"])
@@ -507,7 +504,7 @@ def score_records(manifest: dict, records: list[dict], review: dict) -> dict:
                 counts["accepted_fp"] += 1
 
         control_fp_ids = []
-        for record in successful_control_records:
+        for record in successful_fixed_control_records:
             case_id = record["case_id"]
             if any(
                 key[0] == case_id
@@ -663,7 +660,7 @@ def render_report(report: dict) -> str:
         "recall": "Conditional recall",
         "end_to_end_detection": "End-to-end detection",
         "grounding_rate": "Grounding rate",
-        "control_false_alarm_rate": "Control false alarm rate",
+        "control_false_alarm_rate": "Fixed/control false alarm rate",
         "uncertain_rate": "Uncertain rate",
         "duplicate_rate": "Duplicate rate",
     }

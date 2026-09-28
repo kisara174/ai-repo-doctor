@@ -287,6 +287,33 @@ class DiagnosisScoreTests(unittest.TestCase):
             "denominator": 5,
         })
 
+    def test_false_alarm_rate_counts_fixed_and_control_negative_cases(self):
+        records = [
+            self.inputs.make_record(
+                case["id"], accepted=(0,) if case["id"] == "fixed-1" else ()
+            )
+            for case in self.inputs.manifest["cases"]
+        ]
+        run = copy.deepcopy(self.inputs.run)
+        run.update(
+            attempted_calls=8, completed_calls=8, state="complete",
+            record_files=[f"records/{record['case_id']}-r1.json" for record in records],
+        )
+        review = make_review_template(records)
+        review["run"] = run
+        review["rows"][0].update(
+            verdict="fp", rationale="The fixed sample is wrongly flagged.",
+            reviewer="primary reviewer",
+        )
+
+        report = score_records(self.inputs.manifest, records, review)
+        result = report["by_repeat"][0]
+
+        self.assertEqual(result["counts"]["successful_fixed_and_control_cases"], 5)
+        self.assertEqual(result["counts"]["successful_control_cases_with_accepted_fp"], 1)
+        self.assertEqual(result["metrics"]["control_false_alarm_rate"], 1 / 5)
+        self.assertIn("Fixed/control false alarm rate", render_report(report))
+
     def test_optional_error_diagnostics_are_validated_and_legacy_records_still_work(self):
         legacy_report = score_records(
             self.inputs.manifest, copy.deepcopy(self.inputs.records), self.inputs.review
