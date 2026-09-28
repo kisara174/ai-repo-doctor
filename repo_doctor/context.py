@@ -27,6 +27,31 @@ def _semantic_edge_data(edge: SemanticEdge, symbol_id: str) -> dict:
     return data
 
 
+def _class_header_span(source: list[str], symbol: Symbol) -> tuple[int, int] | None:
+    try:
+        module = ast.parse("\n".join(source))
+    except (SyntaxError, ValueError):
+        return None
+    matches = [
+        node for node in ast.walk(module)
+        if isinstance(node, ast.ClassDef)
+        and node.name == symbol.name
+        and node.end_lineno == symbol.end_line
+        and symbol.start_line <= node.lineno <= symbol.end_line
+    ]
+    if len(matches) != 1:
+        return None
+    node = matches[0]
+    first_body = node.body[0]
+    first_body_line = first_body.lineno
+    for decorator in getattr(first_body, "decorator_list", ()):
+        first_body_line = min(first_body_line, decorator.lineno)
+    end = max(node.lineno, first_body_line - 1)
+    while end > node.lineno and (not source[end - 1].strip() or source[end - 1].lstrip().startswith("#")):
+        end -= 1
+    return node.lineno, min(end, symbol.end_line)
+
+
 def build_context(index: RepoIndex, symbol_id: str, max_lines: int = 120) -> dict:
     """Return target-first one-hop context with a physical source-line budget."""
     target = _require_symbol(index, symbol_id)
@@ -41,6 +66,16 @@ def build_context(index: RepoIndex, symbol_id: str, max_lines: int = 120) -> dic
         if path not in source_cache:
             source_cache[path] = _read_lines(index, path)
         return source_cache[path]
+
+    candidate_spans: dict[str, tuple[int, int]] = {}
+    if target.kind == "method" and target.parent not in index.ambiguous_symbols:
+        candidate_owner = index.symbols.get(target.parent or "")
+        if candidate_owner is not None and candidate_owner.kind == "class":
+            header_span = _class_header_span(source_lines(candidate_owner.file), candidate_owner)
+            if header_span is not None:
+                seen.add(candidate_owner.id)
+                candidates.append((candidate_owner.id, "owner_class"))
+                candidate_spans[candidate_owner.id] = header_span
 
     def add(symbols: set[str], relation: str) -> None:
         for neighbor_id in sorted(
@@ -124,6 +159,7 @@ def build_context(index: RepoIndex, symbol_id: str, max_lines: int = 120) -> dic
     parsed_modules: dict[str, ast.Module | None] = {}
     for neighbor_id, _relation in candidates:
         symbol = index.symbols[neighbor_id]
+        start, end = candidate_spans.get(neighbor_id, (symbol.start_line, symbol.end_line))
         module = parsed_modules.get(symbol.file)
         if symbol.file not in parsed_modules:
             try:
@@ -133,7 +169,7 @@ def build_context(index: RepoIndex, symbol_id: str, max_lines: int = 120) -> dic
             parsed_modules[symbol.file] = module
         if module is not None:
             for node in ast.walk(module):
-                if isinstance(node, ast.Name) and symbol.start_line <= node.lineno <= symbol.end_line:
+                if isinstance(node, ast.Name) and start <= node.lineno <= end:
                     module_names[symbol.file].add(node.id)
 
     import_rows: dict[tuple[str, int], set[str]] = defaultdict(set)
@@ -161,8 +197,8 @@ def build_context(index: RepoIndex, symbol_id: str, max_lines: int = 120) -> dic
             break
         symbol = index.symbols[neighbor_id]
         source = source_lines(symbol.file)
-        end = min(symbol.end_line, len(source))
-        start = symbol.start_line
+        start, end = candidate_spans.get(neighbor_id, (symbol.start_line, symbol.end_line))
+        end = min(end, len(source))
         selected_end = min(end, start + remaining - 1)
         lines = [{"line": number, "text": source[number - 1]} for number in range(start, selected_end + 1)]
         if not lines:

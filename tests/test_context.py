@@ -215,6 +215,106 @@ class ContextTests(unittest.TestCase):
         self.assertTrue(five_lines["budget_exhausted"])
         self.assertFalse(any(block["relation"] == "import_binding" for block in five_lines["blocks"]))
 
+    def test_method_context_includes_owner_class_header_without_unrelated_imports(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.py").write_text(
+                "import click\n"
+                "from extra import unrelated\n"
+                "\n"
+                "class PathChild(\n"
+                "    click.Path,\n"
+                "):\n"
+                "    def convert(self, value):\n"
+                "        return super().convert(value)\n"
+                "    def other(self):\n"
+                "        return unrelated()\n",
+                encoding="utf-8",
+            )
+            index = build_index(root)
+            full = build_context(index, "sample.py::PathChild.convert", max_lines=6)
+            tight = build_context(index, "sample.py::PathChild.convert", max_lines=4)
+
+        self.assertEqual(
+            [(block["symbol"], block["relation"]) for block in full["blocks"]],
+            [
+                ("sample.py::PathChild.convert", "target"),
+                ("sample.py::PathChild", "owner_class"),
+                ("sample.py::<module import click>", "import_binding"),
+            ],
+        )
+        self.assertEqual(
+            [line["text"] for line in full["blocks"][1]["lines"]],
+            ["class PathChild(", "    click.Path,", "):"],
+        )
+        self.assertEqual(sum(len(block["lines"]) for block in full["blocks"]), 6)
+        self.assertFalse(full["budget_exhausted"])
+        self.assertEqual(tight["blocks"][1]["relation"], "owner_class")
+        self.assertTrue(tight["blocks"][1]["truncated"])
+        self.assertTrue(tight["budget_exhausted"])
+        self.assertEqual(tight["omitted_imports"], 1)
+
+    def test_method_owner_header_does_not_expand_full_base_class(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.py").write_text(
+                "class Parent:\n"
+                "    def helper(self):\n"
+                "        return 1\n"
+                "\n"
+                "class Child(Parent):\n"
+                "    def run(self):\n"
+                "        return 2\n",
+                encoding="utf-8",
+            )
+            index = build_index(root)
+            context = build_context(index, "sample.py::Child.run", max_lines=5)
+
+        self.assertEqual(
+            [(block["symbol"], block["relation"]) for block in context["blocks"]],
+            [
+                ("sample.py::Child.run", "target"),
+                ("sample.py::Child", "owner_class"),
+            ],
+        )
+        self.assertEqual(sum(len(block["lines"]) for block in context["blocks"]), 3)
+        self.assertFalse(context["budget_exhausted"])
+
+    def test_method_owner_header_excludes_first_method_decorator(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.py").write_text(
+                "class Child:\n"
+                "    @staticmethod\n"
+                "    def other():\n"
+                "        return 1\n"
+                "    def run(self):\n"
+                "        return 2\n",
+                encoding="utf-8",
+            )
+            index = build_index(root)
+            context = build_context(index, "sample.py::Child.run", max_lines=5)
+
+        owner = next(block for block in context["blocks"] if block["relation"] == "owner_class")
+        self.assertEqual([line["text"] for line in owner["lines"]], ["class Child:"])
+
+    def test_method_owner_header_excludes_comments_before_first_method(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.py").write_text(
+                "class Child:\n"
+                "    # This describes the first method, not the class header.\n"
+                "\n"
+                "    def run(self):\n"
+                "        return 2\n",
+                encoding="utf-8",
+            )
+            index = build_index(root)
+            context = build_context(index, "sample.py::Child.run", max_lines=5)
+
+        owner = next(block for block in context["blocks"] if block["relation"] == "owner_class")
+        self.assertEqual([line["text"] for line in owner["lines"]], ["class Child:"])
+
     def test_context_marks_truncation_and_respects_budget(self):
         with tempfile.TemporaryDirectory() as directory:
             index = self.make_index(Path(directory))
