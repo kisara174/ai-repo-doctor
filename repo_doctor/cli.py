@@ -205,6 +205,7 @@ def _print_diagnosis(payload: dict) -> None:
 
 
 _DOCTOR_ACTIONS = {
+    "invalid_key": "Check DEEPSEEK_API_KEY for whitespace or invalid characters.",
     "authentication": "Check DEEPSEEK_API_KEY and try again.",
     "balance": "Check the DeepSeek account balance.",
     "rate_limit": "Wait briefly before checking again.",

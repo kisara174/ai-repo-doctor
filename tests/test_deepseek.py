@@ -426,6 +426,7 @@ class DeepSeekTests(unittest.TestCase):
             (urllib.error.URLError(socket.gaierror("test-secret")), "dns"),
             (urllib.error.URLError(ssl.SSLError("test-secret")), "tls"),
             (urllib.error.URLError("Tunnel connection failed: 407 test-secret"), "proxy"),
+            (urllib.error.URLError(OSError("Tunnel connection failed: 407 test-secret")), "proxy"),
             (urllib.error.URLError(TimeoutError("test-secret")), "timeout"),
         ]
         for failure, expected in failures:
@@ -449,3 +450,16 @@ class DeepSeekTests(unittest.TestCase):
             self.assertEqual(raised.exception.diagnostic_category, expected)
             self.assertEqual(raised.exception.http_status, status)
             self.assertNotIn("test-secret", str(raised.exception))
+
+    def test_malformed_key_is_rejected_before_transport_without_echoing_it(self):
+        secret = "DEMOSECRET\nEXTRA"
+        for client in (
+            lambda: list_models(api_key=secret),
+            lambda: complete_json("system", "user", api_key=secret, model="deepseek-flash"),
+        ):
+            with self.subTest(client=client), patch("urllib.request.OpenerDirector.open") as open_request:
+                with self.assertRaises(DeepSeekError) as raised:
+                    client()
+            self.assertEqual(raised.exception.code, "invalid_key")
+            self.assertNotIn(secret, str(raised.exception))
+            open_request.assert_not_called()

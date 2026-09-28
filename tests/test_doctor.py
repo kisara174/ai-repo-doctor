@@ -114,6 +114,21 @@ class DoctorCliTests(unittest.TestCase):
         self.assertEqual(status, 1, stderr)
         self.assertEqual(report["repository"]["parse_errors"], 1)
 
+    def test_malformed_key_is_reported_safely(self):
+        secret = "DEMOSECRET\nEXTRA"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text("x = 1\n", encoding="utf-8")
+            with patch.dict(os.environ, {"DEEPSEEK_API_KEY": secret}, clear=True), patch(
+                "urllib.request.OpenerDirector.open"
+            ) as open_request:
+                status, report, stderr = self.run_doctor(root, "--deepseek")
+
+        self.assertEqual(status, 1, stderr)
+        self.assertEqual(report["deepseek"]["category"], "invalid_key")
+        self.assertNotIn(secret, json.dumps(report) + stderr)
+        open_request.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

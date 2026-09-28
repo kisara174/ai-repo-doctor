@@ -20,6 +20,7 @@ DEEPSEEK_ERROR_CODES = frozenset({
     "request_too_large",
     "response_too_large",
     "invalid_response",
+    "invalid_key",
     "unknown",
 })
 DEEPSEEK_ERROR_DETAILS = frozenset({
@@ -112,9 +113,19 @@ def _connection_category(reason: object) -> str:
         return "dns"
     if isinstance(reason, ssl.SSLError):
         return "tls"
-    if isinstance(reason, str) and reason.startswith("Tunnel connection failed:"):
+    if isinstance(reason, (str, OSError)) and str(reason).startswith("Tunnel connection failed:"):
         return "proxy"
     return "connection"
+
+
+def _authorization_header(api_key: str) -> str:
+    if not isinstance(api_key, str) or not api_key or any(
+        not 33 <= ord(character) <= 126 for character in api_key
+    ):
+        raise DeepSeekError(
+            "DEEPSEEK_API_KEY contains invalid characters", code="invalid_key"
+        )
+    return f"Bearer {api_key}"
 
 
 def _read_response(request: urllib.request.Request, timeout: float) -> bytes:
@@ -152,7 +163,7 @@ def list_models(*, api_key: str, timeout: float = 10.0) -> tuple[str, ...]:
     """Check the fixed models endpoint without sending repository source."""
     request = urllib.request.Request(
         MODELS_URL,
-        headers={"Authorization": f"Bearer {api_key}"},
+        headers={"Authorization": _authorization_header(api_key)},
         method="GET",
     )
     response_body = _read_response(request, timeout)
@@ -244,7 +255,7 @@ def complete_json(
         data=request_body,
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
+            "Authorization": _authorization_header(api_key),
         },
         method="POST",
     )
