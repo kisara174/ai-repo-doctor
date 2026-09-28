@@ -184,3 +184,16 @@ arms have separately traceable commits, plans, records, and reviews.
 
 **Acceptance:** The report supports a concrete keep/change recommendation;
 the integrated code and documentation have current-head verification.
+
+## Execution checkpoint — 2026-09-28
+
+Tasks 1–3 completed. Task 4's prompt variant was prepared under clean commit
+`c206da6`, with all six context hashes identical to the baseline and each
+request hash changed only by the preregistered prompt text. Its first online
+call returned `invalid_response/invalid_content_json`, so the runner stopped
+at 1/6 attempts and Task 4's complete paired comparison was not possible.
+The prompt was reverted at `d66ec4c`. Do not resume the five unattempted
+calls or retry this arm as if they belonged to the original one-pass plan.
+Task 5's report and integration checks remain the next actions. The
+[holdout report](../../evaluations/2026-09-28-flask-holdout.md) is the
+source for actual outcome counts.
