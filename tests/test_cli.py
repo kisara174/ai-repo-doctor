@@ -402,8 +402,53 @@ class CliTests(unittest.TestCase):
             "64 KiB",
             "selected source context",
             "selected code may contain secrets",
-            "commands remain offline",
+            "doctor without --deepseek remain offline",
             "does not upload the full repository",
         ):
             with self.subTest(expected=expected):
                 self.assertIn(expected, help_text)
+
+    def test_diagnose_schema_format_is_opt_in_and_uses_same_evidence_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+            response = DeepSeekResult("deepseek-flash", {"findings": []})
+            with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-secret"}, clear=True), patch(
+                "repo_doctor.cli.complete_json_schema", return_value=response, create=True
+            ) as schema_client, patch("repo_doctor.cli.complete_json") as chat_client:
+                status, stdout, stderr = self.run_main(
+                    "diagnose", root, "a.py::target", "--response-format", "json-schema", "--json"
+                )
+
+        self.assertEqual(status, 0, stderr)
+        self.assertEqual(json.loads(stdout)["accepted"], [])
+        self.assertEqual(json.loads(stdout)["rejected"], [])
+        self.assertIn("a.py", stderr)
+        schema_client.assert_called_once()
+        self.assertEqual(schema_client.call_args.kwargs["api_key"], "test-secret")
+        chat_client.assert_not_called()
+
+    def test_diagnose_schema_format_rejects_ungrounded_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+            finding = {
+                "title": "Unsupported claim",
+                "category": "reliability",
+                "confidence": 0.8,
+                "evidence": [{"file": "a.py", "start_line": 2, "end_line": 2, "quote": "invented"}],
+                "reasoning": "Reasoning.",
+                "impact": "Impact.",
+                "suggested_fix": "Fix.",
+            }
+            response = DeepSeekResult("deepseek-flash", {"findings": [finding]})
+            with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-secret"}, clear=True), patch(
+                "repo_doctor.cli.complete_json_schema", return_value=response
+            ):
+                status, stdout, stderr = self.run_main(
+                    "diagnose", root, "a.py::target", "--response-format", "json-schema", "--json"
+                )
+
+        self.assertEqual(status, 1, stderr)
+        self.assertEqual(json.loads(stdout)["accepted"], [])
+        self.assertEqual(len(json.loads(stdout)["rejected"]), 1)

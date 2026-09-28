@@ -106,6 +106,9 @@ python3 -m repo_doctor context /path/to/python-repo 'app/services/user.py::UserS
 
 # 显式发起云端诊断
 python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::UserService.create'
+
+# 可选：使用 DeepSeek Responses API 的 JSON Schema 输出路径
+python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::UserService.create' --response-format json-schema
 ```
 
 `diagnose` 只发送所选的、有上限的源码片段，以及仓库相对路径、行号、关系标签和静态调用证据。片段可能包含本地类父级定义和被引用的模块级导入行；不会发送整个仓库、绝对仓库路径或未选中的源码。每次请求最多包含 120 行和 64 KiB 源码文本，完整序列化后的 HTTP 请求体另有 256 KiB 上限，超出会在联网前失败。客户端拒绝所有重定向，只连接固定的 DeepSeek endpoint。发出请求前，命令会在标准错误中显示将发送的文件、行范围和源码大小，不会在提示中重复源码。
@@ -113,6 +116,8 @@ python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::User
 源码片段可能含有密钥或其他敏感内容。调用前请用 `context` 查看实际选中的代码；发现不应上传的内容时，不要运行 `diagnose`。Repo Doctor 不保存请求、源码或模型响应。API Key 仅从 `DEEPSEEK_API_KEY` 读取，不作为命令参数，也不会写入报告。
 
 被接受的 finding 表示其引文通过了本地源码和已发送上下文校验，并不证明推理正确。请人工复核结论，并通过实际运行或测试确认影响。
+
+`--response-format json-schema` 是显式选择的实验性路径：它在相同的本地上下文与证据校验规则下调用 DeepSeek Responses API，请求结构化输出并关闭 thinking。默认的 `chat-json` 路径保持不变。当前单样本对照中，Chat JSON 出现了无效 JSON；JSON Schema 路径两次尝试有一次通过结构与本地证据校验，另一次失败原因未能细分。这不足以证明稳定性或诊断正确率；两种路径都不会自动重试。详情见[结构化输出对照记录](docs/evaluations/2026-09-28-structured-output.md)。
 
 ## 影响分析
 

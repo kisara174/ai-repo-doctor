@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 API_URL = "https://api.deepseek.com/chat/completions"
 MODELS_URL = "https://api.deepseek.com/models"
+RESPONSES_URL = "https://api.deepseek.com/responses"
 MAX_REQUEST_BYTES = 256 * 1024
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 _THINKING_MODES = frozenset({"enabled", "disabled"})
@@ -32,6 +33,7 @@ DEEPSEEK_ERROR_DETAILS = frozenset({
     "missing_content",
     "invalid_content_json",
     "invalid_content_shape",
+    "provider_status",
 })
 _TRANSPORT_CATEGORIES = frozenset({"dns", "tls", "proxy", "timeout", "connection"})
 
@@ -329,4 +331,120 @@ def complete_json(
             usage=usage,
         )
 
+    return DeepSeekResult(response_model, payload, usage)
+
+
+def complete_json_schema(
+    system_prompt: str,
+    user_prompt: str,
+    *,
+    api_key: str,
+    model: str,
+    timeout: float = 60.0,
+) -> DeepSeekResult:
+    """Request one schema-constrained Responses completion with thinking disabled."""
+    from .diagnosis import DIAGNOSIS_SCHEMA
+
+    request_body = json.dumps({
+        "model": model,
+        "input": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "reasoning": {"effort": "none"},
+        "max_output_tokens": 4096,
+        "stream": False,
+        "store": False,
+        "text": {"format": {
+            "type": "json_schema",
+            "name": "repo_doctor_findings",
+            "schema": DIAGNOSIS_SCHEMA,
+        }},
+    }, ensure_ascii=False).encode("utf-8")
+    if len(request_body) > MAX_REQUEST_BYTES:
+        raise DeepSeekError(
+            "DeepSeek API request exceeds 256 KiB limit", code="request_too_large"
+        )
+    request = urllib.request.Request(
+        RESPONSES_URL,
+        data=request_body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": _authorization_header(api_key),
+        },
+        method="POST",
+    )
+    response_body = _read_response(request, timeout)
+    try:
+        envelope = json.loads(response_body.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError):
+        raise DeepSeekError(
+            "DeepSeek API returned invalid JSON", code="invalid_response",
+            error_detail="invalid_envelope_json",
+        ) from None
+    if not isinstance(envelope, dict) or envelope.get("object") != "response":
+        raise DeepSeekError(
+            "DeepSeek API response must be a response object", code="invalid_response",
+            error_detail="invalid_envelope_shape",
+        )
+
+    raw_usage = envelope.get("usage")
+    usage = _safe_usage({
+        "prompt_tokens": raw_usage.get("input_tokens"),
+        "completion_tokens": raw_usage.get("output_tokens"),
+        "total_tokens": raw_usage.get("total_tokens"),
+    }) if isinstance(raw_usage, dict) else None
+    response_model = envelope.get("model")
+    if not isinstance(response_model, str) or not response_model.strip():
+        raise DeepSeekError(
+            "DeepSeek API response did not include a model name", code="invalid_response",
+            error_detail="missing_model", usage=usage,
+        )
+    if envelope.get("status") == "incomplete":
+        raise DeepSeekError(
+            "DeepSeek response was truncated or incomplete", code="invalid_response",
+            error_detail="truncated", usage=usage,
+        )
+    if envelope.get("status") != "completed":
+        raise DeepSeekError(
+            "DeepSeek API response did not complete", code="invalid_response",
+            error_detail="provider_status", usage=usage,
+        )
+    output = envelope.get("output")
+    if not isinstance(output, list):
+        raise DeepSeekError(
+            "DeepSeek API response did not include output", code="invalid_response",
+            error_detail="missing_choices", usage=usage,
+        )
+    texts = [
+        part.get("text")
+        for item in output
+        if isinstance(item, dict) and item.get("type") == "message"
+        and item.get("role") == "assistant" and isinstance(item.get("content"), list)
+        for part in item["content"]
+        if isinstance(part, dict) and part.get("type") == "output_text"
+    ]
+    if not texts or any(not isinstance(text, str) for text in texts):
+        raise DeepSeekError(
+            "DeepSeek returned empty response content", code="invalid_response",
+            error_detail="missing_content", usage=usage,
+        )
+    content = "".join(texts)
+    if not content.strip():
+        raise DeepSeekError(
+            "DeepSeek returned empty response content", code="invalid_response",
+            error_detail="missing_content", usage=usage,
+        )
+    try:
+        payload = json.loads(content)
+    except json.JSONDecodeError:
+        raise DeepSeekError(
+            "DeepSeek response content was not valid JSON", code="invalid_response",
+            error_detail="invalid_content_json", usage=usage,
+        ) from None
+    if not isinstance(payload, dict):
+        raise DeepSeekError(
+            "DeepSeek response content must be a JSON object", code="invalid_response",
+            error_detail="invalid_content_shape", usage=usage,
+        )
     return DeepSeekResult(response_model, payload, usage)

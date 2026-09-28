@@ -9,7 +9,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from .context import build_context, build_impact
-from .deepseek import DeepSeekError, complete_json, list_models
+from .deepseek import DeepSeekError, complete_json, complete_json_schema, list_models
 from .diagnosis import (
     DEFAULT_MODEL,
     MAX_CONTEXT_LINES,
@@ -321,14 +321,18 @@ def _parser() -> argparse.ArgumentParser:
         epilog=(
             "Requires DEEPSEEK_API_KEY. Optionally set DEEPSEEK_MODEL or pass --model. "
             "At most 120 lines and 64 KiB of source text are sent. Inspect with the "
-            "context command first because selected code may contain secrets. Other "
-            "commands remain offline."
+            "context command first because selected code may contain secrets. "
+            "scan, context, impact, validate, and doctor without --deepseek remain offline."
         ),
     )
     diagnose.add_argument("path", type=Path)
     diagnose.add_argument("symbol")
     diagnose.add_argument("--max-lines", type=int, default=MAX_CONTEXT_LINES)
     diagnose.add_argument("--model")
+    diagnose.add_argument(
+        "--response-format", choices=("chat-json", "json-schema"), default="chat-json",
+        help="Provider output protocol; json-schema uses the experimental Responses API",
+    )
     diagnose.add_argument("--json", action="store_true")
     return parser
 
@@ -367,12 +371,8 @@ def main(argv: list[str] | None = None) -> int:
             model = model.strip() or DEFAULT_MODEL
             _print_upload_summary(context, line_count, byte_count)
             system_prompt, user_prompt = build_diagnosis_prompts(context)
-            result = complete_json(
-                system_prompt,
-                user_prompt,
-                api_key=api_key,
-                model=model,
-            )
+            client = complete_json_schema if args.response_format == "json-schema" else complete_json
+            result = client(system_prompt, user_prompt, api_key=api_key, model=model)
             report = validate_diagnosis_payload(index, result.payload, context)
             payload = {
                 "schema_version": report["schema_version"],
