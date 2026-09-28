@@ -108,3 +108,43 @@ The run records `selected_case_id` and the full prepared plan hash. Review
 preparation is supported, but `score` rejects this smoke as a dataset run.
 A complete response and locally accepted evidence do not establish diagnostic
 accuracy; inspect the findings against the pinned source and ground truth.
+
+## Flask holdout v1
+
+`flask-holdout-v1.json` is a separate, preregistered six-case comparison set.
+It contains three new bug/fixed pairs from Flask, with no case from the
+Click/Requests manifest above. The upstream issue, merged fix PR, exact
+first-parent bug commit, fixed merge commit, selected symbol, ground truth,
+source fingerprint, and primary-agent annotation are recorded in each case.
+Flask's BSD-3-Clause license text has the same SHA-256 across all six
+snapshots: `489a8e1108509ed98a37bb983e11e0f7e1d31f0bd8f99a79c8448e7ff37d07ea`.
+
+The frozen holdout manifest SHA-256 is
+`68aeaa16e4b0e400de800ea5f192c2c22c467eda8132e0e7dad7d08620333cd2`.
+Keep this file byte-for-byte stable after the experiment begins. The
+[experiment design](../../docs/superpowers/specs/2026-09-28-flask-holdout-design.md)
+preregistered one prompt variant before any holdout model result was read.
+Fixed cases are negative only for their paired defect; they are not a claim
+that the selected method is entirely defect-free. There are no extra controls
+in this small holdout.
+
+To recreate the six detached, clean checkouts, set a writable local root and
+clone Flask once. The evaluator verifies each checkout's HEAD and clean
+status before preparing any request.
+
+```sh
+HOLDOUT_ROOT=/tmp/ai-repo-doctor-flask-holdout
+mkdir -p "$HOLDOUT_ROOT/.bare"
+git clone --bare https://github.com/pallets/flask.git "$HOLDOUT_ROOT/.bare/flask.git"
+git --git-dir="$HOLDOUT_ROOT/.bare/flask.git" worktree add --detach "$HOLDOUT_ROOT/flask-c3f923d0e0ab" c3f923d0e0aba3ed5b6013c5d022021e4ae059cf
+git --git-dir="$HOLDOUT_ROOT/.bare/flask.git" worktree add --detach "$HOLDOUT_ROOT/flask-ef3a82a28200" ef3a82a2820082f7d9f2ca963c9dff7eb1ea9687
+git --git-dir="$HOLDOUT_ROOT/.bare/flask.git" worktree add --detach "$HOLDOUT_ROOT/flask-3435d2ff1589" 3435d2ff1589eb0c1a85cc294a20985910a1a606
+git --git-dir="$HOLDOUT_ROOT/.bare/flask.git" worktree add --detach "$HOLDOUT_ROOT/flask-d7209a957004" d7209a957004d4758f32fd8b2f89da11f5fe5718
+git --git-dir="$HOLDOUT_ROOT/.bare/flask.git" worktree add --detach "$HOLDOUT_ROOT/flask-5addaf833b2e" 5addaf833b2e8c7a616f89dd8ad5a44b07d7c000
+git --git-dir="$HOLDOUT_ROOT/.bare/flask.git" worktree add --detach "$HOLDOUT_ROOT/flask-24824ff666e0" 24824ff666e096c4c07d0b75a889088571afe4a6
+```
+
+The target code and its tests must not be executed or installed by this
+evaluation. The analyzer selects source statically; its largest observed
+holdout context is 120 lines and 4,635 source bytes. Model claims require
+source review even if the local quotation validator accepts their evidence.
