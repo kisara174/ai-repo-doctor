@@ -3,12 +3,13 @@
 import argparse
 import json
 import os
+import shutil
 import sys
 from dataclasses import asdict
 from pathlib import Path
 
 from .context import build_context, build_impact
-from .deepseek import DeepSeekError, complete_json
+from .deepseek import DeepSeekError, complete_json, list_models
 from .diagnosis import (
     DEFAULT_MODEL,
     MAX_CONTEXT_LINES,
@@ -203,9 +204,95 @@ def _print_diagnosis(payload: dict) -> None:
     print("Evidence checks confirm source grounding only; they do not prove the diagnosis is correct.")
 
 
+_DOCTOR_ACTIONS = {
+    "authentication": "Check DEEPSEEK_API_KEY and try again.",
+    "balance": "Check the DeepSeek account balance.",
+    "rate_limit": "Wait briefly before checking again.",
+    "dns": "Check DNS resolution and network access to api.deepseek.com.",
+    "tls": "Check the trusted CA bundle (SSL_CERT_FILE), clock, and TLS interception settings.",
+    "proxy": "Check proxy configuration and proxy authentication.",
+    "timeout": "Check network latency and try again later.",
+    "connection": "Check network access to api.deepseek.com.",
+    "server": "The provider is unavailable; try again later.",
+    "invalid_response": "The provider returned an unexpected model list; try again later.",
+    "response_too_large": "The provider model list exceeded the response limit.",
+    "http": "Check the provider status and request configuration.",
+}
+
+
+def _doctor_data(index: RepoIndex, *, check_deepseek: bool, model: str) -> dict:
+    api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+    remote = {
+        "checked": False,
+        "key_present": bool(api_key),
+        "model": model,
+        "status": "not_checked",
+    }
+    if check_deepseek and not api_key:
+        remote.update(status="missing_key", action="Set DEEPSEEK_API_KEY and try again.")
+    elif check_deepseek:
+        remote["checked"] = True
+        try:
+            models = list_models(api_key=api_key, timeout=10.0)
+        except DeepSeekError as exc:
+            remote.update(
+                status="error",
+                category=exc.diagnostic_category,
+                action=_DOCTOR_ACTIONS.get(exc.diagnostic_category, "Check the provider and try again."),
+            )
+            if exc.http_status is not None:
+                remote["http_status"] = exc.http_status
+        else:
+            if model in models:
+                remote["status"] = "ready"
+            else:
+                remote.update(
+                    status="model_unavailable",
+                    action="Set DEEPSEEK_MODEL to an available model and try again.",
+                )
+    return {
+        "schema_version": 1,
+        "root": str(index.root),
+        "python": {
+            "version": sys.version.split()[0],
+            "supported": sys.version_info >= (3, 11),
+        },
+        "git": {
+            "available": shutil.which("git") is not None,
+            "scan_mode": index.scan_mode,
+        },
+        "repository": {
+            "python_files": len(index.files),
+            "parse_errors": len(index.parse_errors),
+        },
+        "deepseek": remote,
+    }
+
+
+def _print_doctor(payload: dict) -> None:
+    print(f"Repo Doctor check — {payload['root']}")
+    python = payload["python"]
+    print(f"Python: {python['version']} ({'supported' if python['supported'] else 'unsupported'})")
+    git = payload["git"]
+    print(f"Git: {'available' if git['available'] else 'unavailable'}  Scan mode: {git['scan_mode']}")
+    repo = payload["repository"]
+    print(f"Repository: {repo['python_files']} Python files  Parse errors: {repo['parse_errors']}")
+    remote = payload["deepseek"]
+    print(f"DeepSeek: {remote['status']}  Model: {remote['model']}  Key: {'set' if remote['key_present'] else 'unset'}")
+    if "category" in remote:
+        print(f"Category: {remote['category']}")
+    if "action" in remote:
+        print(f"Next step: {remote['action']}")
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="repo-doctor", description="Evidence-first analysis of a local Python repository")
     subcommands = parser.add_subparsers(dest="command", required=True)
+    doctor = subcommands.add_parser("doctor", help="Check local repository readiness and optional DeepSeek access")
+    doctor.add_argument("path", type=Path, nargs="?", default=Path("."))
+    doctor.add_argument("--deepseek", action="store_true", help="Check DeepSeek models over the network without sending source")
+    doctor.add_argument("--model", help="Model to check; overrides DEEPSEEK_MODEL")
+    doctor.add_argument("--json", action="store_true")
     scan = subcommands.add_parser("scan", help="Build and report a Python repository index")
     scan.add_argument("path", type=Path)
     scan.add_argument("--json", action="store_true", help="Print the complete machine-readable result")
@@ -251,7 +338,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "diagnose" and not 1 <= args.max_lines <= MAX_CONTEXT_LINES:
             raise ValueError(f"--max-lines must be from 1 through {MAX_CONTEXT_LINES}")
         index = build_index(args.path)
-        if args.command == "scan":
+        if args.command == "doctor":
+            model = args.model or os.environ.get("DEEPSEEK_MODEL") or DEFAULT_MODEL
+            model = model.strip() or DEFAULT_MODEL
+            payload = _doctor_data(index, check_deepseek=args.deepseek, model=model)
+            printer = _print_doctor
+        elif args.command == "scan":
             payload = _scan_data(index)
             printer = _print_scan
         elif args.command == "context":
@@ -293,6 +385,13 @@ def main(argv: list[str] | None = None) -> int:
             _print_json(payload)
         else:
             printer(payload)
+        if args.command == "doctor":
+            return 0 if (
+                payload["python"]["supported"]
+                and payload["repository"]["python_files"] > 0
+                and payload["repository"]["parse_errors"] == 0
+                and (not args.deepseek or payload["deepseek"]["status"] == "ready")
+            ) else 1
         return 1 if args.command in {"validate", "diagnose"} and payload["rejected"] else 0
     except (DeepSeekError, ValueError, OSError, json.JSONDecodeError) as exc:
         print(f"error: {exc}", file=sys.stderr)

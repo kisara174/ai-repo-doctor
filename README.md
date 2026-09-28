@@ -37,7 +37,7 @@ python3 -m venv .venv
 .venv/bin/repo-doctor scan /path/to/python-repo
 ```
 
-发行包提供 `repo-doctor` 命令和 `repo_doctor` Python 包。源码仓库内的 `tools.evaluate_diagnosis` 评估命令不在发行包内。离线命令不需要 DeepSeek Key；只有显式运行 `diagnose` 时才会访问云端。
+发行包提供 `repo-doctor` 命令和 `repo_doctor` Python 包。源码仓库内的 `tools.evaluate_diagnosis` 评估命令不在发行包内。`scan`、`context`、`impact`、`validate` 和默认的 `doctor` 都离线运行；只有显式运行 `diagnose` 或 `doctor --deepseek` 才会访问云端。
 
 `scan` 文本输出会给出示例符号 ID。完整索引在 `--json` 输出中，包括文件、符号、导入声明、调用点、局部导入边、已解析调用边、语义关系、导入环和解析错误。
 
@@ -78,6 +78,20 @@ finding 结构：
 ```
 
 `validate` 对有拒绝项的文件返回退出码 1；参数、路径或 JSON 无法读取时返回 2。通过校验只说明引文真实且定位正确，**不代表诊断结论一定成立**；仍需人工审查推理和实际运行验证。
+
+## 检查运行环境
+
+```bash
+repo-doctor doctor /path/to/python-repo
+repo-doctor doctor /path/to/python-repo --json
+repo-doctor doctor /path/to/python-repo --deepseek
+```
+
+`doctor` 默认检查 Python 版本、Git 可用性、仓库可解析的 Python 文件数、语法解析错误数，以及 `DEEPSEEK_API_KEY` 是否存在；省略路径时检查当前目录。它不会运行目标代码，也不会联网。Git 不可用时扫描器会退回目录遍历；语法错误或没有 Python 文件会使检查返回退出码 1。
+
+只有加 `--deepseek` 才会发出一次不含仓库源码的 `GET /models` 请求，检查 Key 与所选模型。模型选择顺序是 `--model`、`DEEPSEEK_MODEL`、默认 `deepseek-flash`。连接失败时 JSON 输出给出安全的类别和下一步提示，包括认证、余额、限流、DNS、TLS、代理、超时和服务端故障；不会输出 Key 或原始服务端错误正文。检查成功返回 0，未就绪返回 1，路径或参数错误返回 2。这项检查不运行诊断，也不能证明诊断质量或账号余额足以完成后续调用。
+
+如果 `doctor --deepseek` 报告 `tls`，检查当前 Python 的可信 CA 证书配置；不要关闭证书验证。在部分 macOS Python 安装中，设置 `SSL_CERT_FILE` 为系统可信 CA bundle 可以解决问题，例如 `SSL_CERT_FILE=/etc/ssl/cert.pem repo-doctor doctor --deepseek`（先确认该文件存在且是可信来源）。
 
 ## 使用 DeepSeek 云端诊断（可选）
 

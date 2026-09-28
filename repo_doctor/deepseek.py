@@ -1,12 +1,15 @@
 """Minimal, fixed-endpoint DeepSeek JSON client."""
 
 import json
+import socket
+import ssl
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 
 
 API_URL = "https://api.deepseek.com/chat/completions"
+MODELS_URL = "https://api.deepseek.com/models"
 MAX_REQUEST_BYTES = 256 * 1024
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 _THINKING_MODES = frozenset({"enabled", "disabled"})
@@ -29,6 +32,7 @@ DEEPSEEK_ERROR_DETAILS = frozenset({
     "invalid_content_json",
     "invalid_content_shape",
 })
+_TRANSPORT_CATEGORIES = frozenset({"dns", "tls", "proxy", "timeout", "connection"})
 
 
 def _safe_usage(value: object) -> dict[str, int | None] | None:
@@ -61,6 +65,7 @@ class DeepSeekError(Exception):
         http_status: int | None = None,
         error_detail: str | None = None,
         usage: dict[str, int | None] | None = None,
+        transport_category: str | None = None,
     ) -> None:
         super().__init__(message)
         self.code = code if isinstance(code, str) and code in DEEPSEEK_ERROR_CODES else "unknown"
@@ -77,6 +82,106 @@ class DeepSeekError(Exception):
             else None
         )
         self.usage = _safe_usage(usage)
+        self.transport_category = (
+            transport_category
+            if self.code in {"connection", "timeout"} and transport_category in _TRANSPORT_CATEGORIES
+            else None
+        )
+
+    @property
+    def diagnostic_category(self) -> str:
+        if self.code == "http":
+            if self.http_status == 401:
+                return "authentication"
+            if self.http_status == 402:
+                return "balance"
+            if self.http_status == 407:
+                return "proxy"
+            if self.http_status == 429:
+                return "rate_limit"
+            if self.http_status is not None and self.http_status >= 500:
+                return "server"
+            return "http"
+        return self.transport_category or self.code
+
+
+def _connection_category(reason: object) -> str:
+    if isinstance(reason, (TimeoutError, socket.timeout)):
+        return "timeout"
+    if isinstance(reason, socket.gaierror):
+        return "dns"
+    if isinstance(reason, ssl.SSLError):
+        return "tls"
+    if isinstance(reason, str) and reason.startswith("Tunnel connection failed:"):
+        return "proxy"
+    return "connection"
+
+
+def _read_response(request: urllib.request.Request, timeout: float) -> bytes:
+    try:
+        opener = urllib.request.build_opener(_NoRedirectHandler())
+        with opener.open(request, timeout=timeout) as response:
+            response_body = response.read(MAX_RESPONSE_BYTES + 1)
+            if len(response_body) > MAX_RESPONSE_BYTES:
+                raise DeepSeekError(
+                    "DeepSeek API response exceeds 2 MiB limit", code="response_too_large"
+                )
+            return response_body
+    except urllib.error.HTTPError as exc:
+        exc.close()
+        raise DeepSeekError(
+            f"DeepSeek API returned HTTP {exc.code}", code="http", http_status=exc.code
+        ) from None
+    except TimeoutError:
+        raise DeepSeekError(
+            "DeepSeek API request timed out", code="timeout", transport_category="timeout"
+        ) from None
+    except urllib.error.URLError as exc:
+        category = _connection_category(exc.reason)
+        raise DeepSeekError(
+            "Could not connect to DeepSeek API", code="connection", transport_category=category
+        ) from None
+    except OSError as exc:
+        category = _connection_category(exc)
+        raise DeepSeekError(
+            "Could not read the DeepSeek API response", code="connection", transport_category=category
+        ) from None
+
+
+def list_models(*, api_key: str, timeout: float = 10.0) -> tuple[str, ...]:
+    """Check the fixed models endpoint without sending repository source."""
+    request = urllib.request.Request(
+        MODELS_URL,
+        headers={"Authorization": f"Bearer {api_key}"},
+        method="GET",
+    )
+    response_body = _read_response(request, timeout)
+    try:
+        envelope = json.loads(response_body.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError):
+        raise DeepSeekError(
+            "DeepSeek API returned invalid JSON",
+            code="invalid_response",
+            error_detail="invalid_envelope_json",
+        ) from None
+    if (
+        not isinstance(envelope, dict)
+        or envelope.get("object") != "list"
+        or not isinstance(envelope.get("data"), list)
+        or any(
+            not isinstance(item, dict)
+            or item.get("object") != "model"
+            or not isinstance(item.get("id"), str)
+            or not item["id"].strip()
+            for item in envelope["data"]
+        )
+    ):
+        raise DeepSeekError(
+            "DeepSeek API returned an invalid model list",
+            code="invalid_response",
+            error_detail="invalid_envelope_shape",
+        )
+    return tuple(item["id"] for item in envelope["data"])
 
 
 def _thinking_parameter(thinking_mode: str | None) -> dict | None:
@@ -144,27 +249,7 @@ def complete_json(
         method="POST",
     )
 
-    try:
-        opener = urllib.request.build_opener(_NoRedirectHandler())
-        with opener.open(request, timeout=timeout) as response:
-            response_body = response.read(MAX_RESPONSE_BYTES + 1)
-            if len(response_body) > MAX_RESPONSE_BYTES:
-                raise DeepSeekError(
-                    "DeepSeek API response exceeds 2 MiB limit", code="response_too_large"
-                )
-    except urllib.error.HTTPError as exc:
-        exc.close()
-        raise DeepSeekError(
-            f"DeepSeek API returned HTTP {exc.code}", code="http", http_status=exc.code
-        ) from None
-    except TimeoutError:
-        raise DeepSeekError("DeepSeek API request timed out", code="timeout") from None
-    except urllib.error.URLError:
-        raise DeepSeekError("Could not connect to DeepSeek API", code="connection") from None
-    except OSError:
-        raise DeepSeekError(
-            "Could not read the DeepSeek API response", code="connection"
-        ) from None
+    response_body = _read_response(request, timeout)
 
     try:
         envelope = json.loads(response_body.decode("utf-8"))
