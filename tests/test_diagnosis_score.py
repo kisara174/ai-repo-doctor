@@ -201,6 +201,32 @@ class DiagnosisScoreTests(unittest.TestCase):
         self.assertEqual(report["thinking_mode"], "disabled")
         self.assertIn("Thinking mode: `disabled`", rendered)
 
+    def test_schema_protocol_is_preserved_in_scored_report(self):
+        run = copy.deepcopy(self.inputs.run)
+        run["response_format"] = "json-schema"
+        review = copy.deepcopy(self.inputs.review)
+        review["run"] = run
+
+        report = score_records(self.inputs.manifest, self.inputs.records, review)
+        rendered = render_report(report)
+
+        self.assertEqual(report["response_format"], "json-schema")
+        self.assertIn("Response format: `json-schema`", rendered)
+
+    def test_score_rejects_invalid_schema_protocol_metadata(self):
+        for change in (
+            {"response_format": "unknown"},
+            {"response_format": "json-schema", "thinking_mode": "disabled"},
+        ):
+            with self.subTest(change=change):
+                run = copy.deepcopy(self.inputs.run)
+                run.update(change)
+                review = copy.deepcopy(self.inputs.review)
+                review["run"] = run
+
+                with self.assertRaisesRegex(ValueError, "response_format"):
+                    score_records(self.inputs.manifest, self.inputs.records, review)
+
     def test_score_rejects_unsupported_run_thinking_mode(self):
         run = copy.deepcopy(self.inputs.run)
         run["thinking_mode"] = "balanced"

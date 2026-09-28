@@ -38,7 +38,11 @@ _RUN_KEYS = {
     "state",
     "record_files",
 }
-_RUN_OPTIONAL_KEYS = {"thinking_mode"}
+_RUN_ALLOWED_KEY_SETS = (
+    _RUN_KEYS,
+    _RUN_KEYS | {"thinking_mode"},
+    _RUN_KEYS | {"response_format"},
+)
 _THINKING_MODES = {"enabled", "disabled"}
 _USAGE_KEYS = ("prompt_tokens", "completion_tokens", "total_tokens")
 _COUNT_ZEROES = {
@@ -139,10 +143,11 @@ def make_review_template(records: list[dict]) -> dict:
 
 def _validate_run_and_records(manifest: dict, records: list[dict], run: dict) -> dict[str, dict]:
     validate_manifest(manifest)
-    if not isinstance(run, dict) or set(run) not in (
-        _RUN_KEYS,
-        _RUN_KEYS | _RUN_OPTIONAL_KEYS,
-    ):
+    if not isinstance(run, dict):
+        _fail("review run metadata does not match the run schema")
+    if "response_format" in run and "thinking_mode" in run:
+        _fail("run response_format cannot be combined with thinking_mode")
+    if set(run) not in _RUN_ALLOWED_KEY_SETS:
         _fail("review run metadata does not match the run schema")
     if type(run["schema_version"]) is not int or run["schema_version"] != 1:
         _fail("run schema_version must be 1")
@@ -159,6 +164,8 @@ def _validate_run_and_records(manifest: dict, records: list[dict], run: dict) ->
         or run["thinking_mode"] not in _THINKING_MODES
     ):
         _fail("run thinking_mode must be enabled or disabled")
+    if "response_format" in run and run["response_format"] != "json-schema":
+        _fail("run response_format must be json-schema")
     repeats = run["repeats"]
     max_calls = run["max_calls"]
     planned = run["planned_calls"]
@@ -601,6 +608,8 @@ def score_records(manifest: dict, records: list[dict], review: dict) -> dict:
     }
     if "thinking_mode" in run:
         report["thinking_mode"] = run["thinking_mode"]
+    if "response_format" in run:
+        report["response_format"] = run["response_format"]
     return report
 
 
@@ -628,6 +637,8 @@ def render_report(report: dict) -> str:
     ]
     if "thinking_mode" in report:
         lines.append(f"- Thinking mode: `{_markdown(report['thinking_mode'])}`")
+    if "response_format" in report:
+        lines.append(f"- Response format: `{_markdown(report['response_format'])}`")
     lines.extend([
         f"- Response models: `{_markdown(', '.join(report['response_models']) or 'none')}`",
         f"- Samples: {report['case_count']}; case IDs: `{_markdown(', '.join(report['case_ids']))}`",
