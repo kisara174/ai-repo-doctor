@@ -34,6 +34,7 @@ DEEPSEEK_ERROR_DETAILS = frozenset({
     "invalid_content_json",
     "invalid_content_shape",
     "provider_status",
+    "content_filter",
 })
 _TRANSPORT_CATEGORIES = frozenset({"dns", "tls", "proxy", "timeout", "connection"})
 
@@ -401,9 +402,12 @@ def complete_json_schema(
             error_detail="missing_model", usage=usage,
         )
     if envelope.get("status") == "incomplete":
+        details = envelope.get("incomplete_details")
+        filtered = isinstance(details, dict) and details.get("reason") == "content_filter"
         raise DeepSeekError(
-            "DeepSeek response was truncated or incomplete", code="invalid_response",
-            error_detail="truncated", usage=usage,
+            "DeepSeek response was filtered" if filtered else "DeepSeek response was truncated or incomplete",
+            code="invalid_response",
+            error_detail="content_filter" if filtered else "truncated", usage=usage,
         )
     if envelope.get("status") != "completed":
         raise DeepSeekError(

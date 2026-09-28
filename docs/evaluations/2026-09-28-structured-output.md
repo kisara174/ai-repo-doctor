@@ -61,6 +61,10 @@ can produce a parseable payload, but the first failure prevents a stability
 claim. The frozen ten-case evaluation runner remains on its existing Chat
 protocol; a Responses baseline requires its own prepared request fingerprints
 and human claim review before any quality comparison or default change.
+The tested schema omits the prompt's optional evidence `symbol` field, so this
+path still checks file, line, and exact quote but cannot use the additional
+symbol citation check. This preserves the exact tested request while the
+structured-output path remains experimental.
 
 DeepSeek's [Chat API](https://api-docs.deepseek.com/api/create-chat-completion/)
 documents `json_object` for Chat output. Its

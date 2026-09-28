@@ -8,14 +8,14 @@ from repo_doctor.diagnosis import DIAGNOSIS_SCHEMA
 
 
 class DeepSeekSchemaTests(unittest.TestCase):
-    def response(self, text='{"findings": []}', status="completed"):
+    def response(self, text='{"findings": []}', status="completed", incomplete_reason=None):
         return io.BytesIO(json.dumps({
             "id": "response-id",
             "object": "response",
             "created_at": 1710000000,
             "status": status,
             "error": None,
-            "incomplete_details": None,
+            "incomplete_details": {"reason": incomplete_reason} if incomplete_reason else None,
             "model": "deepseek-flash",
             "output": [{
                 "type": "message",
@@ -87,6 +87,15 @@ class DeepSeekSchemaTests(unittest.TestCase):
             result = self.call_client()
 
         self.assertEqual(result.payload, {"findings": []})
+
+    def test_content_filter_is_not_reported_as_token_truncation(self):
+        with patch("urllib.request.OpenerDirector.open", return_value=self.response(
+            status="incomplete", incomplete_reason="content_filter"
+        )):
+            with self.assertRaises(DeepSeekError) as raised:
+                self.call_client()
+
+        self.assertEqual(raised.exception.error_detail, "content_filter")
 
     def test_invalid_output_text_json_is_sanitized(self):
         with patch("urllib.request.OpenerDirector.open", return_value=self.response(text="{secret")):
