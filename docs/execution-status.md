@@ -5,9 +5,10 @@ below preserve the earlier experiments.
 
 **Active branch/worktree:** `codex/stability-value-v0.2` at
 `/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor`.
-Latest implementation commit: `420495b` (fixed/control false-alarm rate
-correction). This branch also added offline request preview, SHA-256 pinning,
-selected-source freshness checks, and reproducible JSON Schema evaluation.
+This branch includes the `420495b` fixed/control false-alarm rate correction,
+offline request preview, SHA-256 pinning, selected-source freshness checks,
+and reproducible JSON Schema evaluation. A later regression fix handles an
+invalid source encoding cookie after the provider call without a traceback.
 The prior evaluation branch
 was integrated at `86d1022`; its context implementation commit was
 `6791483f9045487285e72aebad2eee7134ce4424`. Focused context
@@ -99,19 +100,19 @@ The current stability sequence has completed the offline/local parts of P0:
   `--expect-request-sha256` locks a later upload to those bytes. Selected
   source lines are checked before and after the provider call (`0eb8361`).
   The 303-test suite, `compileall`, CLI help, and diff check passed at that
-  source state. A reviewer subagent could not finish its independent review
-  because of account limits; primary diff and test review was performed.
+  source state. A subsequent reviewer found the source-encoding edge case
+  described above; no other actionable issue was reported.
 - Two pinned real repositories produced byte-identical repeat scans with zero
   parse errors and clean worktrees. See the
   [scanner checkpoint](evaluations/2026-09-28-scanner-stability.md).
 - The wheel built in an isolated environment and the installed CLI scanned
   and previewed outside the source tree. See the
-  [installed CLI checkpoint](evaluations/2026-09-28-wheel-smoke.md). CI for
-  the new branch head remains to be checked.
+  [installed CLI checkpoint](evaluations/2026-09-28-wheel-smoke.md).
 - JSON Schema preparation, run dispatch, and scoring are implemented at
   `24736c0`, `9bcc18b`, and `091dc2d`. The scorer correction at `420495b`
-  has a red/green regression test. After that correction, the full offline
-  suite passed 312 tests; `compileall` and `git diff --check` passed. The
+  has a red/green regression test. The source-encoding regression also failed
+  before its fix and passed after it; the full offline suite passed 313 tests,
+  along with `compileall` and `git diff --check`. The
   ten-case provider run is pinned to the earlier clean analyzer commit
   `091dc2d`; the corrected score is a later offline derivation from unchanged
   run records and completed primary review.
@@ -121,8 +122,8 @@ falsifiable prompt or context change aimed at known-defect detection and
 unsupported claims. Do not tune only against the now-visible ten cases or
 switch the default protocol from this exploratory baseline. Preserve the
 frozen manifest and prior partial runs, and use new output directories for
-subsequent experiments. The branch still needs current-head CI and review
-before integration.
+subsequent experiments. The branch still needs current-head CI before
+integration.
 
 The earlier [post-V3 execution plan](superpowers/plans/2026-09-24-post-v3-execution.md),
 [handoff audit](evaluations/2026-09-25-handoff-audit.md), and

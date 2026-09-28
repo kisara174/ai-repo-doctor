@@ -144,6 +144,28 @@ class DiagnosePreviewTests(unittest.TestCase):
         self.assertIn("Selected source changed", stderr)
         client.assert_called_once()
 
+    def test_invalid_encoding_after_provider_call_discards_findings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+
+            def mutate_source(*args, **kwargs):
+                (root / "app.py").write_text(
+                    "# coding: made_up_codec\ndef target():\n    return 1\n",
+                    encoding="utf-8",
+                )
+                return DeepSeekResult("deepseek-flash", {"findings": []})
+
+            with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-secret"}, clear=True), patch(
+                "repo_doctor.cli.complete_json", side_effect=mutate_source
+            ) as client:
+                status, stdout, stderr = self.run_main(root, "app.py::target", "--json")
+
+        self.assertEqual(status, 2)
+        self.assertEqual(stdout, "")
+        self.assertIn("Selected source changed", stderr)
+        client.assert_called_once()
+
     def test_source_mutation_during_context_build_blocks_upload(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

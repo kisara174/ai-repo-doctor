@@ -221,7 +221,7 @@ def _verify_selected_source(index: RepoIndex, context: dict) -> None:
                 number = line["line"]
                 if number > len(source) or source[number - 1] != line["text"]:
                     raise ValueError("selected source line changed")
-    except (OSError, ValueError, UnicodeError):
+    except (OSError, ValueError, UnicodeError, SyntaxError):
         raise ValueError("Selected source changed during diagnosis; rerun preview and diagnosis") from None
 
 
