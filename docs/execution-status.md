@@ -3,15 +3,19 @@
 Updated 2026-09-28. This file is the current project checkpoint; dated reports
 below preserve the earlier experiments.
 
-**Active branch/worktree:** `codex/diagnosis-evaluation` at
+**Active branch/worktree:** `codex/stability-value-v0.2` at
 `/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor`.
-Latest implementation commit: `6791483f9045487285e72aebad2eee7134ce4424`
-(class ancestry and used import bindings in bounded contexts). Focused context
+This branch includes the `420495b` fixed/control false-alarm rate correction,
+offline request preview, SHA-256 pinning, selected-source freshness checks,
+and reproducible JSON Schema evaluation. A later regression fix handles an
+invalid source encoding cookie after the provider call without a traceback.
+The prior evaluation branch
+was integrated at `86d1022`; its context implementation commit was
+`6791483f9045487285e72aebad2eee7134ce4424`. Focused context
 coverage was committed at `0ad91c8a456941dda8e7c0f6ebba351d038b6e61`.
 Wheel installation instructions and CI acceptance were committed at
-`05b5bc94af2d5fd999740892db8021f19dbb4248`. These changes are pushed to
-[PR #7](https://github.com/kisara174/ai-repo-doctor/pull/7); the pull request
-records their integration state. The original `codex/repo-doctor-v2-design`
+`05b5bc94af2d5fd999740892db8021f19dbb4248`. Those changes were reviewed
+in [PR #7](https://github.com/kisara174/ai-repo-doctor/pull/7). The original `codex/repo-doctor-v2-design`
 checkout has separate untracked V3 documents and was left untouched.
 
 ## Delivered capabilities
@@ -53,11 +57,18 @@ record of that run.
   Its one permitted bug call stopped with `provider_error/connection` before
   model content arrived. The full ten-case run was not started. See
   [quality-gate report](evaluations/2026-09-28-quality-gate.md).
+- At analyzer commit `091dc2d`, the opt-in Responses JSON Schema evaluator
+  completed a frozen ten-case run. Primary review found one match among four
+  known bug cases, seven accepted false positives, six uncertain findings,
+  and one rejected false positive. The corrected fixed/control false-alarm
+  count is 3/6. See the
+  [ten-case baseline](evaluations/2026-09-28-schema-ten-case-baseline.md).
 
-These exploratory calls use one selected case at a time. They cannot be scored
-as dataset coverage, cannot estimate general model quality, and have no
-independent human review. The original ten-case run remains partial and
-unchanged. Model token usage is recorded where available; actual billing is
+The earlier exploratory calls used one selected case at a time and cannot be
+scored as dataset coverage. The original Chat ten-case run remains partial
+and unchanged; the new JSON Schema ten-case run is complete and has a primary
+review, but no independent second review. Neither estimates general model
+quality. Model token usage is recorded where available; actual billing is
 not inferred.
 
 ## Verification scope
@@ -78,14 +89,41 @@ not inferred.
 
 ## Next gates
 
-The [2026-09-28 work plan](superpowers/plans/2026-09-28-diagnosis-quality-next-stage.md)
-sets the scope and stop conditions. Its focused fixture, local integration
-gate, PR CI, and one-call checkpoint are complete. The ten-case online baseline
-was conditional on a usable bug response and remains unattempted. No prompt or
-context change is justified by the connection failure. PR integration requires
-CI on the final head. A future, separately bounded
-provider checkpoint should establish connectivity and produce one reviewable
-bug response before the ten-case quality run.
+The current stability sequence has completed the offline/local parts of P0:
+
+- `doctor` now checks local readiness by default and optional DeepSeek model
+  access only when requested (`7239c4c`, `3900bac`).
+- An opt-in Responses JSON Schema diagnosis path was added after a controlled
+  single-case comparison (`a11d526`, `b70e446`). See the
+  [structured-output report](evaluations/2026-09-28-structured-output.md).
+- `diagnose --preview` produces the exact request body without network or Key;
+  `--expect-request-sha256` locks a later upload to those bytes. Selected
+  source lines are checked before and after the provider call (`0eb8361`).
+  The 303-test suite, `compileall`, CLI help, and diff check passed at that
+  source state. A subsequent reviewer found the source-encoding edge case
+  described above; no other actionable issue was reported.
+- Two pinned real repositories produced byte-identical repeat scans with zero
+  parse errors and clean worktrees. See the
+  [scanner checkpoint](evaluations/2026-09-28-scanner-stability.md).
+- The wheel built in an isolated environment and the installed CLI scanned
+  and previewed outside the source tree. See the
+  [installed CLI checkpoint](evaluations/2026-09-28-wheel-smoke.md).
+- JSON Schema preparation, run dispatch, and scoring are implemented at
+  `24736c0`, `9bcc18b`, and `091dc2d`. The scorer correction at `420495b`
+  has a red/green regression test. The source-encoding regression also failed
+  before its fix and passed after it; the full offline suite passed 313 tests,
+  along with `compileall` and `git diff --check`. The
+  ten-case provider run is pinned to the earlier clean analyzer commit
+  `091dc2d`; the corrected score is a later offline derivation from unchanged
+  run records and completed primary review.
+
+The next evidence gate is an independently selected holdout and a single
+falsifiable prompt or context change aimed at known-defect detection and
+unsupported claims. Do not tune only against the now-visible ten cases or
+switch the default protocol from this exploratory baseline. Preserve the
+frozen manifest and prior partial runs, and use new output directories for
+subsequent experiments. The branch still needs current-head CI before
+integration.
 
 The earlier [post-V3 execution plan](superpowers/plans/2026-09-24-post-v3-execution.md),
 [handoff audit](evaluations/2026-09-25-handoff-audit.md), and

@@ -20,6 +20,7 @@ from repo_doctor.diagnosis import (
 from repo_doctor.deepseek import (
     MAX_REQUEST_BYTES,
     _serialize_request_body,
+    _serialize_schema_request_body,
     _thinking_parameter,
 )
 from repo_doctor.index import build_index
@@ -246,6 +247,7 @@ def prepare_cases(
     *,
     manifest_sha256: str | None = None,
     thinking_mode: str | None = None,
+    response_format: str = "chat-json",
 ) -> dict:
     """Build request-safe context and a reproducible plan without writing or networking."""
     validate_manifest(manifest)
@@ -253,6 +255,10 @@ def prepare_cases(
         raise EvaluationDataError("model must be nonempty text")
     if type(max_lines) is not int or not 1 <= max_lines <= MAX_CONTEXT_LINES:
         raise EvaluationDataError(f"max_lines must be between 1 and {MAX_CONTEXT_LINES}")
+    if not isinstance(response_format, str) or response_format not in {"chat-json", "json-schema"}:
+        raise EvaluationDataError("response_format must be chat-json or json-schema")
+    if response_format == "json-schema" and thinking_mode is not None:
+        raise EvaluationDataError("thinking_mode cannot be set for json-schema")
     try:
         thinking = _thinking_parameter(thinking_mode)
     except ValueError as exc:
@@ -301,21 +307,30 @@ def prepare_cases(
 
         if set(context) != {"symbol", "blocks", "call_evidence"}:
             raise EvaluationDataError(f"{case['id']}: prompt context contains unexpected fields")
-        if len(_serialize_request_body(
-            system_prompt, user_prompt, model, thinking_mode=thinking_mode
-        )) > MAX_REQUEST_BYTES:
+        wire_body = (
+            _serialize_schema_request_body(system_prompt, user_prompt, model)
+            if response_format == "json-schema"
+            else _serialize_request_body(
+                system_prompt, user_prompt, model, thinking_mode=thinking_mode
+            )
+        )
+        if len(wire_body) > MAX_REQUEST_BYTES:
             raise EvaluationDataError(f"{case['id']}: serialized request exceeds 256 KiB limit")
         context_hash = _canonical_hash(context)
-        request_shape = {
-            "system_prompt": system_prompt,
-            "user_prompt": user_prompt,
-            "requested_model": model,
-            "max_tokens": 4096,
-            "stream": False,
-            "response_format": {"type": "json_object"},
-        }
-        if thinking is not None:
-            request_shape["thinking"] = thinking
+        if response_format == "json-schema":
+            request_hash = hashlib.sha256(wire_body).hexdigest()
+        else:
+            request_shape = {
+                "system_prompt": system_prompt,
+                "user_prompt": user_prompt,
+                "requested_model": model,
+                "max_tokens": 4096,
+                "stream": False,
+                "response_format": {"type": "json_object"},
+            }
+            if thinking is not None:
+                request_shape["thinking"] = thinking
+            request_hash = _canonical_hash(request_shape)
         prepared_cases.append({
             "id": case["id"],
             "repository_url": case["repository_url"],
@@ -323,7 +338,7 @@ def prepare_cases(
             "symbol": case["symbol"],
             "context_file": f"{case['id']}.json",
             "context_sha256": context_hash,
-            "request_sha256": _canonical_hash(request_shape),
+            "request_sha256": request_hash,
             "source_lines": source_lines,
             "source_bytes": source_bytes,
         })
@@ -331,7 +346,7 @@ def prepare_cases(
 
     _analyzer_commit(expected_commit=analyzer_commit)
     plan = {
-        "schema_version": 1,
+        "schema_version": 2 if response_format == "json-schema" else 1,
         "dataset_id": manifest["dataset_id"],
         "manifest_sha256": manifest_sha256,
         "analyzer_commit": analyzer_commit,
@@ -342,4 +357,6 @@ def prepare_cases(
     }
     if thinking_mode is not None:
         plan["thinking_mode"] = thinking_mode
+    if response_format == "json-schema":
+        plan["response_format"] = response_format
     return {"plan": plan, "contexts": contexts}

@@ -62,3 +62,5 @@ jobs:
           "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" context repo-doctor-sample 'app.py::answer' --max-lines 5
           "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" impact repo-doctor-sample 'app.py::answer'
           "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" validate repo-doctor-sample findings.json
+          env -u DEEPSEEK_API_KEY "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" diagnose repo-doctor-sample 'app.py::answer' --preview > request-preview.json
+          "$RUNNER_TEMP/repo-doctor-venv/bin/python" -m json.tool request-preview.json > /dev/null

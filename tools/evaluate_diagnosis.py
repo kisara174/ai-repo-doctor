@@ -12,7 +12,7 @@ import sys
 import tempfile
 from pathlib import Path, PurePosixPath
 
-from repo_doctor.deepseek import complete_json
+from repo_doctor.deepseek import complete_json, complete_json_schema
 from .diagnosis_data import EvaluationDataError, _analyzer_commit, prepare_cases
 from .diagnosis_runner import run_cases
 from .diagnosis_score import make_review_template, render_report, score_records
@@ -74,6 +74,7 @@ def _prepare(args: argparse.Namespace) -> int:
         args.max_lines,
         manifest_sha256=manifest_hash,
         thinking_mode=args.thinking_mode,
+        response_format=args.response_format,
     )
     _write_prepared(output, prepared)
     print(f"Prepared {len(prepared['plan']['cases'])} cases in {output}")
@@ -129,7 +130,11 @@ def _run(args: argparse.Namespace) -> int:
         repeats=args.repeats,
         max_calls=args.max_calls,
         api_key=api_key,
-        client=complete_json,
+        client=(
+            complete_json_schema
+            if plan.get("schema_version") == 2 and plan.get("response_format") == "json-schema"
+            else complete_json
+        ),
         output_dir=Path(args.out_dir),
         manifest=manifest,
         manifest_sha256=manifest_hash,
@@ -306,6 +311,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--thinking-mode",
         choices=("enabled", "disabled"),
         help="explicitly set DeepSeek thinking mode (omitted by default)",
+    )
+    prepare.add_argument(
+        "--response-format", choices=("chat-json", "json-schema"), default="chat-json",
+        help="provider output protocol; json-schema uses the Responses API",
     )
     prepare.add_argument("--out-dir", required=True)
     run = subparsers.add_parser("run", help="send an explicitly authorized diagnosis evaluation")

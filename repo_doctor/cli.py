@@ -1,14 +1,25 @@
 """Command-line interface for read-only repository diagnosis."""
 
 import argparse
+import hashlib
 import json
 import os
+import re
+import shutil
 import sys
 from dataclasses import asdict
 from pathlib import Path
 
 from .context import build_context, build_impact
-from .deepseek import DeepSeekError, complete_json
+from .deepseek import (
+    MAX_REQUEST_BYTES,
+    DeepSeekError,
+    _serialize_request_body,
+    _serialize_schema_request_body,
+    complete_json,
+    complete_json_schema,
+    list_models,
+)
 from .diagnosis import (
     DEFAULT_MODEL,
     MAX_CONTEXT_LINES,
@@ -19,6 +30,7 @@ from .diagnosis import (
 from .evidence import validate_findings
 from .index import build_index
 from .model import RepoIndex, Symbol
+from .source import read_source
 
 
 def _symbol_data(symbol: Symbol) -> dict:
@@ -177,9 +189,12 @@ def _print_validation(payload: dict) -> None:
     print("Acceptance checks source grounding only; it does not prove the diagnosis is correct.")
 
 
-def _print_upload_summary(context: dict, line_count: int, byte_count: int) -> None:
+def _print_upload_summary(
+    context: dict, line_count: int, byte_count: int, request_body: bytes, *, preview: bool
+) -> None:
+    verb = "Previewing" if preview else "Sending"
     print(
-        f"Sending {line_count} source lines ({byte_count} bytes) to DeepSeek API for diagnosis:",
+        f"{verb} {line_count} source lines ({byte_count} bytes) for DeepSeek diagnosis:",
         file=sys.stderr,
     )
     for block in context["blocks"]:
@@ -187,6 +202,27 @@ def _print_upload_summary(context: dict, line_count: int, byte_count: int) -> No
             f"  {block['file']}:{block['start_line']}-{block['end_line']}",
             file=sys.stderr,
         )
+    print(
+        f"Request body: {len(request_body)} bytes  SHA-256: {hashlib.sha256(request_body).hexdigest()}",
+        file=sys.stderr,
+    )
+
+
+def _verify_selected_source(index: RepoIndex, context: dict) -> None:
+    """Refuse findings when a submitted source line changed since collection."""
+    source_cache: dict[str, list[str]] = {}
+    try:
+        for block in context["blocks"]:
+            path = block["file"]
+            if path not in source_cache:
+                source_cache[path] = read_source(index.root, path, index.root_identity).splitlines()
+            source = source_cache[path]
+            for line in block["lines"]:
+                number = line["line"]
+                if number > len(source) or source[number - 1] != line["text"]:
+                    raise ValueError("selected source line changed")
+    except (OSError, ValueError, UnicodeError, SyntaxError):
+        raise ValueError("Selected source changed during diagnosis; rerun preview and diagnosis") from None
 
 
 def _print_diagnosis(payload: dict) -> None:
@@ -203,9 +239,96 @@ def _print_diagnosis(payload: dict) -> None:
     print("Evidence checks confirm source grounding only; they do not prove the diagnosis is correct.")
 
 
+_DOCTOR_ACTIONS = {
+    "invalid_key": "Check DEEPSEEK_API_KEY for whitespace or invalid characters.",
+    "authentication": "Check DEEPSEEK_API_KEY and try again.",
+    "balance": "Check the DeepSeek account balance.",
+    "rate_limit": "Wait briefly before checking again.",
+    "dns": "Check DNS resolution and network access to api.deepseek.com.",
+    "tls": "Check the trusted CA bundle (SSL_CERT_FILE), clock, and TLS interception settings.",
+    "proxy": "Check proxy configuration and proxy authentication.",
+    "timeout": "Check network latency and try again later.",
+    "connection": "Check network access to api.deepseek.com.",
+    "server": "The provider is unavailable; try again later.",
+    "invalid_response": "The provider returned an unexpected model list; try again later.",
+    "response_too_large": "The provider model list exceeded the response limit.",
+    "http": "Check the provider status and request configuration.",
+}
+
+
+def _doctor_data(index: RepoIndex, *, check_deepseek: bool, model: str) -> dict:
+    api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+    remote = {
+        "checked": False,
+        "key_present": bool(api_key),
+        "model": model,
+        "status": "not_checked",
+    }
+    if check_deepseek and not api_key:
+        remote.update(status="missing_key", action="Set DEEPSEEK_API_KEY and try again.")
+    elif check_deepseek:
+        remote["checked"] = True
+        try:
+            models = list_models(api_key=api_key, timeout=10.0)
+        except DeepSeekError as exc:
+            remote.update(
+                status="error",
+                category=exc.diagnostic_category,
+                action=_DOCTOR_ACTIONS.get(exc.diagnostic_category, "Check the provider and try again."),
+            )
+            if exc.http_status is not None:
+                remote["http_status"] = exc.http_status
+        else:
+            if model in models:
+                remote["status"] = "ready"
+            else:
+                remote.update(
+                    status="model_unavailable",
+                    action="Set DEEPSEEK_MODEL to an available model and try again.",
+                )
+    return {
+        "schema_version": 1,
+        "root": str(index.root),
+        "python": {
+            "version": sys.version.split()[0],
+            "supported": sys.version_info >= (3, 11),
+        },
+        "git": {
+            "available": shutil.which("git") is not None,
+            "scan_mode": index.scan_mode,
+        },
+        "repository": {
+            "python_files": len(index.files),
+            "parse_errors": len(index.parse_errors),
+        },
+        "deepseek": remote,
+    }
+
+
+def _print_doctor(payload: dict) -> None:
+    print(f"Repo Doctor check — {payload['root']}")
+    python = payload["python"]
+    print(f"Python: {python['version']} ({'supported' if python['supported'] else 'unsupported'})")
+    git = payload["git"]
+    print(f"Git: {'available' if git['available'] else 'unavailable'}  Scan mode: {git['scan_mode']}")
+    repo = payload["repository"]
+    print(f"Repository: {repo['python_files']} Python files  Parse errors: {repo['parse_errors']}")
+    remote = payload["deepseek"]
+    print(f"DeepSeek: {remote['status']}  Model: {remote['model']}  Key: {'set' if remote['key_present'] else 'unset'}")
+    if "category" in remote:
+        print(f"Category: {remote['category']}")
+    if "action" in remote:
+        print(f"Next step: {remote['action']}")
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="repo-doctor", description="Evidence-first analysis of a local Python repository")
     subcommands = parser.add_subparsers(dest="command", required=True)
+    doctor = subcommands.add_parser("doctor", help="Check local repository readiness and optional DeepSeek access")
+    doctor.add_argument("path", type=Path, nargs="?", default=Path("."))
+    doctor.add_argument("--deepseek", action="store_true", help="Check DeepSeek models over the network without sending source")
+    doctor.add_argument("--model", help="Model to check; overrides DEEPSEEK_MODEL")
+    doctor.add_argument("--json", action="store_true")
     scan = subcommands.add_parser("scan", help="Build and report a Python repository index")
     scan.add_argument("path", type=Path)
     scan.add_argument("--json", action="store_true", help="Print the complete machine-readable result")
@@ -233,14 +356,27 @@ def _parser() -> argparse.ArgumentParser:
         epilog=(
             "Requires DEEPSEEK_API_KEY. Optionally set DEEPSEEK_MODEL or pass --model. "
             "At most 120 lines and 64 KiB of source text are sent. Inspect with the "
-            "context command first because selected code may contain secrets. Other "
-            "commands remain offline."
+            "context command first because selected code may contain secrets. "
+            "Use --preview to inspect the exact request body offline. "
+            "scan, context, impact, validate, and doctor without --deepseek remain offline."
         ),
     )
     diagnose.add_argument("path", type=Path)
     diagnose.add_argument("symbol")
     diagnose.add_argument("--max-lines", type=int, default=MAX_CONTEXT_LINES)
     diagnose.add_argument("--model")
+    diagnose.add_argument(
+        "--response-format", choices=("chat-json", "json-schema"), default="chat-json",
+        help="Provider output protocol; json-schema uses the experimental Responses API",
+    )
+    diagnose.add_argument(
+        "--preview", action="store_true",
+        help="Print the exact JSON request body without a key or network call",
+    )
+    diagnose.add_argument(
+        "--expect-request-sha256",
+        help="Reject upload unless the request body matches a preview SHA-256",
+    )
     diagnose.add_argument("--json", action="store_true")
     return parser
 
@@ -251,7 +387,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "diagnose" and not 1 <= args.max_lines <= MAX_CONTEXT_LINES:
             raise ValueError(f"--max-lines must be from 1 through {MAX_CONTEXT_LINES}")
         index = build_index(args.path)
-        if args.command == "scan":
+        if args.command == "doctor":
+            model = args.model or os.environ.get("DEEPSEEK_MODEL") or DEFAULT_MODEL
+            model = model.strip() or DEFAULT_MODEL
+            payload = _doctor_data(index, check_deepseek=args.deepseek, model=model)
+            printer = _print_doctor
+        elif args.command == "scan":
             payload = _scan_data(index)
             printer = _print_scan
         elif args.command == "context":
@@ -267,19 +408,40 @@ def main(argv: list[str] | None = None) -> int:
         else:
             context = build_context(index, args.symbol, args.max_lines)
             line_count, byte_count = validate_context_budget(context)
-            api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
-            if not api_key:
-                raise ValueError("DEEPSEEK_API_KEY is required for diagnose")
             model = args.model or os.environ.get("DEEPSEEK_MODEL") or DEFAULT_MODEL
             model = model.strip() or DEFAULT_MODEL
-            _print_upload_summary(context, line_count, byte_count)
             system_prompt, user_prompt = build_diagnosis_prompts(context)
-            result = complete_json(
-                system_prompt,
-                user_prompt,
-                api_key=api_key,
-                model=model,
+            serializer = (
+                _serialize_schema_request_body
+                if args.response_format == "json-schema"
+                else _serialize_request_body
             )
+            request_body = serializer(system_prompt, user_prompt, model)
+            if len(request_body) > MAX_REQUEST_BYTES:
+                raise DeepSeekError(
+                    "DeepSeek API request exceeds 256 KiB limit", code="request_too_large"
+                )
+            _verify_selected_source(index, context)
+            request_sha256 = hashlib.sha256(request_body).hexdigest()
+            if args.expect_request_sha256 is not None:
+                if not re.fullmatch(r"[0-9a-f]{64}", args.expect_request_sha256):
+                    raise ValueError("--expect-request-sha256 requires 64 lowercase hex characters")
+                if request_sha256 != args.expect_request_sha256:
+                    raise ValueError("request SHA-256 does not match preview; rerun preview")
+            if not args.preview:
+                api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+                if not api_key:
+                    raise ValueError("DEEPSEEK_API_KEY is required for diagnose")
+            _print_upload_summary(context, line_count, byte_count, request_body, preview=args.preview)
+            if args.preview:
+                if hasattr(sys.stdout, "buffer"):
+                    sys.stdout.buffer.write(request_body)
+                else:
+                    sys.stdout.write(request_body.decode("utf-8"))
+                return 0
+            client = complete_json_schema if args.response_format == "json-schema" else complete_json
+            result = client(system_prompt, user_prompt, api_key=api_key, model=model)
+            _verify_selected_source(index, context)
             report = validate_diagnosis_payload(index, result.payload, context)
             payload = {
                 "schema_version": report["schema_version"],
@@ -293,6 +455,13 @@ def main(argv: list[str] | None = None) -> int:
             _print_json(payload)
         else:
             printer(payload)
+        if args.command == "doctor":
+            return 0 if (
+                payload["python"]["supported"]
+                and payload["repository"]["python_files"] > 0
+                and payload["repository"]["parse_errors"] == 0
+                and (not args.deepseek or payload["deepseek"]["status"] == "ready")
+            ) else 1
         return 1 if args.command in {"validate", "diagnose"} and payload["rejected"] else 0
     except (DeepSeekError, ValueError, OSError, json.JSONDecodeError) as exc:
         print(f"error: {exc}", file=sys.stderr)

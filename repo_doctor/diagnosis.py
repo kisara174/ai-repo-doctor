@@ -10,6 +10,47 @@ DEFAULT_MODEL = "deepseek-flash"
 MAX_CONTEXT_LINES = 120
 MAX_CONTEXT_BYTES = 64 * 1024
 
+DIAGNOSIS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "findings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "category": {"type": "string"},
+                    "confidence": {"type": "number"},
+                    "evidence": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "file": {"type": "string"},
+                                "start_line": {"type": "integer"},
+                                "end_line": {"type": "integer"},
+                                "quote": {"type": "string"},
+                            },
+                            "required": ["file", "start_line", "end_line", "quote"],
+                            "additionalProperties": False,
+                        },
+                    },
+                    "reasoning": {"type": "string"},
+                    "impact": {"type": "string"},
+                    "suggested_fix": {"type": "string"},
+                },
+                "required": [
+                    "title", "category", "confidence", "evidence",
+                    "reasoning", "impact", "suggested_fix",
+                ],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["findings"],
+    "additionalProperties": False,
+}
+
 
 def _context_lines(context: dict):
     if not isinstance(context, dict) or not isinstance(context.get("blocks"), list):

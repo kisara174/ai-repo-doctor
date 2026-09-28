@@ -1,5 +1,7 @@
 import io
 import json
+import socket
+import ssl
 import unittest
 import urllib.error
 import urllib.request
@@ -11,6 +13,7 @@ from repo_doctor.deepseek import (
     DeepSeekResult,
     _NoRedirectHandler,
     complete_json,
+    list_models,
 )
 
 
@@ -387,3 +390,76 @@ class DeepSeekTests(unittest.TestCase):
             with self.assertRaisesRegex(DeepSeekError, "truncated") as raised:
                 self.call_client()
         self.assertEqual(getattr(raised.exception, "code", None), "invalid_response")
+
+    def test_list_models_uses_bounded_get_without_source_or_redirects(self):
+        response = FakeResponse({
+            "object": "list",
+            "data": [
+                {"id": "deepseek-flash", "object": "model", "owned_by": "deepseek"},
+                {"id": "deepseek-v4-pro", "object": "model", "owned_by": "deepseek"},
+            ],
+        })
+        with patch("urllib.request.OpenerDirector.open", return_value=response) as open_request:
+            models = list_models(api_key="test-secret", timeout=10.0)
+
+        self.assertEqual(models, ("deepseek-flash", "deepseek-v4-pro"))
+        request = open_request.call_args.args[0]
+        self.assertEqual(request.full_url, "https://api.deepseek.com/models")
+        self.assertEqual(request.get_method(), "GET")
+        self.assertIsNone(request.data)
+        self.assertEqual(request.get_header("Authorization"), "Bearer test-secret")
+        self.assertEqual(open_request.call_args.kwargs["timeout"], 10.0)
+        self.assertEqual(response.read_sizes, [deepseek_module.MAX_RESPONSE_BYTES + 1])
+        self.assertTrue(response.closed)
+
+    def test_list_models_rejects_malformed_envelope(self):
+        with patch("urllib.request.OpenerDirector.open", return_value=FakeResponse(
+            {"object": "list", "data": [{"id": 5}]}
+        )):
+            with self.assertRaises(DeepSeekError) as raised:
+                list_models(api_key="test-secret")
+
+        self.assertEqual(raised.exception.code, "invalid_response")
+
+    def test_transport_diagnosis_distinguishes_dns_tls_proxy_and_timeout(self):
+        failures = [
+            (urllib.error.URLError(socket.gaierror("test-secret")), "dns"),
+            (urllib.error.URLError(ssl.SSLError("test-secret")), "tls"),
+            (urllib.error.URLError("Tunnel connection failed: 407 test-secret"), "proxy"),
+            (urllib.error.URLError(OSError("Tunnel connection failed: 407 test-secret")), "proxy"),
+            (urllib.error.URLError(TimeoutError("test-secret")), "timeout"),
+        ]
+        for failure, expected in failures:
+            with self.subTest(category=expected), patch(
+                "urllib.request.OpenerDirector.open", side_effect=failure
+            ):
+                with self.assertRaises(DeepSeekError) as raised:
+                    list_models(api_key="test-secret")
+            self.assertEqual(raised.exception.diagnostic_category, expected)
+            self.assertNotIn("test-secret", str(raised.exception))
+
+    def test_http_diagnosis_distinguishes_account_and_provider_conditions(self):
+        for status, expected in ((401, "authentication"), (402, "balance"), (429, "rate_limit"), (503, "server")):
+            with self.subTest(status=status):
+                failure = urllib.error.HTTPError(
+                    "https://api.deepseek.com/models", status, "test-secret", None, io.BytesIO(b"test-secret")
+                )
+                with patch("urllib.request.OpenerDirector.open", side_effect=failure):
+                    with self.assertRaises(DeepSeekError) as raised:
+                        list_models(api_key="test-secret")
+            self.assertEqual(raised.exception.diagnostic_category, expected)
+            self.assertEqual(raised.exception.http_status, status)
+            self.assertNotIn("test-secret", str(raised.exception))
+
+    def test_malformed_key_is_rejected_before_transport_without_echoing_it(self):
+        secret = "DEMOSECRET\nEXTRA"
+        for client in (
+            lambda: list_models(api_key=secret),
+            lambda: complete_json("system", "user", api_key=secret, model="deepseek-flash"),
+        ):
+            with self.subTest(client=client), patch("urllib.request.OpenerDirector.open") as open_request:
+                with self.assertRaises(DeepSeekError) as raised:
+                    client()
+            self.assertEqual(raised.exception.code, "invalid_key")
+            self.assertNotIn(secret, str(raised.exception))
+            open_request.assert_not_called()

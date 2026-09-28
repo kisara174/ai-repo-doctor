@@ -37,7 +37,7 @@ python3 -m venv .venv
 .venv/bin/repo-doctor scan /path/to/python-repo
 ```
 
-发行包提供 `repo-doctor` 命令和 `repo_doctor` Python 包。源码仓库内的 `tools.evaluate_diagnosis` 评估命令不在发行包内。离线命令不需要 DeepSeek Key；只有显式运行 `diagnose` 时才会访问云端。
+发行包提供 `repo-doctor` 命令和 `repo_doctor` Python 包。源码仓库内的 `tools.evaluate_diagnosis` 评估命令不在发行包内。`scan`、`context`、`impact`、`validate` 和默认的 `doctor` 都离线运行；只有显式运行 `diagnose` 或 `doctor --deepseek` 才会访问云端。
 
 `scan` 文本输出会给出示例符号 ID。完整索引在 `--json` 输出中，包括文件、符号、导入声明、调用点、局部导入边、已解析调用边、语义关系、导入环和解析错误。
 
@@ -79,6 +79,20 @@ finding 结构：
 
 `validate` 对有拒绝项的文件返回退出码 1；参数、路径或 JSON 无法读取时返回 2。通过校验只说明引文真实且定位正确，**不代表诊断结论一定成立**；仍需人工审查推理和实际运行验证。
 
+## 检查运行环境
+
+```bash
+repo-doctor doctor /path/to/python-repo
+repo-doctor doctor /path/to/python-repo --json
+repo-doctor doctor /path/to/python-repo --deepseek
+```
+
+`doctor` 默认检查 Python 版本、Git 可用性、仓库可解析的 Python 文件数、语法解析错误数，以及 `DEEPSEEK_API_KEY` 是否存在；省略路径时检查当前目录。它不会运行目标代码，也不会联网。Git 不可用时扫描器会退回目录遍历；语法错误或没有 Python 文件会使检查返回退出码 1。
+
+只有加 `--deepseek` 才会发出一次不含仓库源码的 `GET /models` 请求，检查 Key 与所选模型。模型选择顺序是 `--model`、`DEEPSEEK_MODEL`、默认 `deepseek-flash`。连接失败时 JSON 输出给出安全的类别和下一步提示，包括认证、余额、限流、DNS、TLS、代理、超时和服务端故障；不会输出 Key 或原始服务端错误正文。检查成功返回 0，未就绪返回 1，路径或参数错误返回 2。这项检查不运行诊断，也不能证明诊断质量或账号余额足以完成后续调用。
+
+如果 `doctor --deepseek` 报告 `tls`，检查当前 Python 的可信 CA 证书配置；不要关闭证书验证。在部分 macOS Python 安装中，设置 `SSL_CERT_FILE` 为系统可信 CA bundle 可以解决问题，例如 `SSL_CERT_FILE=/etc/ssl/cert.pem repo-doctor doctor --deepseek`（先确认该文件存在且是可信来源）。
+
 ## 使用 DeepSeek 云端诊断（可选）
 
 配置 DeepSeek API Key。模型可通过 `DEEPSEEK_MODEL` 指定；默认使用 `deepseek-flash`。
@@ -90,15 +104,26 @@ export DEEPSEEK_API_KEY="your-key"
 # 先检查将要分析的本地上下文
 python3 -m repo_doctor context /path/to/python-repo 'app/services/user.py::UserService.create' --max-lines 120
 
-# 显式发起云端诊断
-python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::UserService.create'
+# 可选：离线预览精确的 JSON 请求体；SHA-256 显示在标准错误中
+python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::UserService.create' --preview
+
+# 复制预览输出中的 SHA-256，再显式发起云端诊断
+REQUEST_SHA256='paste-the-64-character-digest-here'
+python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::UserService.create' --expect-request-sha256 "$REQUEST_SHA256"
+
+# 可选：使用 DeepSeek Responses API 的 JSON Schema 输出路径
+python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::UserService.create' --response-format json-schema
 ```
 
-`diagnose` 只发送所选的、有上限的源码片段，以及仓库相对路径、行号、关系标签和静态调用证据。片段可能包含本地类父级定义和被引用的模块级导入行；不会发送整个仓库、绝对仓库路径或未选中的源码。每次请求最多包含 120 行和 64 KiB 源码文本，完整序列化后的 HTTP 请求体另有 256 KiB 上限，超出会在联网前失败。客户端拒绝所有重定向，只连接固定的 DeepSeek endpoint。发出请求前，命令会在标准错误中显示将发送的文件、行范围和源码大小，不会在提示中重复源码。
+`diagnose` 只发送所选的、有上限的源码片段，以及仓库相对路径、行号、关系标签和静态调用证据。片段可能包含本地类父级定义和被引用的模块级导入行；不会发送整个仓库、绝对仓库路径或未选中的源码。每次请求最多包含 120 行和 64 KiB 源码文本，完整序列化后的 HTTP 请求体另有 256 KiB 上限，超出会在联网前失败。客户端拒绝所有重定向，只连接固定的 DeepSeek endpoint。发出请求前，命令会在标准错误中显示将发送的文件、行范围、源码大小、请求体字节数和 SHA-256，不会在提示中重复源码。
+
+`--preview` 只输出将要发送的 JSON 请求体，不需要 API Key，也不联网；其内容含所选源码，请仅保存到受保护的位置。把标准错误中显示的 64 位 SHA-256 赋给 `REQUEST_SHA256` 后使用 `--expect-request-sha256`。若源码、模型、输出格式或提示内容使请求体变化，正式诊断会在联网前拒绝发送。命令还会在请求前和收到响应后核对已选源码行；若核对时与构造请求时不同，就丢弃返回的 finding。`--preview` 输出的是 HTTP 请求体，不含 Key 或请求头；`--json` 在预览模式下仍输出这个原始请求体。
 
 源码片段可能含有密钥或其他敏感内容。调用前请用 `context` 查看实际选中的代码；发现不应上传的内容时，不要运行 `diagnose`。Repo Doctor 不保存请求、源码或模型响应。API Key 仅从 `DEEPSEEK_API_KEY` 读取，不作为命令参数，也不会写入报告。
 
 被接受的 finding 表示其引文通过了本地源码和已发送上下文校验，并不证明推理正确。请人工复核结论，并通过实际运行或测试确认影响。
+
+`--response-format json-schema` 是显式选择的实验性路径：它在相同的本地上下文与证据校验规则下调用 DeepSeek Responses API，请求结构化输出并关闭 thinking。默认的 `chat-json` 路径保持不变，两种路径都不会自动重试。[最初的单样本格式对照](docs/evaluations/2026-09-28-structured-output.md)之后，结构化路径完成了一轮[十样本诊断基线](docs/evaluations/2026-09-28-schema-ten-case-baseline.md)：十次请求均可解析，但经主代理复核只命中四个已知缺陷中的一个，且有较多误报和待确认发现。这说明输出格式可用不等于诊断质量达标；该定向小样本也不足以证明未来成功率。
 
 ## 影响分析
 
