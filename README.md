@@ -104,14 +104,20 @@ export DEEPSEEK_API_KEY="your-key"
 # 先检查将要分析的本地上下文
 python3 -m repo_doctor context /path/to/python-repo 'app/services/user.py::UserService.create' --max-lines 120
 
-# 显式发起云端诊断
-python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::UserService.create'
+# 可选：离线预览精确的 JSON 请求体；SHA-256 显示在标准错误中
+python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::UserService.create' --preview
+
+# 复制预览输出中的 SHA-256，再显式发起云端诊断
+REQUEST_SHA256='paste-the-64-character-digest-here'
+python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::UserService.create' --expect-request-sha256 "$REQUEST_SHA256"
 
 # 可选：使用 DeepSeek Responses API 的 JSON Schema 输出路径
 python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::UserService.create' --response-format json-schema
 ```
 
-`diagnose` 只发送所选的、有上限的源码片段，以及仓库相对路径、行号、关系标签和静态调用证据。片段可能包含本地类父级定义和被引用的模块级导入行；不会发送整个仓库、绝对仓库路径或未选中的源码。每次请求最多包含 120 行和 64 KiB 源码文本，完整序列化后的 HTTP 请求体另有 256 KiB 上限，超出会在联网前失败。客户端拒绝所有重定向，只连接固定的 DeepSeek endpoint。发出请求前，命令会在标准错误中显示将发送的文件、行范围和源码大小，不会在提示中重复源码。
+`diagnose` 只发送所选的、有上限的源码片段，以及仓库相对路径、行号、关系标签和静态调用证据。片段可能包含本地类父级定义和被引用的模块级导入行；不会发送整个仓库、绝对仓库路径或未选中的源码。每次请求最多包含 120 行和 64 KiB 源码文本，完整序列化后的 HTTP 请求体另有 256 KiB 上限，超出会在联网前失败。客户端拒绝所有重定向，只连接固定的 DeepSeek endpoint。发出请求前，命令会在标准错误中显示将发送的文件、行范围、源码大小、请求体字节数和 SHA-256，不会在提示中重复源码。
+
+`--preview` 只输出将要发送的 JSON 请求体，不需要 API Key，也不联网；其内容含所选源码，请仅保存到受保护的位置。把标准错误中显示的 64 位 SHA-256 赋给 `REQUEST_SHA256` 后使用 `--expect-request-sha256`。若源码、模型、输出格式或提示内容使请求体变化，正式诊断会在联网前拒绝发送。命令还会在请求前和收到响应后核对已选源码行；若核对时与构造请求时不同，就丢弃返回的 finding。`--preview` 输出的是 HTTP 请求体，不含 Key 或请求头；`--json` 在预览模式下仍输出这个原始请求体。
 
 源码片段可能含有密钥或其他敏感内容。调用前请用 `context` 查看实际选中的代码；发现不应上传的内容时，不要运行 `diagnose`。Repo Doctor 不保存请求、源码或模型响应。API Key 仅从 `DEEPSEEK_API_KEY` 读取，不作为命令参数，也不会写入报告。
 

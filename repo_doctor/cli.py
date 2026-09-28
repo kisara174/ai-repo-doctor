@@ -1,15 +1,25 @@
 """Command-line interface for read-only repository diagnosis."""
 
 import argparse
+import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 from dataclasses import asdict
 from pathlib import Path
 
 from .context import build_context, build_impact
-from .deepseek import DeepSeekError, complete_json, complete_json_schema, list_models
+from .deepseek import (
+    MAX_REQUEST_BYTES,
+    DeepSeekError,
+    _serialize_request_body,
+    _serialize_schema_request_body,
+    complete_json,
+    complete_json_schema,
+    list_models,
+)
 from .diagnosis import (
     DEFAULT_MODEL,
     MAX_CONTEXT_LINES,
@@ -20,6 +30,7 @@ from .diagnosis import (
 from .evidence import validate_findings
 from .index import build_index
 from .model import RepoIndex, Symbol
+from .source import read_source
 
 
 def _symbol_data(symbol: Symbol) -> dict:
@@ -178,9 +189,12 @@ def _print_validation(payload: dict) -> None:
     print("Acceptance checks source grounding only; it does not prove the diagnosis is correct.")
 
 
-def _print_upload_summary(context: dict, line_count: int, byte_count: int) -> None:
+def _print_upload_summary(
+    context: dict, line_count: int, byte_count: int, request_body: bytes, *, preview: bool
+) -> None:
+    verb = "Previewing" if preview else "Sending"
     print(
-        f"Sending {line_count} source lines ({byte_count} bytes) to DeepSeek API for diagnosis:",
+        f"{verb} {line_count} source lines ({byte_count} bytes) for DeepSeek diagnosis:",
         file=sys.stderr,
     )
     for block in context["blocks"]:
@@ -188,6 +202,27 @@ def _print_upload_summary(context: dict, line_count: int, byte_count: int) -> No
             f"  {block['file']}:{block['start_line']}-{block['end_line']}",
             file=sys.stderr,
         )
+    print(
+        f"Request body: {len(request_body)} bytes  SHA-256: {hashlib.sha256(request_body).hexdigest()}",
+        file=sys.stderr,
+    )
+
+
+def _verify_selected_source(index: RepoIndex, context: dict) -> None:
+    """Refuse findings when a submitted source line changed since collection."""
+    source_cache: dict[str, list[str]] = {}
+    try:
+        for block in context["blocks"]:
+            path = block["file"]
+            if path not in source_cache:
+                source_cache[path] = read_source(index.root, path, index.root_identity).splitlines()
+            source = source_cache[path]
+            for line in block["lines"]:
+                number = line["line"]
+                if number > len(source) or source[number - 1] != line["text"]:
+                    raise ValueError("selected source line changed")
+    except (OSError, ValueError, UnicodeError):
+        raise ValueError("Selected source changed during diagnosis; rerun preview and diagnosis") from None
 
 
 def _print_diagnosis(payload: dict) -> None:
@@ -322,6 +357,7 @@ def _parser() -> argparse.ArgumentParser:
             "Requires DEEPSEEK_API_KEY. Optionally set DEEPSEEK_MODEL or pass --model. "
             "At most 120 lines and 64 KiB of source text are sent. Inspect with the "
             "context command first because selected code may contain secrets. "
+            "Use --preview to inspect the exact request body offline. "
             "scan, context, impact, validate, and doctor without --deepseek remain offline."
         ),
     )
@@ -332,6 +368,14 @@ def _parser() -> argparse.ArgumentParser:
     diagnose.add_argument(
         "--response-format", choices=("chat-json", "json-schema"), default="chat-json",
         help="Provider output protocol; json-schema uses the experimental Responses API",
+    )
+    diagnose.add_argument(
+        "--preview", action="store_true",
+        help="Print the exact JSON request body without a key or network call",
+    )
+    diagnose.add_argument(
+        "--expect-request-sha256",
+        help="Reject upload unless the request body matches a preview SHA-256",
     )
     diagnose.add_argument("--json", action="store_true")
     return parser
@@ -364,15 +408,40 @@ def main(argv: list[str] | None = None) -> int:
         else:
             context = build_context(index, args.symbol, args.max_lines)
             line_count, byte_count = validate_context_budget(context)
-            api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
-            if not api_key:
-                raise ValueError("DEEPSEEK_API_KEY is required for diagnose")
             model = args.model or os.environ.get("DEEPSEEK_MODEL") or DEFAULT_MODEL
             model = model.strip() or DEFAULT_MODEL
-            _print_upload_summary(context, line_count, byte_count)
             system_prompt, user_prompt = build_diagnosis_prompts(context)
+            serializer = (
+                _serialize_schema_request_body
+                if args.response_format == "json-schema"
+                else _serialize_request_body
+            )
+            request_body = serializer(system_prompt, user_prompt, model)
+            if len(request_body) > MAX_REQUEST_BYTES:
+                raise DeepSeekError(
+                    "DeepSeek API request exceeds 256 KiB limit", code="request_too_large"
+                )
+            _verify_selected_source(index, context)
+            request_sha256 = hashlib.sha256(request_body).hexdigest()
+            if args.expect_request_sha256 is not None:
+                if not re.fullmatch(r"[0-9a-f]{64}", args.expect_request_sha256):
+                    raise ValueError("--expect-request-sha256 requires 64 lowercase hex characters")
+                if request_sha256 != args.expect_request_sha256:
+                    raise ValueError("request SHA-256 does not match preview; rerun preview")
+            if not args.preview:
+                api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+                if not api_key:
+                    raise ValueError("DEEPSEEK_API_KEY is required for diagnose")
+            _print_upload_summary(context, line_count, byte_count, request_body, preview=args.preview)
+            if args.preview:
+                if hasattr(sys.stdout, "buffer"):
+                    sys.stdout.buffer.write(request_body)
+                else:
+                    sys.stdout.write(request_body.decode("utf-8"))
+                return 0
             client = complete_json_schema if args.response_format == "json-schema" else complete_json
             result = client(system_prompt, user_prompt, api_key=api_key, model=model)
+            _verify_selected_source(index, context)
             report = validate_diagnosis_payload(index, result.payload, context)
             payload = {
                 "schema_version": report["schema_version"],

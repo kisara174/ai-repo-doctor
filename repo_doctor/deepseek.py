@@ -335,18 +335,11 @@ def complete_json(
     return DeepSeekResult(response_model, payload, usage)
 
 
-def complete_json_schema(
-    system_prompt: str,
-    user_prompt: str,
-    *,
-    api_key: str,
-    model: str,
-    timeout: float = 60.0,
-) -> DeepSeekResult:
-    """Request one schema-constrained Responses completion with thinking disabled."""
+def _serialize_schema_request_body(system_prompt: str, user_prompt: str, model: str) -> bytes:
+    """Build the exact JSON Schema request body shared by preview and transport."""
     from .diagnosis import DIAGNOSIS_SCHEMA
 
-    request_body = json.dumps({
+    return json.dumps({
         "model": model,
         "input": [
             {"role": "system", "content": system_prompt},
@@ -362,6 +355,18 @@ def complete_json_schema(
             "schema": DIAGNOSIS_SCHEMA,
         }},
     }, ensure_ascii=False).encode("utf-8")
+
+
+def complete_json_schema(
+    system_prompt: str,
+    user_prompt: str,
+    *,
+    api_key: str,
+    model: str,
+    timeout: float = 60.0,
+) -> DeepSeekResult:
+    """Request one schema-constrained Responses completion with thinking disabled."""
+    request_body = _serialize_schema_request_body(system_prompt, user_prompt, model)
     if len(request_body) > MAX_REQUEST_BYTES:
         raise DeepSeekError(
             "DeepSeek API request exceeds 256 KiB limit", code="request_too_large"
