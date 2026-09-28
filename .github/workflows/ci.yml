@@ -46,3 +46,19 @@ jobs:
           python -m tools.evaluate_diagnosis run --help
           python -m tools.evaluate_diagnosis prepare-review --help
           python -m tools.evaluate_diagnosis score --help
+
+      - name: Build and smoke-test installed wheel
+        shell: bash
+        run: |
+          python -m pip wheel --no-deps --wheel-dir dist .
+          python -m venv "$RUNNER_TEMP/repo-doctor-venv"
+          "$RUNNER_TEMP/repo-doctor-venv/bin/python" -m pip install --no-index dist/*.whl
+          mkdir "$RUNNER_TEMP/repo-doctor-sample"
+          printf 'def answer():\n    return 42\n' > "$RUNNER_TEMP/repo-doctor-sample/app.py"
+          printf '[]\n' > "$RUNNER_TEMP/findings.json"
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" --help
+          "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" scan repo-doctor-sample --json > scan.json
+          "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" context repo-doctor-sample 'app.py::answer' --max-lines 5
+          "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" impact repo-doctor-sample 'app.py::answer'
+          "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" validate repo-doctor-sample findings.json

@@ -11,13 +11,33 @@ python3 -m repo_doctor scan /path/to/python-repo
 python3 -m repo_doctor scan /path/to/python-repo --json > repo-map.json
 ```
 
-或在虚拟环境中安装 CLI：
+在虚拟环境中从公开仓库安装 CLI（需要 Git）：
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install 'git+https://github.com/kisara174/ai-repo-doctor.git'
+.venv/bin/repo-doctor --help
+.venv/bin/repo-doctor scan /path/to/python-repo
+```
+
+已经取得源码时，也可以先构建 wheel，再在目标虚拟环境安装：
+
+```bash
+python3 -m pip wheel --no-deps --wheel-dir dist .
+python3 -m venv .venv
+.venv/bin/python -m pip install dist/ai_repo_doctor-0.1.0-py3-none-any.whl
+.venv/bin/repo-doctor scan /path/to/python-repo
+```
+
+开发时可使用可编辑安装：
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -e .
 .venv/bin/repo-doctor scan /path/to/python-repo
 ```
+
+发行包提供 `repo-doctor` 命令和 `repo_doctor` Python 包。源码仓库内的 `tools.evaluate_diagnosis` 评估命令不在发行包内。离线命令不需要 DeepSeek Key；只有显式运行 `diagnose` 时才会访问云端。
 
 `scan` 文本输出会给出示例符号 ID。完整索引在 `--json` 输出中，包括文件、符号、导入声明、调用点、局部导入边、已解析调用边、语义关系、导入环和解析错误。
 
