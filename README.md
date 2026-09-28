@@ -121,7 +121,7 @@ python3 -m repo_doctor impact /path/to/python-repo 'app/services/user.py::UserSe
 
 ## 诊断评估
 
-离线评估基础设施和固定十例样本已完成。原始十例在线运行在首个请求发生 `provider_error` 后停止，其余九例未发送；之后的单例探索取得了完整模型响应，但人工初审发现误报，扩展上下文后的已知缺陷样本又遇到无效 JSON。因此目前仍没有可用的十例诊断质量评分。详见[当前进度](docs/execution-status.md)、[原始部分运行报告](docs/evaluations/2026-09-25-diagnosis-v1.md)和[最新上下文实验](docs/evaluations/2026-09-28-context-expansion.md)。
+离线评估基础设施和固定十例样本已完成。原始十例在线运行在首个请求发生 `provider_error` 后停止，其余九例未发送；之后的单例探索取得了完整模型响应，但人工初审发现误报。扩展上下文后的已知缺陷样本先遇到无效 JSON，在相同请求体的一次后续尝试中又遇到连接错误。因此目前仍没有可用的十例诊断质量评分。详见[当前进度](docs/execution-status.md)、[原始部分运行报告](docs/evaluations/2026-09-25-diagnosis-v1.md)和[最新质量门槛](docs/evaluations/2026-09-28-quality-gate.md)。
 
 评估命令 `tools.evaluate_diagnosis` 需要在本项目源码目录中执行；当前发行包仅包含 `repo_doctor`，不包含 `tools`。
 
