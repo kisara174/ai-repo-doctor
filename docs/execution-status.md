@@ -10,8 +10,8 @@ Latest implementation commit: `6791483f9045487285e72aebad2eee7134ce4424`
 coverage was committed at `0ad91c8a456941dda8e7c0f6ebba351d038b6e61`.
 Wheel installation instructions and CI acceptance were committed at
 `05b5bc94af2d5fd999740892db8021f19dbb4248`. These changes are pushed to
-[PR #7](https://github.com/kisara174/ai-repo-doctor/pull/7), pending final
-documentation and integration. The original `codex/repo-doctor-v2-design`
+[PR #7](https://github.com/kisara174/ai-repo-doctor/pull/7); the pull request
+records their integration state. The original `codex/repo-doctor-v2-design`
 checkout has separate untracked V3 documents and was left untouched.
 
 ## Delivered capabilities
@@ -70,8 +70,8 @@ not inferred.
   Installed CLI help plus offline scan, context, impact, and validation passed.
 - PR #7 head `05b5bc94af2d5fd999740892db8021f19dbb4248` passed all Python
   3.11, 3.12, and 3.13 jobs in both push and pull-request CI runs. Each job
-  built and smoke-tested the installed wheel. A later documentation commit
-  requires CI on its own new head before merge.
+  built and smoke-tested the installed wheel. See PR #7 for the CI result on
+  its final integration head.
 - Pinned target repository code, tests, and dependencies were not executed or
   installed during these diagnosis experiments. The API key and raw provider
   response bodies were not saved in the evaluation artifacts.
@@ -82,8 +82,8 @@ The [2026-09-28 work plan](superpowers/plans/2026-09-28-diagnosis-quality-next-s
 sets the scope and stop conditions. Its focused fixture, local integration
 gate, PR CI, and one-call checkpoint are complete. The ten-case online baseline
 was conditional on a usable bug response and remains unattempted. No prompt or
-context change is justified by the connection failure. Finish PR review and
-merge after CI checks the documentation head. A future, separately bounded
+context change is justified by the connection failure. PR integration requires
+CI on the final head. A future, separately bounded
 provider checkpoint should establish connectivity and produce one reviewable
 bug response before the ten-case quality run.
 
