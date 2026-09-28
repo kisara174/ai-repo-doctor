@@ -158,10 +158,62 @@ class ContextTests(unittest.TestCase):
                 ("helpers.py::save", "callee"),
                 ("api.py::route", "caller"),
                 ("tests/test_service.py::test_process", "related_test"),
+                ("api.py::<module import process>", "import_binding"),
+                ("service.py::<module import save>", "import_binding"),
+                ("tests/test_service.py::<module import process>", "import_binding"),
             ],
         )
         self.assertEqual(result["blocks"][0]["lines"][0], {"line": 3, "text": "def process(value):"})
         self.assertEqual(result["blocks"][0]["lines"][1], {"line": 4, "text": "    return save(value)"})
+
+    def test_context_includes_local_base_chain_and_used_import_with_budget(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "errors.py").write_text(
+                "from compat import Decoder\n"
+                "from compat import unrelated\n"
+                "\n"
+                "class GrandError(Exception): pass\n"
+                "class BaseError(GrandError): pass\n"
+                "class ChildError(BaseError):\n"
+                "    def decode(self):\n"
+                "        return Decoder()\n",
+                encoding="utf-8",
+            )
+            index = build_index(root)
+
+            six_lines = build_context(index, "errors.py::ChildError", max_lines=6)
+            five_lines = build_context(index, "errors.py::ChildError", max_lines=5)
+
+        self.assertEqual(
+            [(block["symbol"], block["relation"]) for block in six_lines["blocks"][:3]],
+            [
+                ("errors.py::ChildError", "target"),
+                ("errors.py::BaseError", "base_class"),
+                ("errors.py::GrandError", "base_class"),
+            ],
+        )
+        self.assertTrue(
+            any(
+                block["relation"] == "import_binding"
+                and any(line["text"] == "from compat import Decoder" for line in block["lines"])
+                for block in six_lines["blocks"]
+            )
+        )
+        self.assertFalse(
+            any(
+                line["text"] == "from compat import unrelated"
+                for block in six_lines["blocks"]
+                for line in block["lines"]
+            )
+        )
+        self.assertEqual(sum(len(block["lines"]) for block in six_lines["blocks"]), 6)
+        self.assertEqual(six_lines["omitted_imports"], 0)
+
+        self.assertLessEqual(sum(len(block["lines"]) for block in five_lines["blocks"]), 5)
+        self.assertEqual(five_lines["omitted_imports"], 1)
+        self.assertTrue(five_lines["budget_exhausted"])
+        self.assertFalse(any(block["relation"] == "import_binding" for block in five_lines["blocks"]))
 
     def test_context_marks_truncation_and_respects_budget(self):
         with tempfile.TemporaryDirectory() as directory:
