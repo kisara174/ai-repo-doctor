@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import tests.test_diagnosis_data as data_fixture
+from repo_doctor.deepseek import complete_json_schema
 from tools.diagnosis_data import EvaluationDataError, prepare_cases
 from tools.evaluate_diagnosis import main
 
@@ -176,6 +177,23 @@ class DiagnosisEvaluationCliTests(unittest.TestCase):
             self.assertEqual(run_cases.call_args.kwargs["case_id"], "bug-01")
             self.assertTrue(callable(run_cases.call_args.kwargs["client"]))
             open_request.assert_not_called()
+
+    def test_run_selects_responses_client_from_schema_plan(self):
+        plan = {"schema_version": 2, "response_format": "json-schema", "cases": []}
+        summary = {"state": "complete", "planned_calls": 0, "attempted_calls": 0}
+        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "TEST_SECRET_SENTINEL"}), patch(
+            "tools.evaluate_diagnosis._read_manifest", return_value=({}, "hash")
+        ), patch(
+            "tools.evaluate_diagnosis._read_prepared_bundle", return_value=(plan, {})
+        ), patch("tools.evaluate_diagnosis.run_cases", return_value=summary) as run_cases:
+            code = main([
+                "run", "--plan-dir", "unused", "--manifest", "unused",
+                "--repos-root", "unused", "--out-dir", "unused",
+                "--max-calls", "1", "--allow-network",
+            ])
+
+        self.assertEqual(code, 0)
+        self.assertIs(run_cases.call_args.kwargs["client"], complete_json_schema)
 
 
 if __name__ == "__main__":

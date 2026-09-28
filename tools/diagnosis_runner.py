@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -18,6 +19,7 @@ from repo_doctor.deepseek import (
     DeepSeekError,
     DeepSeekResult,
     _serialize_request_body,
+    _serialize_schema_request_body,
     _thinking_parameter,
 )
 from repo_doctor.context import build_context
@@ -121,8 +123,17 @@ def _validate_plan_and_contexts(
     manifest_sha256: str,
 ) -> tuple[list[tuple[dict, dict, object, str, str]], str]:
     validate_manifest(manifest)
-    if not isinstance(plan, dict) or type(plan.get("schema_version")) is not int or plan["schema_version"] != 1:
-        raise EvaluationDataError("plan.schema_version must be 1")
+    if not isinstance(plan, dict) or type(plan.get("schema_version")) is not int:
+        raise EvaluationDataError("plan.schema_version must be 1 or 2")
+    plan_version = plan["schema_version"]
+    if plan_version == 1:
+        if "response_format" in plan:
+            raise EvaluationDataError("version 1 plan cannot set response_format")
+    elif plan_version == 2:
+        if plan.get("response_format") != "json-schema" or "thinking_mode" in plan:
+            raise EvaluationDataError("version 2 plan requires json-schema without thinking_mode")
+    else:
+        raise EvaluationDataError("plan.schema_version must be 1 or 2")
     if plan.get("dataset_id") != manifest["dataset_id"]:
         raise EvaluationDataError("plan dataset does not match manifest")
     if plan.get("manifest_sha256") != manifest_sha256:
@@ -213,17 +224,23 @@ def _validate_plan_and_contexts(
         if context != expected_context:
             raise EvaluationDataError(f"{case_id}: prepared context differs from pinned checkout")
 
-        request = {
-            "system_prompt": system_prompt,
-            "user_prompt": user_prompt,
-            "requested_model": model,
-            "max_tokens": 4096,
-            "stream": False,
-            "response_format": {"type": "json_object"},
-        }
-        if thinking is not None:
-            request["thinking"] = thinking
-        request_hash = _canonical_hash(request)
+        if plan_version == 2:
+            wire_body = _serialize_schema_request_body(system_prompt, user_prompt, model)
+            if len(wire_body) > MAX_REQUEST_BYTES:
+                raise EvaluationDataError(f"{case_id}: prepared request exceeds 256 KiB limit")
+            request_hash = hashlib.sha256(wire_body).hexdigest()
+        else:
+            request = {
+                "system_prompt": system_prompt,
+                "user_prompt": user_prompt,
+                "requested_model": model,
+                "max_tokens": 4096,
+                "stream": False,
+                "response_format": {"type": "json_object"},
+            }
+            if thinking is not None:
+                request["thinking"] = thinking
+            request_hash = _canonical_hash(request)
         if plan_case.get("request_sha256") != request_hash:
             raise EvaluationDataError(f"{case_id}: request fingerprint changed")
         case_state.append((manifest_case, plan_case, index, system_prompt, user_prompt))
@@ -282,9 +299,14 @@ def run_cases(
     if planned_calls > max_calls:
         raise EvaluationDataError("planned calls exceed max_calls")
     for _, _, _, system_prompt, user_prompt in prepared:
-        if len(_serialize_request_body(
-            system_prompt, user_prompt, model, thinking_mode=thinking_mode
-        )) > MAX_REQUEST_BYTES:
+        request_body = (
+            _serialize_schema_request_body(system_prompt, user_prompt, model)
+            if plan["schema_version"] == 2
+            else _serialize_request_body(
+                system_prompt, user_prompt, model, thinking_mode=thinking_mode
+            )
+        )
+        if len(request_body) > MAX_REQUEST_BYTES:
             raise EvaluationDataError("prepared request exceeds 256 KiB limit")
 
     try:
@@ -314,6 +336,8 @@ def run_cases(
     }
     if thinking_mode is not None:
         summary["thinking_mode"] = thinking_mode
+    if plan["schema_version"] == 2:
+        summary["response_format"] = "json-schema"
     if case_id is not None:
         summary["selected_case_id"] = case_id
     summary_path = output / "run.json"

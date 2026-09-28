@@ -12,7 +12,7 @@ import sys
 import tempfile
 from pathlib import Path, PurePosixPath
 
-from repo_doctor.deepseek import complete_json
+from repo_doctor.deepseek import complete_json, complete_json_schema
 from .diagnosis_data import EvaluationDataError, _analyzer_commit, prepare_cases
 from .diagnosis_runner import run_cases
 from .diagnosis_score import make_review_template, render_report, score_records
@@ -130,7 +130,11 @@ def _run(args: argparse.Namespace) -> int:
         repeats=args.repeats,
         max_calls=args.max_calls,
         api_key=api_key,
-        client=complete_json,
+        client=(
+            complete_json_schema
+            if plan.get("schema_version") == 2 and plan.get("response_format") == "json-schema"
+            else complete_json
+        ),
         output_dir=Path(args.out_dir),
         manifest=manifest,
         manifest_sha256=manifest_hash,

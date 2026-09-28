@@ -173,6 +173,71 @@ class DiagnosisRunnerTests(unittest.TestCase):
         self.assertEqual(client.call_count, 2)
         self.assertEqual(client.call_args.kwargs["thinking_mode"], "disabled")
 
+    def test_schema_plan_runs_with_wire_hash_and_protocol_metadata(self):
+        bundle = prepare_cases(
+            self.manifest, self.fixture.repos_root, "test-model", 120,
+            manifest_sha256=self.manifest_sha256, response_format="json-schema",
+        )
+        client = Mock(return_value=DeepSeekResult("test-model", {"findings": []}))
+
+        summary, output_dir = self.run_with(
+            client=client, plan=bundle["plan"], contexts=bundle["contexts"],
+            output_name="schema-run",
+        )
+
+        self.assertEqual(summary["state"], "complete")
+        self.assertEqual(summary["response_format"], "json-schema")
+        self.assertNotIn("thinking_mode", summary)
+        self.assertEqual(client.call_count, 2)
+        self.assertNotIn("thinking_mode", client.call_args.kwargs)
+        record = json.loads((output_dir / summary["record_files"][0]).read_text())
+        self.assertEqual(record["request_sha256"], bundle["plan"]["cases"][0]["request_sha256"])
+
+    def test_schema_plan_rejects_changed_wire_hash_before_client(self):
+        bundle = prepare_cases(
+            self.manifest, self.fixture.repos_root, "test-model", 120,
+            manifest_sha256=self.manifest_sha256, response_format="json-schema",
+        )
+        plan = copy.deepcopy(bundle["plan"])
+        plan["cases"][0]["request_sha256"] = "0" * 64
+        client = Mock()
+
+        output = self.output_root / "changed-schema-hash"
+        with patch("tools.diagnosis_runner._analyzer_snapshot", return_value=(ANALYZER_COMMIT, False)):
+            with self.assertRaisesRegex(ValueError, "request fingerprint changed"):
+                run_cases(
+                    plan, bundle["contexts"], self.fixture.repos_root,
+                    repeats=1, max_calls=2, api_key=API_KEY, client=client,
+                    output_dir=output, manifest=self.manifest,
+                    manifest_sha256=self.manifest_sha256,
+                )
+
+        client.assert_not_called()
+        self.assertFalse(output.exists())
+
+    def test_schema_plan_rejects_oversized_wire_body_before_client(self):
+        bundle = prepare_cases(
+            self.manifest, self.fixture.repos_root, "test-model", 120,
+            manifest_sha256=self.manifest_sha256, response_format="json-schema",
+        )
+        client = Mock()
+        output = self.output_root / "oversized-schema"
+
+        with patch.object(
+            diagnosis_runner_module, "_serialize_schema_request_body",
+            return_value=b"x" * (MAX_REQUEST_BYTES + 1), create=True,
+        ), patch("tools.diagnosis_runner._analyzer_snapshot", return_value=(ANALYZER_COMMIT, False)):
+            with self.assertRaisesRegex(ValueError, "256 KiB"):
+                run_cases(
+                    bundle["plan"], bundle["contexts"], self.fixture.repos_root,
+                    repeats=1, max_calls=2, api_key=API_KEY, client=client,
+                    output_dir=output, manifest=self.manifest,
+                    manifest_sha256=self.manifest_sha256,
+                )
+
+        client.assert_not_called()
+        self.assertFalse(output.exists())
+
     def test_changed_thinking_mode_with_stale_request_hash_is_rejected(self):
         bundle = prepare_cases(
             self.manifest,
