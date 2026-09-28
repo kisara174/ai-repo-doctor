@@ -5,8 +5,10 @@ below preserve the earlier experiments.
 
 **Active branch/worktree:** `codex/stability-value-v0.2` at
 `/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor`.
-Latest implementation commit: `0eb8361` (offline request preview, SHA-256
-pinning, and selected-source freshness checks). The prior evaluation branch
+Latest implementation commit: `420495b` (fixed/control false-alarm rate
+correction). This branch also added offline request preview, SHA-256 pinning,
+selected-source freshness checks, and reproducible JSON Schema evaluation.
+The prior evaluation branch
 was integrated at `86d1022`; its context implementation commit was
 `6791483f9045487285e72aebad2eee7134ce4424`. Focused context
 coverage was committed at `0ad91c8a456941dda8e7c0f6ebba351d038b6e61`.
@@ -54,11 +56,18 @@ record of that run.
   Its one permitted bug call stopped with `provider_error/connection` before
   model content arrived. The full ten-case run was not started. See
   [quality-gate report](evaluations/2026-09-28-quality-gate.md).
+- At analyzer commit `091dc2d`, the opt-in Responses JSON Schema evaluator
+  completed a frozen ten-case run. Primary review found one match among four
+  known bug cases, seven accepted false positives, six uncertain findings,
+  and one rejected false positive. The corrected fixed/control false-alarm
+  count is 3/6. See the
+  [ten-case baseline](evaluations/2026-09-28-schema-ten-case-baseline.md).
 
-These exploratory calls use one selected case at a time. They cannot be scored
-as dataset coverage, cannot estimate general model quality, and have no
-independent human review. The original ten-case run remains partial and
-unchanged. Model token usage is recorded where available; actual billing is
+The earlier exploratory calls used one selected case at a time and cannot be
+scored as dataset coverage. The original Chat ten-case run remains partial
+and unchanged; the new JSON Schema ten-case run is complete and has a primary
+review, but no independent second review. Neither estimates general model
+quality. Model token usage is recorded where available; actual billing is
 not inferred.
 
 ## Verification scope
@@ -99,12 +108,21 @@ The current stability sequence has completed the offline/local parts of P0:
   and previewed outside the source tree. See the
   [installed CLI checkpoint](evaluations/2026-09-28-wheel-smoke.md). CI for
   the new branch head remains to be checked.
+- JSON Schema preparation, run dispatch, and scoring are implemented at
+  `24736c0`, `9bcc18b`, and `091dc2d`. The scorer correction at `420495b`
+  has a red/green regression test. After that correction, the full offline
+  suite passed 312 tests; `compileall` and `git diff --check` passed. The
+  ten-case provider run is pinned to the earlier clean analyzer commit
+  `091dc2d`; the corrected score is a later offline derivation from unchanged
+  run records and completed primary review.
 
-The next evidence gate is a reviewed diagnosis-quality baseline. The one
-parseable structured-output sample has only local citation acceptance; its
-behavioral claims have not been adjudicated. It does not justify switching the
-default or reporting a success rate. Preserve the frozen manifest and prior
-partial runs, and use new output directories for subsequent experiments.
+The next evidence gate is an independently selected holdout and a single
+falsifiable prompt or context change aimed at known-defect detection and
+unsupported claims. Do not tune only against the now-visible ten cases or
+switch the default protocol from this exploratory baseline. Preserve the
+frozen manifest and prior partial runs, and use new output directories for
+subsequent experiments. The branch still needs current-head CI and review
+before integration.
 
 The earlier [post-V3 execution plan](superpowers/plans/2026-09-24-post-v3-execution.md),
 [handoff audit](evaluations/2026-09-25-handoff-audit.md), and

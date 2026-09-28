@@ -123,7 +123,7 @@ python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::User
 
 被接受的 finding 表示其引文通过了本地源码和已发送上下文校验，并不证明推理正确。请人工复核结论，并通过实际运行或测试确认影响。
 
-`--response-format json-schema` 是显式选择的实验性路径：它在相同的本地上下文与证据校验规则下调用 DeepSeek Responses API，请求结构化输出并关闭 thinking。默认的 `chat-json` 路径保持不变。当前单样本对照中，Chat JSON 出现了无效 JSON；JSON Schema 路径两次尝试有一次通过结构与本地证据校验，另一次失败原因未能细分。这不足以证明稳定性或诊断正确率；两种路径都不会自动重试。详情见[结构化输出对照记录](docs/evaluations/2026-09-28-structured-output.md)。
+`--response-format json-schema` 是显式选择的实验性路径：它在相同的本地上下文与证据校验规则下调用 DeepSeek Responses API，请求结构化输出并关闭 thinking。默认的 `chat-json` 路径保持不变，两种路径都不会自动重试。[最初的单样本格式对照](docs/evaluations/2026-09-28-structured-output.md)之后，结构化路径完成了一轮[十样本诊断基线](docs/evaluations/2026-09-28-schema-ten-case-baseline.md)：十次请求均可解析，但经主代理复核只命中四个已知缺陷中的一个，且有较多误报和待确认发现。这说明输出格式可用不等于诊断质量达标；该定向小样本也不足以证明未来成功率。
 
 ## 影响分析
 
