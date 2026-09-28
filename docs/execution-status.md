@@ -3,15 +3,16 @@
 Updated 2026-09-28. This file is the current project checkpoint; dated reports
 below preserve the earlier experiments.
 
-**Active branch/worktree:** `codex/diagnosis-evaluation` at
+**Active branch/worktree:** `codex/stability-value-v0.2` at
 `/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor`.
-Latest implementation commit: `6791483f9045487285e72aebad2eee7134ce4424`
-(class ancestry and used import bindings in bounded contexts). Focused context
+Latest implementation commit: `0eb8361` (offline request preview, SHA-256
+pinning, and selected-source freshness checks). The prior evaluation branch
+was integrated at `86d1022`; its context implementation commit was
+`6791483f9045487285e72aebad2eee7134ce4424`. Focused context
 coverage was committed at `0ad91c8a456941dda8e7c0f6ebba351d038b6e61`.
 Wheel installation instructions and CI acceptance were committed at
-`05b5bc94af2d5fd999740892db8021f19dbb4248`. These changes are pushed to
-[PR #7](https://github.com/kisara174/ai-repo-doctor/pull/7); the pull request
-records their integration state. The original `codex/repo-doctor-v2-design`
+`05b5bc94af2d5fd999740892db8021f19dbb4248`. Those changes were reviewed
+in [PR #7](https://github.com/kisara174/ai-repo-doctor/pull/7). The original `codex/repo-doctor-v2-design`
 checkout has separate untracked V3 documents and was left untouched.
 
 ## Delivered capabilities
@@ -78,14 +79,32 @@ not inferred.
 
 ## Next gates
 
-The [2026-09-28 work plan](superpowers/plans/2026-09-28-diagnosis-quality-next-stage.md)
-sets the scope and stop conditions. Its focused fixture, local integration
-gate, PR CI, and one-call checkpoint are complete. The ten-case online baseline
-was conditional on a usable bug response and remains unattempted. No prompt or
-context change is justified by the connection failure. PR integration requires
-CI on the final head. A future, separately bounded
-provider checkpoint should establish connectivity and produce one reviewable
-bug response before the ten-case quality run.
+The current stability sequence has completed the offline/local parts of P0:
+
+- `doctor` now checks local readiness by default and optional DeepSeek model
+  access only when requested (`7239c4c`, `3900bac`).
+- An opt-in Responses JSON Schema diagnosis path was added after a controlled
+  single-case comparison (`a11d526`, `b70e446`). See the
+  [structured-output report](evaluations/2026-09-28-structured-output.md).
+- `diagnose --preview` produces the exact request body without network or Key;
+  `--expect-request-sha256` locks a later upload to those bytes. Selected
+  source lines are checked before and after the provider call (`0eb8361`).
+  The 303-test suite, `compileall`, CLI help, and diff check passed at that
+  source state. A reviewer subagent could not finish its independent review
+  because of account limits; primary diff and test review was performed.
+- Two pinned real repositories produced byte-identical repeat scans with zero
+  parse errors and clean worktrees. See the
+  [scanner checkpoint](evaluations/2026-09-28-scanner-stability.md).
+- The wheel built in an isolated environment and the installed CLI scanned
+  and previewed outside the source tree. See the
+  [installed CLI checkpoint](evaluations/2026-09-28-wheel-smoke.md). CI for
+  the new branch head remains to be checked.
+
+The next evidence gate is a reviewed diagnosis-quality baseline. The one
+parseable structured-output sample has only local citation acceptance; its
+behavioral claims have not been adjudicated. It does not justify switching the
+default or reporting a success rate. Preserve the frozen manifest and prior
+partial runs, and use new output directories for subsequent experiments.
 
 The earlier [post-V3 execution plan](superpowers/plans/2026-09-24-post-v3-execution.md),
 [handoff audit](evaluations/2026-09-25-handoff-audit.md), and
