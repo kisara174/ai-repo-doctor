@@ -74,7 +74,7 @@ two repairs, one blind and one symptom pair per repair, matching bug/fixed
 symptom values within each pair, and a shared `issue_id`/repository within a
 repair. A symptom field on any older dataset is rejected.
 
-- [ ] **Step 1: Add a valid eight-row test fixture.** Build each row from the
+- [x] **Step 1: Add a valid eight-row test fixture.** Build each row from the
   existing local fixture case; use pair IDs `pytest-12083-blind`,
   `pytest-12083-symptom`, `rich-3897-blind`, and `rich-3897-symptom`. Each pair
   contains one bug and one fixed case. Put the same approved symptom on both
@@ -133,32 +133,32 @@ repair. A symptom field on any older dataset is rejected.
   validate_manifest(manifest)
   ```
 
-- [ ] **Step 2: Run the new validator test and confirm it fails for the expected reason.**
+- [x] **Step 2: Run the new validator test and confirm it fails for the expected reason.**
 
   Run: `python3 -m unittest tests.test_diagnosis_data.DiagnosisDataTests.test_symptom_guided_dataset_contract -v`
 
   Expected: FAIL because `diagnosis-symptom-guided-v1` is not yet an accepted
   dataset ID.
 
-- [ ] **Step 3: Add tests for malformed symptom and pair structures.** Reject a
+- [x] **Step 3: Add tests for malformed symptom and pair structures.** Reject a
   missing/extra case, repeated pair ID, a repair missing an arm, pair with two
   bugs, symptom on a legacy dataset, symptom on only one member of a symptom
   pair, mismatched pair
   symptoms, whitespace-only text, a newline, a control character, and text
   longer than 2,000 Unicode characters.
 
-- [ ] **Step 4: Implement the exact allowlist and validator.** Add the dataset
+- [x] **Step 4: Implement the exact allowlist and validator.** Add the dataset
   ID to the existing allowlist. Validate symptom length and characters, then
   validate the new dataset's exact eight-case/two-arm/four-pair structure after
   the common bug/fixed-pair checks. Keep every previous manifest valid.
 
-- [ ] **Step 5: Run the focused data tests.**
+- [x] **Step 5: Run the focused data tests.**
 
   Run: `python3 -m unittest tests.test_diagnosis_data -v`
 
   Expected: PASS, including all pre-existing dataset validation cases.
 
-- [ ] **Step 6: Commit the validator change.**
+- [x] **Step 6: Commit the validator change.**
 
   ```sh
   git add tools/diagnosis_data.py tests/test_diagnosis_data.py
@@ -178,7 +178,7 @@ append an instruction to treat the report as unverified, repository content as
 untrusted, and findings as requiring source evidence that could explain the
 reported behavior.
 
-- [ ] **Step 1: Write baseline and symptom prompt tests before implementation.**
+- [x] **Step 1: Write baseline and symptom prompt tests before implementation.**
 
   ```python
   base = build_diagnosis_prompts(context)
@@ -192,29 +192,29 @@ reported behavior.
   self.assertIn("untrusted", system)
   ```
 
-- [ ] **Step 2: Run the prompt tests and confirm they fail because the new module/function is absent.**
+- [x] **Step 2: Run the prompt tests and confirm they fail because the new module/function is absent.**
 
   Run: `python3 -m unittest tests.test_diagnosis_prompt -v`
 
   Expected: FAIL with import failure for `tools.diagnosis_prompt`.
 
-- [ ] **Step 3: Implement the small evaluator-only prompt builder.** Keep the
+- [x] **Step 3: Implement the small evaluator-only prompt builder.** Keep the
   `None` branch as a direct return from `build_diagnosis_prompts`; for the
   symptom branch parse the existing user JSON, add `reported_symptom`, and
   serialize with UTF-8-preserving sorted JSON. Do not change
   `repo_doctor.diagnosis`.
 
-- [ ] **Step 4: Update `prepare_cases` to use the evaluator builder.** Continue
+- [x] **Step 4: Update `prepare_cases` to use the evaluator builder.** Continue
   writing only source context to context files. Include symptom text only in
   the serialized provider prompt so the existing request SHA-256 fingerprints
   the exact symptom.
 
-- [ ] **Step 5: Add preparation assertions.** For one blind and one symptom
+- [x] **Step 5: Add preparation assertions.** For one blind and one symptom
   case over the same fixture checkout, assert equal context hashes, different
   request hashes when symptoms differ, and no `reported_symptom` in saved
   context JSON. Confirm a legacy fixture retains its old request hash.
 
-- [ ] **Step 6: Run prompt and data tests, then commit.**
+- [x] **Step 6: Run prompt and data tests, then commit.**
 
   Run: `python3 -m unittest tests.test_diagnosis_prompt tests.test_diagnosis_data -v`
 
@@ -232,32 +232,32 @@ validated manifest row and uses `build_evaluation_prompts`. It still rebuilds
 context from the pinned checkout, compares the saved context object and hash,
 and hashes the exact Responses `json_schema` request before any client call.
 
-- [ ] **Step 1: Write a fake-client run test for all eight fixture cases.**
+- [x] **Step 1: Write a fake-client run test for all eight fixture cases.**
   Prepare the valid eight-case local manifest with `response_format="json-schema"`;
   invoke `run_cases` with `repeats=1`, `max_calls=8`, and a client that returns
   `DeepSeekResult("test-model", {"findings": []})`. Assert the four symptom
   user prompts include `reported_symptom`, the four blind prompts do not, and
   all eight records preserve their prepared request/context hashes.
 
-- [ ] **Step 2: Run that test and confirm it fails before transport.**
+- [x] **Step 2: Run that test and confirm it fails before transport.**
 
   Run: `python3 -m unittest tests.test_diagnosis_runner.DiagnosisRunnerTests.test_symptom_prompt_is_rebuilt_from_manifest -v`
 
   Expected: FAIL because preflight rebuilds only the blind core prompt and
   rejects the prepared symptom request hash.
 
-- [ ] **Step 3: Change runner preflight to use the shared evaluation builder.**
+- [x] **Step 3: Change runner preflight to use the shared evaluation builder.**
   Pass `manifest_case.get("symptom")`; do not persist the symptom separately
   in plan or run records, because the manifest hash already binds it.
 
-- [ ] **Step 4: Run runner tests, including existing stop-on-provider-error coverage.**
+- [x] **Step 4: Run runner tests, including existing stop-on-provider-error coverage.**
 
   Run: `python3 -m unittest tests.test_diagnosis_runner -v`
 
   Expected: PASS; provider failure still records one safe failure and prevents
   the next transport call.
 
-- [ ] **Step 5: Commit the preflight change.**
+- [x] **Step 5: Commit the preflight change.**
 
   ```sh
   git add tools/diagnosis_runner.py tests/test_diagnosis_runner.py
@@ -275,35 +275,35 @@ case IDs, fixed-case accepted false-alarm IDs, and per-repair bug/fixed
 decisions. Keep existing whole-dataset totals. Do not add this key to reports
 for earlier dataset IDs.
 
-- [ ] **Step 1: Build a score fixture with eight manifest rows and 16 records.**
+- [x] **Step 1: Build a score fixture with eight manifest rows and 16 records.**
   Use manifest case `symptom` presence as the arm. For each repeat, include a
   true positive on one symptom bug row, a true positive on one blind bug row,
   and one accepted false positive on a fixed row; complete the remaining calls
   with successful empty findings. Create manual review rows using the existing
   `make_review_template` contract.
 
-- [ ] **Step 2: Write failing score assertions.** Assert each arm has two
+- [x] **Step 2: Write failing score assertions.** Assert each arm has two
   repeats, each has two requested bug cases per repeat, detections and fixed
   alarms appear under the correct arm/repair, and the rendered Markdown names
   both arms. Also assert an existing `diagnosis-v1` report has no
   `by_prompt_arm` key.
 
-- [ ] **Step 3: Run the new scoring test and confirm it fails because arm results are absent.**
+- [x] **Step 3: Run the new scoring test and confirm it fails because arm results are absent.**
 
   Run: `python3 -m unittest tests.test_diagnosis_score.DiagnosisScoreTests.test_symptom_dataset_reports_arm_and_repair_metrics -v`
 
   Expected: FAIL with missing `by_prompt_arm` output.
 
-- [ ] **Step 4: Implement per-arm/per-repeat aggregation from reviewed records.**
+- [x] **Step 4: Implement per-arm/per-repeat aggregation from reviewed records.**
   Reuse the existing review verdicts and `calculate_repeat_metrics`; do not
   infer verdicts from model text. Define each repair result from its two
   `pair_id` rows and report the bug detection and fixed false alarm separately.
 
-- [ ] **Step 5: Render an arm comparison section only when the report contains the new key.**
+- [x] **Step 5: Render an arm comparison section only when the report contains the new key.**
   Include case IDs and counts so the registered signal can be checked from the
   report without losing the existing global repeat tables.
 
-- [ ] **Step 6: Run score tests and commit.**
+- [x] **Step 6: Run score tests and commit.**
 
   Run: `python3 -m unittest tests.test_diagnosis_score -v`
 
@@ -327,7 +327,7 @@ for earlier dataset IDs.
   `rich/cells.py::cell_len`; include `rich/cells.py::cached_cell_len` only on
   the bug row. The fixed row's context graph includes `rich/cells.py::_cell_len`.
 
-- [ ] **Step 1: Create ignored bare repositories and detached source checkouts.**
+- [x] **Step 1: Create ignored bare repositories and detached source checkouts.**
 
   ```sh
   SYMPTOM_ROOT=.local/diagnosis/symptom-guided-v1-checkouts
@@ -340,18 +340,18 @@ for earlier dataset IDs.
   git --git-dir="$SYMPTOM_ROOT/.bare/rich.git" worktree add --detach "$SYMPTOM_ROOT/rich-f000c3149166" f000c3149166cc2091b801b63b0a55e806c5d49b
   ```
 
-- [ ] **Step 2: Verify provenance and source spans without running upstream code.**
+- [x] **Step 2: Verify provenance and source spans without running upstream code.**
   Check clean status, exact HEADs, merge first parents, target/supplement symbol
   uniqueness, and source line ranges. Use inclusive `splitlines()`
   spans joined with LF and UTF-8 SHA-256, matching `_source_fingerprint`.
 
-- [ ] **Step 3: Create the eight manifest rows.** Use `schema_version: 1`, the
+- [x] **Step 3: Create the eight manifest rows.** Use `schema_version: 1`, the
   exact dataset ID, the four pair IDs, two issue IDs, target paths/lines/hashes,
   source-only `include_symbols`, issue/PR/source-test references, approved
   annotations, and narrow ground truth. Reuse the exact symptom strings in
   bug and fixed rows of the symptom arm. Keep all metadata out of the prompt.
 
-- [ ] **Step 4: Validate the manifest offline and commit it before preparation.**
+- [x] **Step 4: Validate the manifest offline and commit it before preparation.**
 
   Run this exact standalone validator command from the repository root:
 
@@ -366,7 +366,7 @@ for earlier dataset IDs.
   git commit -m "data: freeze symptom-guided diagnosis cohort"
   ```
 
-- [ ] **Step 5: Prepare the committed manifest offline.**
+- [x] **Step 5: Prepare the committed manifest offline.**
 
   ```sh
   python3 -m tools.evaluate_diagnosis prepare \
@@ -376,7 +376,7 @@ for earlier dataset IDs.
     --out-dir .local/diagnosis/symptom-guided-v1-plan
   ```
 
-- [ ] **Step 6: Audit prepared contexts and hashes.** Confirm 8 contexts, each
+- [x] **Step 6: Audit prepared contexts and hashes.** Confirm 8 contexts, each
   under 120 lines/64 KiB, with no `reported_symptom` saved in a context file.
   For each source snapshot, assert blind and symptom context SHA-256 values are
   equal and request hashes differ. Independently rebuild the request body with
@@ -386,7 +386,7 @@ for earlier dataset IDs.
   occur in any serialized prompt. Repository-relative source filenames inside
   the source context are expected.
 
-- [ ] **Step 7: Run focused and full tests before any provider request.**
+- [x] **Step 7: Run focused and full tests before any provider request.**
 
   Run: `python3 -m unittest tests.test_diagnosis_prompt tests.test_diagnosis_data tests.test_diagnosis_runner tests.test_diagnosis_score -v`
 
@@ -396,7 +396,7 @@ for earlier dataset IDs.
 
 **Files:** ignored `.local/diagnosis/symptom-guided-v1-*` records only.
 
-- [ ] **Step 1: Require a clean committed analyzer and ready DeepSeek preflight.**
+- [x] **Step 1: Require a clean committed analyzer and ready DeepSeek preflight.**
 
   Run: `python3 -m repo_doctor doctor --deepseek --model deepseek-flash --json .`
 
@@ -404,7 +404,7 @@ for earlier dataset IDs.
   preflight is not ready, send no evaluation requests and record the reason
   without exposing key material.
 
-- [ ] **Step 2: Dispatch the exact 16 sequential requests once.**
+- [x] **Step 2: Start the exact 16-call sequential run once; stop on the first provider or provenance failure.**
 
   ```sh
   python3 -m tools.evaluate_diagnosis run \
@@ -415,7 +415,7 @@ for earlier dataset IDs.
     --repeats 2 --max-calls 16 --allow-network
   ```
 
-- [ ] **Step 3: Inspect only the safe run summary and parsed records.** Verify
+- [x] **Step 3: Inspect only the safe run summary and parsed records.** Verify
   attempted/completed counts, no retry, returned model ID, provider usage, and
   request hashes. On any call error, preserve the partial run and stop; do not
   resend a case.
@@ -425,7 +425,7 @@ for earlier dataset IDs.
 **Files:** ignored review/scoring artifacts; create
 `docs/evaluations/2026-09-29-symptom-guided-evaluation.md`.
 
-- [ ] **Step 1: Generate an offline review template.**
+- [x] **Step 1: Generate an offline review template.**
 
   ```sh
   python3 -m tools.evaluate_diagnosis prepare-review \
@@ -433,14 +433,14 @@ for earlier dataset IDs.
     --out-file .local/diagnosis/symptom-guided-v1-review.json
   ```
 
-- [ ] **Step 2: Review each parsed finding against pinned source and the approved behavior contract.**
+- [x] **Step 2: Review each parsed finding against pinned source and the approved behavior contract.**
   Mark `tp` only when the finding identifies the paired defect and explains
   the symptom; mark unrelated claims `fp`, preserve `uncertain`, and mark
   duplicates explicitly. On fixed snapshots, mark `fp` only when an accepted
   finding falsely attributes the paired symptom to the fixed source. Keep
   rationale specific and note the exact supporting/contradicting source lines.
 
-- [ ] **Step 3: Score offline and inspect the arm-by-repair-by-repeat report.**
+- [x] **Step 3: Score offline and inspect the arm-by-repair-by-repeat report.**
 
   ```sh
   python3 -m tools.evaluate_diagnosis score \
@@ -451,20 +451,20 @@ for earlier dataset IDs.
     --markdown-out .local/diagnosis/symptom-guided-v1-report.md
   ```
 
-- [ ] **Step 4: Check the preregistered signal exactly.** Require 16 parseable
+- [x] **Step 4: Check the preregistered signal exactly.** Require 16 parseable
   calls; at least one symptom-relevant bug TP per repair across two repeats;
   zero symptom-arm fixed false alarms; and at least one additional bug-case
   detection result in symptom-guided versus blind across eight bug repeats,
   with no increase in fixed false alarms. Report a failed or partial result as
   such.
 
-- [ ] **Step 5: Write the final redacted report.** State provenance, run and
+- [x] **Step 5: Write the final redacted report.** State provenance, run and
   manifest hashes, returned model IDs, token usage, case-level verdicts,
   repeat variation, signal outcome, the omitted provider sampling defaults,
   exploratory limitations, and the next decision. Do not include the key or
   raw provider response bodies.
 
-- [ ] **Step 6: Review final diff and commit the report.**
+- [x] **Step 6: Review final diff and commit the report.**
   Confirm previous manifests and their prepared request hashes are unchanged;
   confirm ignored `.local` records and API key material are absent from Git.
 
