@@ -90,10 +90,12 @@ def validate_manifest(data: dict) -> None:
         "diagnosis-v1",
         "diagnosis-flask-holdout-v1",
         "diagnosis-werkzeug-holdout-v1",
+        "diagnosis-werkzeug-explicit-context-v1",
     }:
         raise EvaluationDataError(
             'manifest.dataset_id must be "diagnosis-v1", "diagnosis-flask-holdout-v1", '
-            'or "diagnosis-werkzeug-holdout-v1"'
+            '"diagnosis-werkzeug-holdout-v1", or '
+            '"diagnosis-werkzeug-explicit-context-v1"'
         )
     cases = root.get("cases")
     if not isinstance(cases, list) or not cases:
@@ -146,6 +148,27 @@ def validate_manifest(data: dict) -> None:
         symbol = _text(case.get("symbol"), f"{case_id}.symbol")
         if not symbol.startswith(file + "::") or not symbol[len(file) + 2:]:
             raise EvaluationDataError(f"{case_id}.symbol must identify a qualified symbol in {file}")
+        if "include_symbols" in case:
+            extras = case["include_symbols"]
+            if not isinstance(extras, list) or not extras:
+                raise EvaluationDataError(f"{case_id}.include_symbols must be a nonempty list")
+            seen_extras: set[str] = set()
+            for extra in extras:
+                if (
+                    not isinstance(extra, str)
+                    or extra.count("::") != 1
+                    or extra != extra.strip()
+                ):
+                    raise EvaluationDataError(f"{case_id}.include_symbols contains an invalid symbol")
+                extra_file, extra_name = extra.split("::", 1)
+                _safe_source_path(extra_file, f"{case_id}.include_symbols file")
+                if not extra_file.endswith(".py") or not extra_name.strip():
+                    raise EvaluationDataError(f"{case_id}.include_symbols contains an invalid symbol")
+                if extra == symbol or extra in seen_extras:
+                    raise EvaluationDataError(
+                        f"{case_id}.include_symbols contains a duplicate or target"
+                    )
+                seen_extras.add(extra)
         _text(case.get("ground_truth"), f"{case_id}.ground_truth")
 
         references = case.get("references")
@@ -303,7 +326,15 @@ def prepare_cases(
                 raise EvaluationDataError(f"{case['id']}: Ambiguous symbol: {case['symbol']}")
             if case["symbol"] not in index.symbols:
                 raise EvaluationDataError(f"{case['id']}: Unknown symbol: {case['symbol']}")
-            detailed_context = build_context(index, case["symbol"], max_lines)
+            extras = case.get("include_symbols", [])
+            for extra in extras:
+                if extra in index.ambiguous_symbols:
+                    raise EvaluationDataError(f"{case['id']}: Ambiguous symbol: {extra}")
+                if extra not in index.symbols:
+                    raise EvaluationDataError(f"{case['id']}: Unknown symbol: {extra}")
+            detailed_context = build_context(
+                index, case["symbol"], max_lines, include_symbols=tuple(extras)
+            )
             source_lines, source_bytes = validate_context_budget(detailed_context)
             system_prompt, user_prompt = build_diagnosis_prompts(detailed_context)
             context = json.loads(user_prompt)
@@ -338,7 +369,7 @@ def prepare_cases(
             if thinking is not None:
                 request_shape["thinking"] = thinking
             request_hash = _canonical_hash(request_shape)
-        prepared_cases.append({
+        prepared_case = {
             "id": case["id"],
             "repository_url": case["repository_url"],
             "commit": case["commit"],
@@ -348,7 +379,10 @@ def prepare_cases(
             "request_sha256": request_hash,
             "source_lines": source_lines,
             "source_bytes": source_bytes,
-        })
+        }
+        if "include_symbols" in case:
+            prepared_case["include_symbols"] = case["include_symbols"]
+        prepared_cases.append(prepared_case)
         contexts[case["id"]] = context
 
     _analyzer_commit(expected_commit=analyzer_commit)

@@ -181,6 +181,8 @@ def _validate_plan_and_contexts(
         ):
             if plan_case.get(field) != expected:
                 raise EvaluationDataError(f"{case_id}: prepared plan {field} changed")
+        if plan_case.get("include_symbols") != manifest_case.get("include_symbols"):
+            raise EvaluationDataError(f"{case_id}: prepared plan include_symbols changed")
 
         context = contexts[case_id]
         if not isinstance(context, dict) or set(context) != {"symbol", "blocks", "call_evidence"}:
@@ -215,7 +217,10 @@ def _validate_plan_and_contexts(
         if symbol in index.ambiguous_symbols or symbol not in index.symbols:
             raise EvaluationDataError(f"{case_id}: target symbol is unknown or ambiguous")
         try:
-            rebuilt_context = build_context(index, symbol, max_lines)
+            rebuilt_context = build_context(
+                index, symbol, max_lines,
+                include_symbols=tuple(manifest_case.get("include_symbols", [])),
+            )
             validate_context_budget(rebuilt_context)
             system_prompt, user_prompt = build_diagnosis_prompts(rebuilt_context)
             expected_context = json.loads(user_prompt)

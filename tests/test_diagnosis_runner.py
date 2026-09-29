@@ -193,6 +193,55 @@ class DiagnosisRunnerTests(unittest.TestCase):
         record = json.loads((output_dir / summary["record_files"][0]).read_text())
         self.assertEqual(record["request_sha256"], bundle["plan"]["cases"][0]["request_sha256"])
 
+    def test_run_rebuilds_explicit_context_from_pinned_checkout(self):
+        manifest = copy.deepcopy(self.manifest)
+        manifest["cases"][0]["include_symbols"] = ["app.py::supplement"]
+        manifest["cases"][1]["include_symbols"] = ["app.py::supplement"]
+        manifest_sha256 = hashlib.sha256(
+            json.dumps(manifest, ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        bundle = prepare_cases(
+            manifest, self.fixture.repos_root, "test-model", 120,
+            manifest_sha256=manifest_sha256, response_format="json-schema",
+        )
+        client = Mock(return_value=DeepSeekResult("test-model", {"findings": []}))
+
+        summary, output = self.run_with(
+            client=client, plan=bundle["plan"], contexts=bundle["contexts"],
+            manifest=manifest, manifest_sha256=manifest_sha256,
+            output_name="explicit-run",
+        )
+
+        self.assertEqual(summary["state"], "complete")
+        self.assertEqual(summary["completed_calls"], 2)
+        self.assertTrue(output.joinpath("run.json").is_file())
+        self.assertEqual(
+            json.loads(client.call_args.args[1])["blocks"][1]["symbol"],
+            "app.py::supplement",
+        )
+
+    def test_changed_prepared_include_symbols_rejects_before_transport(self):
+        manifest = copy.deepcopy(self.manifest)
+        for case in manifest["cases"]:
+            case["include_symbols"] = ["app.py::supplement"]
+        manifest_sha256 = hashlib.sha256(
+            json.dumps(manifest, ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        bundle = prepare_cases(
+            manifest, self.fixture.repos_root, "test-model", 120,
+            manifest_sha256=manifest_sha256, response_format="json-schema",
+        )
+        plan = copy.deepcopy(bundle["plan"])
+        plan["cases"][0]["include_symbols"] = ["app.py::unrelated"]
+        client = Mock(return_value=DeepSeekResult("test-model", {"findings": []}))
+
+        output = self.assert_rejected_before_client(
+            client, output_name="changed-includes", plan=plan,
+            contexts=bundle["contexts"], manifest=manifest,
+            manifest_sha256=manifest_sha256,
+        )
+        self.assertFalse(output.exists())
+
     def test_schema_plan_rejects_changed_wire_hash_before_client(self):
         bundle = prepare_cases(
             self.manifest, self.fixture.repos_root, "test-model", 120,
