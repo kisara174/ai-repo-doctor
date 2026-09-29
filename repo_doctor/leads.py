@@ -37,6 +37,7 @@ def build_review_leads(index: RepoIndex, static_issues: list[dict]) -> list[dict
         if (
             caller is None or target is None or caller.id == target.id
             or caller.file in test_files or target.file in test_files
+            or caller.file == target.file
             or target.kind not in {"function", "method"}
         ):
             continue
@@ -46,11 +47,12 @@ def build_review_leads(index: RepoIndex, static_issues: list[dict]) -> list[dict
 
     shared_targets = sorted(
         ((target_id, callers) for target_id, callers in callers_by_target.items()
-         if len(callers) >= 3),
+         if len(callers) >= 3
+         and len({index.symbols[caller_id].file for caller_id in callers}) >= 2),
         key=lambda item: (-len(item[1]), item[0]),
     )[:5]
     for target_id, callers in shared_targets:
-        evidence = sorted(
+        all_evidence = sorted(
             ({"file": index.symbols[caller_id].file, "start_line": line,
               "end_line": line, "caller": caller_id}
              for caller_id, line in callers.items()),
@@ -61,8 +63,9 @@ def build_review_leads(index: RepoIndex, static_issues: list[dict]) -> list[dict
             "review_order": 3,
             "subject": target_id,
             "caller_count": len(callers),
-            "reason": "This symbol has at least three distinct resolved production callers; this is an impact entry, not evidence of a defect.",
+            "evidence_omitted": max(0, len(all_evidence) - 10),
+            "reason": "This symbol has at least three distinct resolved production callers in two or more other files; this is an impact entry, not evidence of a defect.",
             "next_step": "Inspect the listed callers before changing this symbol; use impact for indirect paths.",
-            "evidence": evidence,
+            "evidence": all_evidence[:10],
         })
     return leads

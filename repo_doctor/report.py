@@ -65,6 +65,34 @@ def render_report(case: dict) -> str:
         f"- 解析失败：{len(scan['parse_errors'])}；局部导入环：{len(scan['import_cycles'])}",
         "- 省略范围：动态调用、运行时行为与未扫描文件无法由静态图谱证明。", "",
     ]
+    if "review_leads" in scan:
+        lines.extend([
+            "## 建议先检查", "",
+            "检查顺序不代表缺陷严重度：先处理影响扫描完整性的解析失败，再看导入环，最后浏览被至少两个其他生产文件直接调用的符号。后两类是调查入口，不代表已确认缺陷。", "",
+        ])
+        if not scan["review_leads"]:
+            lines.extend(["当前规则没有产生静态检查入口；这不证明仓库没有缺陷。", ""])
+        for lead in scan["review_leads"]:
+            label = {
+                "parse_error": "解析失败",
+                "import_cycle": "局部导入环",
+                "shared_call_target": "共用调用目标",
+            }.get(lead["kind"], lead["kind"])
+            heading = f"- 顺序 {lead['review_order']} · {_inline(label)} · {_code(lead['subject'])}"
+            if lead.get("issue_id"):
+                heading += f" · issue {_code(lead['issue_id'])}"
+            if lead.get("caller_count") is not None:
+                heading += f" · {lead['caller_count']} 个跨文件生产代码直接调用者"
+            lines.extend([heading, f"  - 原因：{_inline(lead['reason'])}",
+                          f"  - 下一步：{_inline(lead['next_step'])}"])
+            for evidence in lead["evidence"]:
+                location = f"{evidence['file']}:{evidence['start_line']}"
+                detail = f" · {_code(evidence['caller'])}" if evidence.get("caller") else ""
+                message = f" · {_inline(evidence['message'])}" if evidence.get("message") else ""
+                lines.append(f"  - 边或位置：{_code(location)}{detail}{message}")
+            if lead.get("evidence_omitted"):
+                lines.append(f"  - 另有 {lead['evidence_omitted']} 条直接调用边未在摘要中展开；可用 impact 查看。")
+            lines.append("")
     target = case.get("target")
     if target:
         impact = target["impact"]
