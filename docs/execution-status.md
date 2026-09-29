@@ -1,17 +1,20 @@
 # Execution Status
 
-Updated 2026-09-29. The current public product is
-[v0.2.0](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.2.0),
-merged in [PR #18](https://github.com/kisara174/ai-repo-doctor/pull/18) at
-`603e8cd`. It provides a persistent Python repository case, symbol search,
-bounded optional DeepSeek diagnosis, source-grounded issues, human review,
-and explicit before/after regression records. The bundled offline demo and
-a controlled single cloud issue both completed the issue-to-report loop.
-The 370-test local suite, clean installed wheel smoke, public tag installation,
-and Python 3.11–3.13 CI passed. An external ItsDangerous checkout produced an
-offline static report without executing its code. See the
-[product guide](PRODUCT_GUIDE.md) for the completed P0 checklist and next
-milestone. The older dated reports below preserve evaluation history.
+Updated 2026-09-30. The current public product is
+[v0.3.0](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.3.0),
+merged in [PR #23](https://github.com/kisara174/ai-repo-doctor/pull/23) at
+`479c616`. It retains the v0.2.0 persistent Python repository case, symbol
+search, bounded optional DeepSeek diagnosis, source-grounded issues, human
+review, and explicit before/after regression records. It adds source-backed
+static review leads, architecture and impact summaries, and explicit disabled
+thinking in the default `chat-json` request. The final merge commit passed
+Python 3.11–3.13 CI; 373 local tests passed on the release branch. The wheel
+was rebuilt from the merge commit, installed in a clean environment, and
+downloaded again from the public release with matching SHA-256
+`91025e1462828e280f10aa71924f869fc435761ad1ddfe2be88abdabd6e7f22b`.
+The [product guide](PRODUCT_GUIDE.md) tracks the completed P0 workflow and
+the remaining diagnosis-quality gap. The older dated reports below preserve
+evaluation history.
 
 PR [#20](https://github.com/kisara174/ai-repo-doctor/pull/20) merged the first
 M1 changes into the default branch at `2ab4e15`; no new release tag was made.

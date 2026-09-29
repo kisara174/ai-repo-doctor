@@ -5,4 +5,6 @@ __pycache__/
 .pytest_cache/
 build/
 dist/
-/.local/diagnosis/
+/.local/
+/.graphflow-cache/
+/graphflow-out/
