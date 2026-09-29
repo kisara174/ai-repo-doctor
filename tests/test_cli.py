@@ -200,6 +200,52 @@ class CliTests(unittest.TestCase):
         self.assertEqual(report["accepted"], [])
         self.assertIn("quote", " ".join(report["rejected"][0]["reasons"]))
 
+    def test_validate_text_labels_quote_match_without_claiming_correctness(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+            finding = {
+                "title": "Example issue",
+                "category": "reliability",
+                "confidence": 0.8,
+                "evidence": [{"file": "a.py", "start_line": 2, "end_line": 2, "quote": "    return 1"}],
+                "reasoning": "Claim not checked by quote validation.",
+                "impact": "Unverified impact.",
+                "suggested_fix": "Review manually.",
+            }
+            path = root / "findings.json"
+            path.write_text(json.dumps(finding), encoding="utf-8")
+            result = self.run_cli("validate", root, path)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Quote-verified: 1", result.stdout)
+        self.assertIn("QUOTE-VERIFIED [0] Example issue", result.stdout)
+        self.assertNotIn("ACCEPTED", result.stdout)
+
+    def test_diagnose_text_labels_quote_match_without_claiming_correctness(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+            finding = {
+                "title": "Example issue",
+                "category": "reliability",
+                "confidence": 0.8,
+                "evidence": [{"file": "a.py", "start_line": 2, "end_line": 2, "quote": "    return 1"}],
+                "reasoning": "Claim not checked by quote validation.",
+                "impact": "Unverified impact.",
+                "suggested_fix": "Review manually.",
+            }
+            response = DeepSeekResult("deepseek-flash", {"findings": [finding]})
+            with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-secret"}, clear=True), patch(
+                "repo_doctor.cli.complete_json", return_value=response
+            ):
+                status, stdout, stderr = self.run_main("diagnose", root, "a.py::target")
+
+        self.assertEqual(status, 0, stderr)
+        self.assertIn("Quote-verified: 1", stdout)
+        self.assertIn("QUOTE-VERIFIED [0] Example issue", stdout)
+        self.assertNotIn("ACCEPTED", stdout)
+
     def test_unknown_symbol_returns_usage_error(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

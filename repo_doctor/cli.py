@@ -178,9 +178,9 @@ def _print_impact(payload: dict) -> None:
 
 
 def _print_validation(payload: dict) -> None:
-    print(f"Accepted: {len(payload['accepted'])}  Rejected: {len(payload['rejected'])}")
+    print(f"Quote-verified: {len(payload['accepted'])}  Rejected: {len(payload['rejected'])}")
     for entry in payload["accepted"]:
-        print(f"  ACCEPTED [{entry['index']}] {entry['finding']['title']}")
+        print(f"  QUOTE-VERIFIED [{entry['index']}] {entry['finding']['title']}")
     for entry in payload["rejected"]:
         title = entry["finding"].get("title", "(untitled)") if isinstance(entry["finding"], dict) else "(invalid finding)"
         print(f"  REJECTED [{entry['index']}] {title}")
@@ -227,9 +227,9 @@ def _verify_selected_source(index: RepoIndex, context: dict) -> None:
 
 def _print_diagnosis(payload: dict) -> None:
     print(f"DeepSeek diagnosis ({payload['model']})")
-    print(f"Accepted: {len(payload['accepted'])}  Rejected: {len(payload['rejected'])}")
+    print(f"Quote-verified: {len(payload['accepted'])}  Rejected: {len(payload['rejected'])}")
     for entry in payload["accepted"]:
-        print(f"  ACCEPTED [{entry['index']}] {entry['finding']['title']}")
+        print(f"  QUOTE-VERIFIED [{entry['index']}] {entry['finding']['title']}")
     for entry in payload["rejected"]:
         finding = entry["finding"]
         title = finding.get("title", "(untitled)") if isinstance(finding, dict) else "(invalid finding)"
