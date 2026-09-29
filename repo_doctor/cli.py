@@ -13,7 +13,8 @@ from pathlib import Path
 from .context import build_context, build_impact
 from .case import (
     create_case, load_case, record_diagnosis, record_diagnosis_failure, record_preview,
-    record_reproduction, require_issue, save_case, set_target, source_fingerprint, update_issue,
+    record_reproduction, require_issue, require_reproduction, save_case, set_target,
+    source_fingerprint, update_issue,
 )
 from .deepseek import (
     MAX_REQUEST_BYTES,
@@ -454,6 +455,8 @@ def _parser() -> argparse.ArgumentParser:
     )
     diagnose.add_argument("--json", action="store_true")
     diagnose.add_argument("--case", type=Path, help="Append the result to an existing investigation case")
+    diagnose.add_argument("--reproduction", metavar="R-ID",
+                          help="Include one source-current failed case reproduction; requires --case and a live preview hash")
     return parser
 
 
@@ -617,7 +620,19 @@ def main(argv: list[str] | None = None) -> int:
             line_count, byte_count = validate_context_budget(context)
             model = args.model or os.environ.get("DEEPSEEK_MODEL") or DEFAULT_MODEL
             model = model.strip() or DEFAULT_MODEL
-            system_prompt, user_prompt = build_diagnosis_prompts(context)
+            case = None
+            if args.case is not None:
+                case = load_case(args.case)
+                if case["repository"]["root"] != str(index.root):
+                    raise ValueError("repository does not match case")
+            reproduction = None
+            if args.reproduction is not None:
+                if case is None:
+                    raise ValueError("--reproduction requires --case")
+                reproduction = require_reproduction(case, args.reproduction, source_fingerprint(index))
+                if not args.preview and args.expect_request_sha256 is None:
+                    raise ValueError("--reproduction requires --expect-request-sha256 from preview")
+            system_prompt, user_prompt = build_diagnosis_prompts(context, reproduction=reproduction)
             serializer = (
                 _serialize_schema_request_body
                 if args.response_format == "json-schema"
@@ -631,11 +646,6 @@ def main(argv: list[str] | None = None) -> int:
                 )
             _verify_selected_source(index, context)
             request_sha256 = hashlib.sha256(request_body).hexdigest()
-            case = None
-            if args.case is not None:
-                case = load_case(args.case)
-                if case["repository"]["root"] != str(index.root):
-                    raise ValueError("repository does not match case")
             if args.expect_request_sha256 is not None:
                 if not re.fullmatch(r"[0-9a-f]{64}", args.expect_request_sha256):
                     raise ValueError("--expect-request-sha256 requires 64 lowercase hex characters")
@@ -646,10 +656,12 @@ def main(argv: list[str] | None = None) -> int:
                 if not api_key:
                     raise ValueError("DEEPSEEK_API_KEY is required for diagnose")
             _print_upload_summary(context, line_count, byte_count, request_body, preview=args.preview)
+            if reproduction is not None:
+                print(f"Including reproduction {reproduction['id']}: {len(reproduction['output'].encode('utf-8'))} bytes of captured command output. Inspect the preview before upload.", file=sys.stderr)
             if args.preview:
                 if case is not None:
                     record_preview(case, index, context, request_sha256, args.response_format,
-                                   model, line_count, byte_count)
+                                   model, line_count, byte_count, reproduction_id=args.reproduction)
                     save_case(args.case, case)
                 if hasattr(sys.stdout, "buffer"):
                     sys.stdout.buffer.write(request_body)
@@ -661,6 +673,8 @@ def main(argv: list[str] | None = None) -> int:
                 result = client(system_prompt, user_prompt, api_key=api_key, model=model,
                                 **chat_options)
                 _verify_selected_source(index, context)
+                if reproduction is not None and source_fingerprint(build_index(index.root)) != reproduction["source_fingerprint"]:
+                    raise ValueError("Python source changed during diagnosis; rerun reproduce")
                 report = validate_diagnosis_payload(index, result.payload, context)
             except DeepSeekError as exc:
                 if case is not None:
@@ -672,14 +686,16 @@ def main(argv: list[str] | None = None) -> int:
                         "provider_failure"
                     )
                     record_diagnosis_failure(case, index, context, request_sha256,
-                                             args.response_format, model, status, exc.diagnostic_category)
+                                             args.response_format, model, status, exc.diagnostic_category,
+                                             reproduction_id=args.reproduction)
                     save_case(args.case, case)
                 raise
             except ValueError as exc:
                 if case is not None:
                     status = "source_changed" if "source changed" in str(exc).lower() else "invalid_response"
                     record_diagnosis_failure(case, index, context, request_sha256,
-                                             args.response_format, model, status, status)
+                                             args.response_format, model, status, status,
+                                             reproduction_id=args.reproduction)
                     save_case(args.case, case)
                 raise
             payload = {
@@ -691,7 +707,8 @@ def main(argv: list[str] | None = None) -> int:
             }
             if case is not None:
                 record_diagnosis(case, index, context, request_sha256,
-                                 args.response_format, result.model, report)
+                                 args.response_format, result.model, report,
+                                 reproduction_id=args.reproduction)
                 save_case(args.case, case)
             printer = _print_diagnosis
         if args.json:

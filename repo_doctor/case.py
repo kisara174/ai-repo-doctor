@@ -269,7 +269,7 @@ def update_issue(case: dict, issue_id: str, status: str, note: str, *, related_t
 
 def record_diagnosis(
     case: dict, index: RepoIndex, context: dict, request_sha256: str,
-    response_format: str, model: str, report: dict,
+    response_format: str, model: str, report: dict, *, reproduction_id: str | None = None,
 ) -> dict:
     set_target(case, index, context["symbol"])
     next_id = 1 + max(
@@ -320,6 +320,8 @@ def record_diagnosis(
         "accepted_issue_ids": accepted_ids,
         "rejected": rejected,
     }
+    if reproduction_id is not None:
+        attempt["reproduction_id"] = reproduction_id
     case["diagnoses"].append(attempt)
     return attempt
 
@@ -327,22 +329,27 @@ def record_diagnosis(
 def record_preview(
     case: dict, index: RepoIndex, context: dict, request_sha256: str,
     response_format: str, model: str, line_count: int, byte_count: int,
+    *, reproduction_id: str | None = None,
 ) -> None:
     set_target(case, index, context["symbol"])
-    case["previews"].append({
+    preview = {
         "at": timestamp(), "target_symbol": context["symbol"],
         "context_sha256": hashlib.sha256(json.dumps(context, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest(),
         "request_sha256": request_sha256, "response_format": response_format,
         "model": model, "source_lines": line_count, "source_bytes": byte_count,
-    })
+    }
+    if reproduction_id is not None:
+        preview["reproduction_id"] = reproduction_id
+    case["previews"].append(preview)
 
 
 def record_diagnosis_failure(
     case: dict, index: RepoIndex, context: dict, request_sha256: str,
     response_format: str, model: str, status: str, category: str,
+    *, reproduction_id: str | None = None,
 ) -> None:
     set_target(case, index, context["symbol"])
-    case["diagnoses"].append({
+    attempt = {
         "at": timestamp(),
         "status": status,
         "target_symbol": context["symbol"],
@@ -353,4 +360,7 @@ def record_diagnosis_failure(
         "accepted_issue_ids": [],
         "rejected": [],
         "error_category": category,
-    })
+    }
+    if reproduction_id is not None:
+        attempt["reproduction_id"] = reproduction_id
+    case["diagnoses"].append(attempt)
