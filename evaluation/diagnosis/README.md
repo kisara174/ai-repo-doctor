@@ -181,3 +181,10 @@ Pass `"$WERKZEUG_ROOT"` as `--repos-root` during offline preparation.
 The six currently selected contexts range from 9 to 36 physical source
 lines and 339 to 1,409 source bytes. Fixed cases cover only their paired
 repair; any model finding still needs behavioral review.
+
+The current-product JSON Schema arm completed six calls. Primary review
+matched one of three known defects and found accepted false positives on two
+fixed snapshots. The [run report](../../docs/evaluations/2026-09-29-werkzeug-holdout.md)
+records case judgments, hashes, usage, and limits. This cohort is now visible
+to the implementer and must not be reused as unseen evidence for a tuned
+prompt or context change.
