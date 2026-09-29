@@ -165,7 +165,7 @@ class DiagnosisDataTests(unittest.TestCase):
         self.assertNotIn("tests/test_sensitive_case.py", v2_prompt)
         self.assertIn("return 1 / 0", v2_prompt)
 
-    def test_m1_holdout_excludes_test_evidence_and_rejects_unknown_id(self):
+    def test_m1_holdout_versions_exclude_test_evidence_and_reject_unknown_id(self):
         test_file = self.repo / "tests" / "test_sensitive_case.py"
         test_file.parent.mkdir()
         test_file.write_text(
@@ -178,19 +178,19 @@ class DiagnosisDataTests(unittest.TestCase):
 
         from tools.diagnosis_data import _build_evaluation_context
 
-        context = _build_evaluation_context(
-            index, "app.py::broken", 120,
-            dataset_id="diagnosis-m1-holdout-v1",
-        )
-        _, prompt = build_diagnosis_prompts(context)
-        self.assertIn("return 1 / 0", prompt)
-        self.assertNotIn("test_sensitive_case.py", prompt)
-        self.assertNotIn("test_regression_name_must_not_be_sent", prompt)
-
         manifest = copy.deepcopy(self.manifest)
-        manifest["dataset_id"] = "diagnosis-m1-holdout-v1"
-        validate_manifest(manifest)
-        manifest["dataset_id"] = "diagnosis-m1-holdout-v2"
+        for dataset_id in ("diagnosis-m1-holdout-v1", "diagnosis-m1-holdout-v2"):
+            context = _build_evaluation_context(
+                index, "app.py::broken", 120, dataset_id=dataset_id,
+            )
+            _, prompt = build_diagnosis_prompts(context)
+            self.assertIn("return 1 / 0", prompt)
+            self.assertNotIn("test_sensitive_case.py", prompt)
+            self.assertNotIn("test_regression_name_must_not_be_sent", prompt)
+            manifest["dataset_id"] = dataset_id
+            validate_manifest(manifest)
+
+        manifest["dataset_id"] = "diagnosis-m1-holdout-v3"
         with self.assertRaises(EvaluationDataError):
             validate_manifest(manifest)
 
