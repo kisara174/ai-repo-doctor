@@ -60,3 +60,22 @@ accuracy claim or product-default change follows. Mark this cohort consumed
 for holdout purposes because one request was attempted; do not present it as
 unseen evidence in a later run. The next comparison needs a fresh frozen
 cohort and an operational provider connection before dispatch.
+
+## Post-run transport diagnosis
+
+After [PR #14](https://github.com/kisara174/ai-repo-doctor/pull/14) merged,
+`doctor --deepseek` on the same Python 3.14 interpreter reported safe category
+`tls`. The interpreter's default CA file was absent and its SSL context loaded
+zero root certificates. An independent `curl` request completed TLS and
+returned HTTP 401 without credentials. Setting `SSL_CERT_FILE` to the existing
+system CA bundle made `doctor --deepseek` report `ready`. Running the Python
+installer's `Install Certificates.command` then installed its default CA bundle;
+without the environment override, the SSL context loaded 121 certificates and
+`doctor --deepseek` again reported `ready` for `deepseek-flash`.
+
+These are non-diagnosis model-list checks without repository source. They
+support a missing local Python trust bundle as the explanation for the
+connection failure, but the frozen run record retained only the coarse
+`connection` code, so it cannot prove the original exception's exact TLS
+cause. Provider readiness does not recover the seven unattempted calls or
+make this cohort unseen again.

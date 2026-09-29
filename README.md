@@ -93,7 +93,7 @@ repo-doctor doctor /path/to/python-repo --deepseek
 
 只有加 `--deepseek` 才会发出一次不含仓库源码的 `GET /models` 请求，检查 Key 与所选模型。模型选择顺序是 `--model`、`DEEPSEEK_MODEL`、默认 `deepseek-flash`。连接失败时 JSON 输出给出安全的类别和下一步提示，包括认证、余额、限流、DNS、TLS、代理、超时和服务端故障；不会输出 Key 或原始服务端错误正文。检查成功返回 0，未就绪返回 1，路径或参数错误返回 2。这项检查不运行诊断，也不能证明诊断质量或账号余额足以完成后续调用。
 
-如果 `doctor --deepseek` 报告 `tls`，检查当前 Python 的可信 CA 证书配置；不要关闭证书验证。在部分 macOS Python 安装中，设置 `SSL_CERT_FILE` 为系统可信 CA bundle 可以解决问题，例如 `SSL_CERT_FILE=/etc/ssl/cert.pem repo-doctor doctor --deepseek`（先确认该文件存在且是可信来源）。
+如果 `doctor --deepseek` 报告 `tls`，检查当前 Python 的可信 CA 证书配置。对 python.org 安装的 macOS Python，运行与当前解释器版本匹配的 `Install Certificates.command`（例如 `/Applications/Python 3.14/Install Certificates.command`），再运行 `doctor --deepseek`；这是 [Python 官方安装步骤](https://docs.python.org/3.14/using/mac.html)。若需要临时指定证书，先确认 `/etc/ssl/cert.pem` 存在且来源可信，再运行 `SSL_CERT_FILE=/etc/ssl/cert.pem repo-doctor doctor --deepseek`。保持 TLS 证书验证开启。
 
 ## 使用 DeepSeek 云端诊断（可选）
 
