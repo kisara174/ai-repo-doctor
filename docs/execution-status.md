@@ -177,7 +177,7 @@ actual billing is not inferred.
 
 ## Current next gate
 
-Keep the v0.2 human-reviewed workflow stable. The separately registered
+Keep the v0.3.0 human-reviewed workflow stable. The separately registered
 [M1 v2 evaluation](evaluations/2026-09-29-m1-holdout-v2.md) sent six pinned
 requests with thinking explicitly disabled: five responses were parseable,
 one was invalid JSON, source review found **0/3** known repairs, and one
@@ -187,6 +187,10 @@ next product-quality task is a user-supplied symptom or reproduction entry
 that keeps source quotation, human review, and a paired repaired-snapshot
 false-alarm gate. Earlier symptom-guided experiments improved hit counts but
 also had false alarms; no prompt change is promoted from those results alone.
+The same-context [Pro candidate screen](evaluations/2026-09-30-m1-pro-screen.md)
+returned 6/6 parseable responses but still found **0/3** known defects and
+accepted one false alarm on a repaired snapshot. Its registered gate failed;
+keep Flash as the released default and symptom guidance evaluation-only.
 
 ## Verification scope
 
