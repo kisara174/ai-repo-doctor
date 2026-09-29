@@ -240,3 +240,43 @@ require `deepseek.status` to be `ready`. This models-list check sends no
 repository source and helps catch local Key, model, and TLS setup failures
 before the holdout is attempted. It does not test the Responses endpoint or
 establish model quality.
+
+## Click explicit-context comparison v1
+
+`click-explicit-context-v1.json` freezes two fresh Click repairs, each with
+bug and fixed snapshots in default and explicitly supplemented context arms.
+The cases concern case-insensitive `Choice` shell completion
+([issue #1692](https://github.com/pallets/click/issues/1692),
+[PR #1693](https://github.com/pallets/click/pull/1693)) and `Choice` metavar
+display when `show_choices=False`
+([issue #2356](https://github.com/pallets/click/issues/2356),
+[PR #2365](https://github.com/pallets/click/pull/2365)). The manifest records
+the exact commits, source fingerprints, narrow behavioral labels, and upstream
+tests. Its 13,398 bytes have SHA-256
+`a3b5341bd219f734730cf7272939c890e8ecf3c458ac5cd42096b07ecfe48bd1`.
+Click's BSD-3-Clause license text has SHA-256
+`9a8ad106a394e853bfe21f42f4e72d592819a22805d991b5f3275029292b658d`
+in all four snapshots.
+
+To recreate four detached, clean checkouts without executing Click code:
+
+```sh
+CLICK_ROOT=/tmp/ai-repo-doctor-click-explicit
+mkdir -p "$CLICK_ROOT/.bare"
+git clone --bare https://github.com/pallets/click.git "$CLICK_ROOT/.bare/click.git"
+git --git-dir="$CLICK_ROOT/.bare/click.git" worktree add --detach "$CLICK_ROOT/click-acc91bc4f47e" acc91bc4f47e38f43277fcdfd8ca855734c4fbbc
+git --git-dir="$CLICK_ROOT/.bare/click.git" worktree add --detach "$CLICK_ROOT/click-5eb46cba463f" 5eb46cba463ff3e3894b58f6649c5a13f02a70b1
+git --git-dir="$CLICK_ROOT/.bare/click.git" worktree add --detach "$CLICK_ROOT/click-02046e7a1948" 02046e7a19480f85fff7e4577486518abe47e401
+git --git-dir="$CLICK_ROOT/.bare/click.git" worktree add --detach "$CLICK_ROOT/click-1a4d8c1bb1e8" 1a4d8c1bb1e8f8e214ede7223bd2c05dc2ce006a
+```
+
+Pass `"$CLICK_ROOT"` as `--repos-root`. The default arm includes the public
+`Parameter` method but omits the dynamically called `Choice` method. Each
+explicit row selects exactly that method through `include_symbols`. All eight
+offline selections fit 120 lines and 64 KiB; the largest is 43 selected lines.
+The [preregistered design](../../docs/superpowers/specs/2026-09-29-click-explicit-context-design.md)
+requires `deepseek-flash`, Responses `json_schema`, one sequential call per
+case, no retries, and manual source review. The provider receives selected
+context only, without case labels, issue IDs, or ground truth. Even a positive
+comparison would remain exploratory evidence from two purposive repairs in
+one library, one model sample per arm, and one primary reviewer.

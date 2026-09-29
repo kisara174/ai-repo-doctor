@@ -1,0 +1,250 @@
+{
+  "schema_version": 1,
+  "dataset_id": "diagnosis-click-explicit-context-v1",
+  "cases": [
+    {
+      "id": "click-choice-completion-bug-default",
+      "pair_id": "click-choice-completion-default",
+      "repository_url": "https://github.com/pallets/click",
+      "checkout_id": "click-acc91bc4f47e",
+      "commit": "acc91bc4f47e38f43277fcdfd8ca855734c4fbbc",
+      "symbol": "src/click/core.py::Parameter.shell_complete",
+      "label": "bug",
+      "issue_id": "pallets/click#1692",
+      "source": {
+        "file": "src/click/core.py",
+        "start_line": 2110,
+        "end_line": 2131,
+        "sha256": "c3937a7463013df7ab8b6b7fcc5c3fb590eb9f23926f0e1cfa0a3c220380bb39"
+      },
+      "ground_truth": "Known Click PR #1693. Trigger: an option with Choice(['Au', 'al', 'Bc'], case_sensitive=False) is shell-completed with incomplete 'a'. Parameter.shell_complete delegates to self.type.shell_complete; the old Choice.shell_complete uses case-sensitive startswith and omits 'Au'. Accept only a finding linking that dynamic type call to the missing case-insensitive match. The case_sensitive=True control should still offer only 'al'.",
+      "references": [
+        "https://github.com/pallets/click/pull/1693",
+        "https://github.com/pallets/click/issues/1692",
+        "https://github.com/pallets/click/commit/5eb46cba463ff3e3894b58f6649c5a13f02a70b1",
+        "https://github.com/pallets/click/blob/acc91bc4f47e38f43277fcdfd8ca855734c4fbbc/src/click/core.py#L2110-L2131",
+        "https://github.com/pallets/click/blob/5eb46cba463ff3e3894b58f6649c5a13f02a70b1/tests/test_shell_completion.py#L309-L316"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T05:25:50Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "click-choice-completion-bug-explicit",
+      "pair_id": "click-choice-completion-explicit",
+      "repository_url": "https://github.com/pallets/click",
+      "checkout_id": "click-acc91bc4f47e",
+      "commit": "acc91bc4f47e38f43277fcdfd8ca855734c4fbbc",
+      "symbol": "src/click/core.py::Parameter.shell_complete",
+      "label": "bug",
+      "issue_id": "pallets/click#1692",
+      "source": {
+        "file": "src/click/core.py",
+        "start_line": 2110,
+        "end_line": 2131,
+        "sha256": "c3937a7463013df7ab8b6b7fcc5c3fb590eb9f23926f0e1cfa0a3c220380bb39"
+      },
+      "ground_truth": "Known Click PR #1693. Trigger: an option with Choice(['Au', 'al', 'Bc'], case_sensitive=False) is shell-completed with incomplete 'a'. Parameter.shell_complete delegates to self.type.shell_complete; the old Choice.shell_complete uses case-sensitive startswith and omits 'Au'. Accept only a finding linking that dynamic type call to the missing case-insensitive match. The case_sensitive=True control should still offer only 'al'.",
+      "references": [
+        "https://github.com/pallets/click/pull/1693",
+        "https://github.com/pallets/click/issues/1692",
+        "https://github.com/pallets/click/commit/5eb46cba463ff3e3894b58f6649c5a13f02a70b1",
+        "https://github.com/pallets/click/blob/acc91bc4f47e38f43277fcdfd8ca855734c4fbbc/src/click/core.py#L2110-L2131",
+        "https://github.com/pallets/click/blob/5eb46cba463ff3e3894b58f6649c5a13f02a70b1/tests/test_shell_completion.py#L309-L316"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T05:25:50Z",
+        "status": "approved"
+      },
+      "include_symbols": [
+        "src/click/types.py::Choice.shell_complete"
+      ]
+    },
+    {
+      "id": "click-choice-completion-fixed-default",
+      "pair_id": "click-choice-completion-default",
+      "repository_url": "https://github.com/pallets/click",
+      "checkout_id": "click-5eb46cba463f",
+      "commit": "5eb46cba463ff3e3894b58f6649c5a13f02a70b1",
+      "symbol": "src/click/core.py::Parameter.shell_complete",
+      "label": "fixed",
+      "issue_id": "pallets/click#1692",
+      "source": {
+        "file": "src/click/core.py",
+        "start_line": 2110,
+        "end_line": 2131,
+        "sha256": "c3937a7463013df7ab8b6b7fcc5c3fb590eb9f23926f0e1cfa0a3c220380bb39"
+      },
+      "ground_truth": "Fixed snapshot for Click PR #1693. Choice.shell_complete with case_sensitive=False offers both 'Au' and 'al' for incomplete 'a'; case_sensitive=True offers only 'al'. Accept only a demonstrated violation of this narrow completion contract; this case does not certify the class as defect-free.",
+      "references": [
+        "https://github.com/pallets/click/pull/1693",
+        "https://github.com/pallets/click/issues/1692",
+        "https://github.com/pallets/click/commit/5eb46cba463ff3e3894b58f6649c5a13f02a70b1",
+        "https://github.com/pallets/click/blob/acc91bc4f47e38f43277fcdfd8ca855734c4fbbc/src/click/core.py#L2110-L2131",
+        "https://github.com/pallets/click/blob/5eb46cba463ff3e3894b58f6649c5a13f02a70b1/tests/test_shell_completion.py#L309-L316"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T05:25:50Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "click-choice-completion-fixed-explicit",
+      "pair_id": "click-choice-completion-explicit",
+      "repository_url": "https://github.com/pallets/click",
+      "checkout_id": "click-5eb46cba463f",
+      "commit": "5eb46cba463ff3e3894b58f6649c5a13f02a70b1",
+      "symbol": "src/click/core.py::Parameter.shell_complete",
+      "label": "fixed",
+      "issue_id": "pallets/click#1692",
+      "source": {
+        "file": "src/click/core.py",
+        "start_line": 2110,
+        "end_line": 2131,
+        "sha256": "c3937a7463013df7ab8b6b7fcc5c3fb590eb9f23926f0e1cfa0a3c220380bb39"
+      },
+      "ground_truth": "Fixed snapshot for Click PR #1693. Choice.shell_complete with case_sensitive=False offers both 'Au' and 'al' for incomplete 'a'; case_sensitive=True offers only 'al'. Accept only a demonstrated violation of this narrow completion contract; this case does not certify the class as defect-free.",
+      "references": [
+        "https://github.com/pallets/click/pull/1693",
+        "https://github.com/pallets/click/issues/1692",
+        "https://github.com/pallets/click/commit/5eb46cba463ff3e3894b58f6649c5a13f02a70b1",
+        "https://github.com/pallets/click/blob/acc91bc4f47e38f43277fcdfd8ca855734c4fbbc/src/click/core.py#L2110-L2131",
+        "https://github.com/pallets/click/blob/5eb46cba463ff3e3894b58f6649c5a13f02a70b1/tests/test_shell_completion.py#L309-L316"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T05:25:50Z",
+        "status": "approved"
+      },
+      "include_symbols": [
+        "src/click/types.py::Choice.shell_complete"
+      ]
+    },
+    {
+      "id": "click-choice-metavar-bug-default",
+      "pair_id": "click-choice-metavar-default",
+      "repository_url": "https://github.com/pallets/click",
+      "checkout_id": "click-02046e7a1948",
+      "commit": "02046e7a19480f85fff7e4577486518abe47e401",
+      "symbol": "src/click/core.py::Parameter.make_metavar",
+      "label": "bug",
+      "issue_id": "pallets/click#2356",
+      "source": {
+        "file": "src/click/core.py",
+        "start_line": 2127,
+        "end_line": 2139,
+        "sha256": "26e38d9433092fed60b56c64e96368058e634389aff7cab69dba19abfa4a4947"
+      },
+      "ground_truth": "Known Click PR #2365. Trigger: an Option uses Choice(['foo', 'bar']) with show_choices=False and its help metavar is built through Parameter.make_metavar. The old Choice.get_metavar exposes '[foo|bar]' despite show_choices=False; the intended type metavar is '[TEXT]'. Accept only a finding linking the dynamic self.type.get_metavar call to the ignored show_choices flag, not unrelated help formatting.",
+      "references": [
+        "https://github.com/pallets/click/pull/2365",
+        "https://github.com/pallets/click/issues/2356",
+        "https://github.com/pallets/click/commit/1a4d8c1bb1e8f8e214ede7223bd2c05dc2ce006a",
+        "https://github.com/pallets/click/blob/02046e7a19480f85fff7e4577486518abe47e401/src/click/core.py#L2127-L2139",
+        "https://github.com/pallets/click/blob/1a4d8c1bb1e8f8e214ede7223bd2c05dc2ce006a/tests/test_options.py#L931-L964"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T05:25:50Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "click-choice-metavar-bug-explicit",
+      "pair_id": "click-choice-metavar-explicit",
+      "repository_url": "https://github.com/pallets/click",
+      "checkout_id": "click-02046e7a1948",
+      "commit": "02046e7a19480f85fff7e4577486518abe47e401",
+      "symbol": "src/click/core.py::Parameter.make_metavar",
+      "label": "bug",
+      "issue_id": "pallets/click#2356",
+      "source": {
+        "file": "src/click/core.py",
+        "start_line": 2127,
+        "end_line": 2139,
+        "sha256": "26e38d9433092fed60b56c64e96368058e634389aff7cab69dba19abfa4a4947"
+      },
+      "ground_truth": "Known Click PR #2365. Trigger: an Option uses Choice(['foo', 'bar']) with show_choices=False and its help metavar is built through Parameter.make_metavar. The old Choice.get_metavar exposes '[foo|bar]' despite show_choices=False; the intended type metavar is '[TEXT]'. Accept only a finding linking the dynamic self.type.get_metavar call to the ignored show_choices flag, not unrelated help formatting.",
+      "references": [
+        "https://github.com/pallets/click/pull/2365",
+        "https://github.com/pallets/click/issues/2356",
+        "https://github.com/pallets/click/commit/1a4d8c1bb1e8f8e214ede7223bd2c05dc2ce006a",
+        "https://github.com/pallets/click/blob/02046e7a19480f85fff7e4577486518abe47e401/src/click/core.py#L2127-L2139",
+        "https://github.com/pallets/click/blob/1a4d8c1bb1e8f8e214ede7223bd2c05dc2ce006a/tests/test_options.py#L931-L964"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T05:25:50Z",
+        "status": "approved"
+      },
+      "include_symbols": [
+        "src/click/types.py::Choice.get_metavar"
+      ]
+    },
+    {
+      "id": "click-choice-metavar-fixed-default",
+      "pair_id": "click-choice-metavar-default",
+      "repository_url": "https://github.com/pallets/click",
+      "checkout_id": "click-1a4d8c1bb1e8",
+      "commit": "1a4d8c1bb1e8f8e214ede7223bd2c05dc2ce006a",
+      "symbol": "src/click/core.py::Parameter.make_metavar",
+      "label": "fixed",
+      "issue_id": "pallets/click#2356",
+      "source": {
+        "file": "src/click/core.py",
+        "start_line": 2127,
+        "end_line": 2139,
+        "sha256": "26e38d9433092fed60b56c64e96368058e634389aff7cab69dba19abfa4a4947"
+      },
+      "ground_truth": "Fixed snapshot for Click PR #2365. Choice.get_metavar displays '[TEXT]' for a string Choice(['foo', 'bar']) option with show_choices=False while retaining choice display when show_choices=True. Accept only a demonstrated violation of this narrow metavar contract; this case does not certify the class as defect-free.",
+      "references": [
+        "https://github.com/pallets/click/pull/2365",
+        "https://github.com/pallets/click/issues/2356",
+        "https://github.com/pallets/click/commit/1a4d8c1bb1e8f8e214ede7223bd2c05dc2ce006a",
+        "https://github.com/pallets/click/blob/02046e7a19480f85fff7e4577486518abe47e401/src/click/core.py#L2127-L2139",
+        "https://github.com/pallets/click/blob/1a4d8c1bb1e8f8e214ede7223bd2c05dc2ce006a/tests/test_options.py#L931-L964"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T05:25:50Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "click-choice-metavar-fixed-explicit",
+      "pair_id": "click-choice-metavar-explicit",
+      "repository_url": "https://github.com/pallets/click",
+      "checkout_id": "click-1a4d8c1bb1e8",
+      "commit": "1a4d8c1bb1e8f8e214ede7223bd2c05dc2ce006a",
+      "symbol": "src/click/core.py::Parameter.make_metavar",
+      "label": "fixed",
+      "issue_id": "pallets/click#2356",
+      "source": {
+        "file": "src/click/core.py",
+        "start_line": 2127,
+        "end_line": 2139,
+        "sha256": "26e38d9433092fed60b56c64e96368058e634389aff7cab69dba19abfa4a4947"
+      },
+      "ground_truth": "Fixed snapshot for Click PR #2365. Choice.get_metavar displays '[TEXT]' for a string Choice(['foo', 'bar']) option with show_choices=False while retaining choice display when show_choices=True. Accept only a demonstrated violation of this narrow metavar contract; this case does not certify the class as defect-free.",
+      "references": [
+        "https://github.com/pallets/click/pull/2365",
+        "https://github.com/pallets/click/issues/2356",
+        "https://github.com/pallets/click/commit/1a4d8c1bb1e8f8e214ede7223bd2c05dc2ce006a",
+        "https://github.com/pallets/click/blob/02046e7a19480f85fff7e4577486518abe47e401/src/click/core.py#L2127-L2139",
+        "https://github.com/pallets/click/blob/1a4d8c1bb1e8f8e214ede7223bd2c05dc2ce006a/tests/test_options.py#L931-L964"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T05:25:50Z",
+        "status": "approved"
+      },
+      "include_symbols": [
+        "src/click/types.py::Choice.get_metavar"
+      ]
+    }
+  ]
+}

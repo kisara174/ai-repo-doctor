@@ -46,7 +46,7 @@ manually review every model finding before scoring.
 
 ## Task 1: Admit the exact dataset ID
 
-- [ ] Add a focused test in `tests/test_diagnosis_data.py`: copy
+- [x] Add a focused test in `tests/test_diagnosis_data.py`: copy
   `self.manifest`, set `dataset_id` to
   `diagnosis-click-explicit-context-v1`, and assert `validate_manifest`
   accepts it. Set the ID to `diagnosis-click-explicit-context-v2` and assert
@@ -63,11 +63,11 @@ manually review every model finding before scoring.
           validate_manifest(manifest)
   ```
 
-- [ ] Add the v1 ID to the set and error message in
+- [x] Add the v1 ID to the set and error message in
   `tools/diagnosis_data.py::validate_manifest`; do not broaden matching or
   modify the runner, product CLI, prompt, parser, or scorer. The set addition
   is exactly `"diagnosis-click-explicit-context-v1",`.
-- [ ] Run `python3 -m unittest tests.test_diagnosis_data -q` and
+- [x] Run `python3 -m unittest tests.test_diagnosis_data -q` and
   `git diff --check`. Inspect and commit only the two files.
 
 **Acceptance:** The new exact ID is accepted; an unlisted variant is rejected;
@@ -75,17 +75,17 @@ old manifests and optional extras retain their existing behavior.
 
 ## Task 2: Freeze eight source-backed cases
 
-- [ ] Recheck the four detached checkout HEADs and clean status under
+- [x] Recheck the four detached checkout HEADs and clean status under
   `.local/diagnosis/click-explicit-candidates-20260929`:
   `acc91bc4f47e38f43277fcdfd8ca855734c4fbbc`,
   `5eb46cba463ff3e3894b58f6649c5a13f02a70b1`,
   `02046e7a19480f85fff7e4577486518abe47e401`,
   `1a4d8c1bb1e8f8e214ede7223bd2c05dc2ce006a`.
   Check both fixed commits' first parents match their bug snapshots.
-- [ ] Re-read the two official PRs, exact fix diffs, and upstream regression
+- [x] Re-read the two official PRs, exact fix diffs, and upstream regression
   tests. Confirm trigger, old behavior, repaired behavior, and narrow fixed
   contract. The primary agent approves ground truth before freezing the file.
-- [ ] Create `evaluation/diagnosis/click-explicit-context-v1.json` with
+- [x] Create `evaluation/diagnosis/click-explicit-context-v1.json` with
   `schema_version: 1`, dataset ID from Task 1, and eight cases ordered
   completion bug/default, bug/explicit, fixed/default, fixed/explicit, then
   metavar in the same order. Use distinct pair IDs for default and explicit
@@ -97,7 +97,7 @@ old manifests and optional extras retain their existing behavior.
   and upstream test, and approved primary-agent annotations. State the two
   narrow trigger/outcome contracts in `ground_truth`; do not assert that a
   repaired snapshot is defect-free.
-- [ ] Check `validate_manifest`, `_verified_checkout`, source fingerprints,
+- [x] Check `validate_manifest`, `_verified_checkout`, source fingerprints,
   unique target and extra symbol resolution, and default/explicit context
   selection offline. Confirm no block is truncated and all selected source
   fits 120 lines and 64 KiB. Compute the manifest's exact byte SHA-256 and
