@@ -1,0 +1,250 @@
+{
+  "schema_version": 1,
+  "dataset_id": "diagnosis-symptom-guided-v1",
+  "cases": [
+    {
+      "id": "pytest-12083-blind-bug",
+      "pair_id": "pytest-12083-blind",
+      "repository_url": "https://github.com/pytest-dev/pytest",
+      "checkout_id": "pytest-7cfe8aa2758c",
+      "commit": "7cfe8aa2758c154c9355ca61e3de32a50ec78663",
+      "symbol": "src/_pytest/main.py::Session.perform_collect",
+      "label": "bug",
+      "issue_id": "pytest-dev/pytest#12083",
+      "source": {
+        "file": "src/_pytest/main.py",
+        "start_line": 749,
+        "end_line": 833,
+        "sha256": "89e9951699fd56642a52d634da9edf33f1ed7ed92c13b14bb41423b832af1d00"
+      },
+      "ground_truth": "Known pytest issue #12083. Trigger: collection arguments name a test file and then its parent directory with --collect-only. Session.perform_collect retains both overlapping arguments and traverses the file path first; when the parent directory is then collected, the visited file is treated as a duplicate and sibling tests are missed. Accept a finding only when it links this overlapping-argument collection path to the missing sibling tests. Do not count unrelated collection behavior as this defect.",
+      "references": [
+        "https://github.com/pytest-dev/pytest/issues/12083",
+        "https://github.com/pytest-dev/pytest/pull/13704",
+        "https://github.com/pytest-dev/pytest/blob/7cfe8aa2758c154c9355ca61e3de32a50ec78663/src/_pytest/main.py#L749-L833",
+        "https://github.com/pytest-dev/pytest/blob/d036b12bb6fa09f9a8a3b690cc7336113c93fa44/testing/test_collection.py#L2164-L2190"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T09:17:41Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "pytest-12083-blind-fixed",
+      "pair_id": "pytest-12083-blind",
+      "repository_url": "https://github.com/pytest-dev/pytest",
+      "checkout_id": "pytest-d036b12bb6fa",
+      "commit": "d036b12bb6fa09f9a8a3b690cc7336113c93fa44",
+      "symbol": "src/_pytest/main.py::Session.perform_collect",
+      "label": "fixed",
+      "issue_id": "pytest-dev/pytest#12083",
+      "source": {
+        "file": "src/_pytest/main.py",
+        "start_line": 749,
+        "end_line": 844,
+        "sha256": "bbb88f7a14aa4bc71ab74df6be86126b82c30d6e1fa3835c01a69d0d0973083d"
+      },
+      "ground_truth": "Fixed snapshot for pytest issue #12083. The collection path normalizes overlapping arguments before traversal, so a parent directory subsumes the directly named file and sibling tests are collected. Accept only a different concrete defect in the selected source; do not report the repaired overlap as still broken.",
+      "references": [
+        "https://github.com/pytest-dev/pytest/issues/12083",
+        "https://github.com/pytest-dev/pytest/pull/13704",
+        "https://github.com/pytest-dev/pytest/blob/d036b12bb6fa09f9a8a3b690cc7336113c93fa44/src/_pytest/main.py#L749-L844",
+        "https://github.com/pytest-dev/pytest/blob/d036b12bb6fa09f9a8a3b690cc7336113c93fa44/testing/test_collection.py#L2164-L2190",
+        "https://github.com/pytest-dev/pytest/blob/d036b12bb6fa09f9a8a3b690cc7336113c93fa44/src/_pytest/main.py#L1150-L1175"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T09:17:41Z",
+        "status": "approved"
+      },
+      "include_symbols": [
+        "src/_pytest/main.py::normalize_collection_arguments"
+      ]
+    },
+    {
+      "id": "pytest-12083-symptom-bug",
+      "pair_id": "pytest-12083-symptom",
+      "repository_url": "https://github.com/pytest-dev/pytest",
+      "checkout_id": "pytest-7cfe8aa2758c",
+      "commit": "7cfe8aa2758c154c9355ca61e3de32a50ec78663",
+      "symbol": "src/_pytest/main.py::Session.perform_collect",
+      "label": "bug",
+      "issue_id": "pytest-dev/pytest#12083",
+      "source": {
+        "file": "src/_pytest/main.py",
+        "start_line": 749,
+        "end_line": 833,
+        "sha256": "89e9951699fd56642a52d634da9edf33f1ed7ed92c13b14bb41423b832af1d00"
+      },
+      "ground_truth": "Known pytest issue #12083. Trigger: collection arguments name a test file and then its parent directory with --collect-only. Session.perform_collect retains both overlapping arguments and traverses the file path first; when the parent directory is then collected, the visited file is treated as a duplicate and sibling tests are missed. Accept a finding only when it links this overlapping-argument collection path to the missing sibling tests. Do not count unrelated collection behavior as this defect.",
+      "references": [
+        "https://github.com/pytest-dev/pytest/issues/12083",
+        "https://github.com/pytest-dev/pytest/pull/13704",
+        "https://github.com/pytest-dev/pytest/blob/7cfe8aa2758c154c9355ca61e3de32a50ec78663/src/_pytest/main.py#L749-L833",
+        "https://github.com/pytest-dev/pytest/blob/d036b12bb6fa09f9a8a3b690cc7336113c93fa44/testing/test_collection.py#L2164-L2190"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T09:17:41Z",
+        "status": "approved"
+      },
+      "symptom": "When I ask pytest to collect a specific test file together with its containing directory, it collects only the file's test and misses other tests in that directory. Which code in the supplied context could explain this behavior?"
+    },
+    {
+      "id": "pytest-12083-symptom-fixed",
+      "pair_id": "pytest-12083-symptom",
+      "repository_url": "https://github.com/pytest-dev/pytest",
+      "checkout_id": "pytest-d036b12bb6fa",
+      "commit": "d036b12bb6fa09f9a8a3b690cc7336113c93fa44",
+      "symbol": "src/_pytest/main.py::Session.perform_collect",
+      "label": "fixed",
+      "issue_id": "pytest-dev/pytest#12083",
+      "source": {
+        "file": "src/_pytest/main.py",
+        "start_line": 749,
+        "end_line": 844,
+        "sha256": "bbb88f7a14aa4bc71ab74df6be86126b82c30d6e1fa3835c01a69d0d0973083d"
+      },
+      "ground_truth": "Fixed snapshot for pytest issue #12083. The collection path normalizes overlapping arguments before traversal, so a parent directory subsumes the directly named file and sibling tests are collected. Accept only a different concrete defect in the selected source; do not report the repaired overlap as still broken.",
+      "references": [
+        "https://github.com/pytest-dev/pytest/issues/12083",
+        "https://github.com/pytest-dev/pytest/pull/13704",
+        "https://github.com/pytest-dev/pytest/blob/d036b12bb6fa09f9a8a3b690cc7336113c93fa44/src/_pytest/main.py#L749-L844",
+        "https://github.com/pytest-dev/pytest/blob/d036b12bb6fa09f9a8a3b690cc7336113c93fa44/testing/test_collection.py#L2164-L2190",
+        "https://github.com/pytest-dev/pytest/blob/d036b12bb6fa09f9a8a3b690cc7336113c93fa44/src/_pytest/main.py#L1150-L1175"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T09:17:41Z",
+        "status": "approved"
+      },
+      "include_symbols": [
+        "src/_pytest/main.py::normalize_collection_arguments"
+      ],
+      "symptom": "When I ask pytest to collect a specific test file together with its containing directory, it collects only the file's test and misses other tests in that directory. Which code in the supplied context could explain this behavior?"
+    },
+    {
+      "id": "rich-3897-blind-bug",
+      "pair_id": "rich-3897-blind",
+      "repository_url": "https://github.com/Textualize/rich",
+      "checkout_id": "rich-53757bc234cf",
+      "commit": "53757bc234cf18977cade41a5b64f3abaccb0b85",
+      "symbol": "rich/cells.py::cell_len",
+      "label": "bug",
+      "issue_id": "Textualize/rich#3897",
+      "source": {
+        "file": "rich/cells.py",
+        "start_line": 51,
+        "end_line": 64,
+        "sha256": "8fa14b290a52f68d426305d61d968953a719ed6e2b0932f1e21f620cc7edab5c"
+      },
+      "ground_truth": "Known Rich issue #3897. Trigger: a variation-selector emoji such as ⬇️ is measured for terminal layout. In this snapshot, cached_cell_len sums code-point widths, so the zero-width variation selector does not widen its base glyph to two cells; subsequent layout is one cell too narrow. Accept a finding only when it links this cached per-code-point calculation to variation-selector width. Do not generalize it to ordinary single-arrow or unrelated wide-character handling.",
+      "references": [
+        "https://github.com/Textualize/rich/issues/3897",
+        "https://github.com/Textualize/rich/pull/3930",
+        "https://github.com/Textualize/rich/blob/53757bc234cf18977cade41a5b64f3abaccb0b85/rich/cells.py#L51-L64",
+        "https://github.com/Textualize/rich/blob/f000c3149166cc2091b801b63b0a55e806c5d49b/tests/test_cells.py#L159-L183",
+        "https://github.com/Textualize/rich/blob/53757bc234cf18977cade41a5b64f3abaccb0b85/rich/cells.py#L33-L48"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T09:17:41Z",
+        "status": "approved"
+      },
+      "include_symbols": [
+        "rich/cells.py::cached_cell_len"
+      ]
+    },
+    {
+      "id": "rich-3897-blind-fixed",
+      "pair_id": "rich-3897-blind",
+      "repository_url": "https://github.com/Textualize/rich",
+      "checkout_id": "rich-f000c3149166",
+      "commit": "f000c3149166cc2091b801b63b0a55e806c5d49b",
+      "symbol": "rich/cells.py::cell_len",
+      "label": "fixed",
+      "issue_id": "Textualize/rich#3897",
+      "source": {
+        "file": "rich/cells.py",
+        "start_line": 95,
+        "end_line": 107,
+        "sha256": "82c6ffb45d097968e6ad279161245c72f664ec64a3458d3cd266c3aa22b8269e"
+      },
+      "ground_truth": "Fixed snapshot for Rich issue #3897. cell_len delegates to cached_cell_len, which now uses _cell_len and Unicode-aware handling for variation selectors and joined graphemes; the regression test expects ⬇️ to occupy two cells. Accept only a different concrete defect in the selected source; do not report the repaired variation-selector width as still broken.",
+      "references": [
+        "https://github.com/Textualize/rich/issues/3897",
+        "https://github.com/Textualize/rich/pull/3930",
+        "https://github.com/Textualize/rich/blob/f000c3149166cc2091b801b63b0a55e806c5d49b/rich/cells.py#L95-L107",
+        "https://github.com/Textualize/rich/blob/f000c3149166cc2091b801b63b0a55e806c5d49b/tests/test_cells.py#L159-L183"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T09:17:41Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "rich-3897-symptom-bug",
+      "pair_id": "rich-3897-symptom",
+      "repository_url": "https://github.com/Textualize/rich",
+      "checkout_id": "rich-53757bc234cf",
+      "commit": "53757bc234cf18977cade41a5b64f3abaccb0b85",
+      "symbol": "rich/cells.py::cell_len",
+      "label": "bug",
+      "issue_id": "Textualize/rich#3897",
+      "source": {
+        "file": "rich/cells.py",
+        "start_line": 51,
+        "end_line": 64,
+        "sha256": "8fa14b290a52f68d426305d61d968953a719ed6e2b0932f1e21f620cc7edab5c"
+      },
+      "ground_truth": "Known Rich issue #3897. Trigger: a variation-selector emoji such as ⬇️ is measured for terminal layout. In this snapshot, cached_cell_len sums code-point widths, so the zero-width variation selector does not widen its base glyph to two cells; subsequent layout is one cell too narrow. Accept a finding only when it links this cached per-code-point calculation to variation-selector width. Do not generalize it to ordinary single-arrow or unrelated wide-character handling.",
+      "references": [
+        "https://github.com/Textualize/rich/issues/3897",
+        "https://github.com/Textualize/rich/pull/3930",
+        "https://github.com/Textualize/rich/blob/53757bc234cf18977cade41a5b64f3abaccb0b85/rich/cells.py#L51-L64",
+        "https://github.com/Textualize/rich/blob/f000c3149166cc2091b801b63b0a55e806c5d49b/tests/test_cells.py#L159-L183",
+        "https://github.com/Textualize/rich/blob/53757bc234cf18977cade41a5b64f3abaccb0b85/rich/cells.py#L33-L48"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T09:17:41Z",
+        "status": "approved"
+      },
+      "include_symbols": [
+        "rich/cells.py::cached_cell_len"
+      ],
+      "symptom": "In the terminal, `⬇️` and `⬆️` visually occupy two columns, but Rich lays out following text as though each occupies one; lines wrap or align incorrectly. Which code in the supplied context could explain this behavior?"
+    },
+    {
+      "id": "rich-3897-symptom-fixed",
+      "pair_id": "rich-3897-symptom",
+      "repository_url": "https://github.com/Textualize/rich",
+      "checkout_id": "rich-f000c3149166",
+      "commit": "f000c3149166cc2091b801b63b0a55e806c5d49b",
+      "symbol": "rich/cells.py::cell_len",
+      "label": "fixed",
+      "issue_id": "Textualize/rich#3897",
+      "source": {
+        "file": "rich/cells.py",
+        "start_line": 95,
+        "end_line": 107,
+        "sha256": "82c6ffb45d097968e6ad279161245c72f664ec64a3458d3cd266c3aa22b8269e"
+      },
+      "ground_truth": "Fixed snapshot for Rich issue #3897. cell_len delegates to cached_cell_len, which now uses _cell_len and Unicode-aware handling for variation selectors and joined graphemes; the regression test expects ⬇️ to occupy two cells. Accept only a different concrete defect in the selected source; do not report the repaired variation-selector width as still broken.",
+      "references": [
+        "https://github.com/Textualize/rich/issues/3897",
+        "https://github.com/Textualize/rich/pull/3930",
+        "https://github.com/Textualize/rich/blob/f000c3149166cc2091b801b63b0a55e806c5d49b/rich/cells.py#L95-L107",
+        "https://github.com/Textualize/rich/blob/f000c3149166cc2091b801b63b0a55e806c5d49b/tests/test_cells.py#L159-L183"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T09:17:41Z",
+        "status": "approved"
+      },
+      "symptom": "In the terminal, `⬇️` and `⬆️` visually occupy two columns, but Rich lays out following text as though each occupies one; lines wrap or align incorrectly. Which code in the supplied context could explain this behavior?"
+    }
+  ]
+}
