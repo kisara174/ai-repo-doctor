@@ -3,7 +3,7 @@
 Updated 2026-09-29. This file is the current project checkpoint; dated reports
 below preserve the earlier experiments.
 
-**Active branch/worktree:** `codex/werkzeug-holdout-v0.5` at
+**Active branch/worktree:** `codex/diagnosis-grounding-label-v0.6` at
 `/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor`.
 The stability branch was merged in
 [PR #8](https://github.com/kisara174/ai-repo-doctor/pull/8) at `5d72890`,
@@ -11,9 +11,11 @@ and the separate Flask holdout was merged in
 [PR #9](https://github.com/kisara174/ai-repo-doctor/pull/9) at `dbd8a1c`.
 The method-owner context change was merged in
 [PR #10](https://github.com/kisara174/ai-repo-doctor/pull/10) at `74da767`.
+The Werkzeug holdout was merged in
+[PR #11](https://github.com/kisara174/ai-repo-doctor/pull/11) at `2f7cc48`.
 The experimental prompt was reverted before PR #9 merged. The current branch
-freezes a third-repository Werkzeug holdout and records one current-product
-baseline without changing the prompt; see the
+clarifies the human-readable finding label after the holdout exposed a large
+gap between source quotation checks and behavioral correctness; see the
 [Werkzeug report](evaluations/2026-09-29-werkzeug-holdout.md).
 The prior evaluation branch
 was integrated at `86d1022`; its context implementation commit was
@@ -34,6 +36,7 @@ checkout has separate untracked V3 documents and was left untouched.
 | Evaluation | Frozen ten-case diagnosis manifest, separate six-case Flask and Werkzeug holdouts, offline preparation, one-case and full-plan runners, manual-review template, scoring, reproducible hashes, and offline CI workflow. | The original Chat ten-case online run is partial; later JSON Schema runs are complete with primary-only review. |
 | Latest context change | Local class ancestor definitions and used module import bindings may join the selected source blocks within the same line budget. | Focused fixture covers ancestry order, relevant imports, and the shared budget; PR #8 passed the full offline suite and CI. |
 | Method-owner context | A method target can include its enclosing class declaration as a separate bounded block. | Pinned offline comparisons preserve target lines and existing imports; PR #10 passed local and CI gates. |
+| Finding presentation | Text output calls citation-checked findings `QUOTE-VERIFIED`; the JSON `accepted` key remains stable. | Exact source quotation matching does not establish a true bug; manual review remains required. |
 | Distribution | The `0.1.0` wheel installs `repo-doctor` in a clean virtual environment; the public repository can serve as a pip source after integration. | Wheel contents and installed `scan`, `context`, `impact`, and `validate` were checked outside the source tree. The evaluation-only `tools` package is intentionally absent from the wheel. |
 
 The original post-V3 plan's T0–T6 implementation and T7 offline preparation
@@ -121,8 +124,14 @@ inferred.
 - The Werkzeug dataset-ID focused test and all 26 diagnosis-data tests passed
   after the exact allowlist extension. Six clean target checkouts, source
   fingerprints, context budgets, and serialized request hashes were checked
-  before the online run. The current branch passed 319 local offline tests and
-  `compileall` on 2026-09-29; current-head CI is still pending.
+  before the online run. The Werkzeug branch passed 319 local offline tests
+  and `compileall` on 2026-09-29.
+- PR #11 head `88ef9ec75be2645b4e767c456c1a4c6a65211ce3` passed Python
+  3.11, 3.12, and 3.13 in both push and pull-request CI before merging.
+- The current text-label branch first failed then passed its two focused CLI
+  output tests. Its JSON compatibility is covered by the existing CLI test.
+  All 321 local offline tests, `compileall`, and `git diff --check` passed on
+  2026-09-29; current-head CI is pending.
 - Pinned target repository code, tests, and dependencies were not executed or
   installed during these diagnosis experiments. The API key and raw provider
   response bodies were not saved in the evaluation artifacts.

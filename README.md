@@ -121,7 +121,7 @@ python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::User
 
 源码片段可能含有密钥或其他敏感内容。调用前请用 `context` 查看实际选中的代码；发现不应上传的内容时，不要运行 `diagnose`。Repo Doctor 不保存请求、源码或模型响应。API Key 仅从 `DEEPSEEK_API_KEY` 读取，不作为命令参数，也不会写入报告。
 
-被接受的 finding 表示其引文通过了本地源码和已发送上下文校验，并不证明推理正确。请人工复核结论，并通过实际运行或测试确认影响。
+文本输出将引文通过本地源码和已发送上下文校验的 finding 标为 `QUOTE-VERIFIED`；JSON 输出仍使用 `accepted` 字段以保持兼容。引文匹配不证明推理正确。请人工复核结论，并通过实际运行或测试确认影响。
 
 `--response-format json-schema` 是显式选择的实验性路径：它在相同的本地上下文与证据校验规则下调用 DeepSeek Responses API，请求结构化输出并关闭 thinking。默认的 `chat-json` 路径保持不变，两种路径都不会自动重试。[最初的单样本格式对照](docs/evaluations/2026-09-28-structured-output.md)之后，结构化路径完成了一轮[十样本诊断基线](docs/evaluations/2026-09-28-schema-ten-case-baseline.md)：十次请求均可解析，但经主代理复核只命中四个已知缺陷中的一个，且有较多误报和待确认发现。这说明输出格式可用不等于诊断质量达标；该定向小样本也不足以证明未来成功率。
 
