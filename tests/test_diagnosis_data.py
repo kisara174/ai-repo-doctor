@@ -1,3 +1,4 @@
+import copy
 import hashlib
 import json
 import subprocess
@@ -50,7 +51,9 @@ class DiagnosisDataTests(unittest.TestCase):
             "def unrelated():\n"
             "    return 42\n\n"
             "def broken():\n"
-            "    return 1 / 0\n",
+            "    return 1 / 0\n\n"
+            "def supplement():\n"
+            "    return 99\n",
             encoding="utf-8",
         )
         git(self.repo, "init", "-q")
@@ -128,6 +131,68 @@ class DiagnosisDataTests(unittest.TestCase):
         self.assertEqual(prepared["plan"]["cases"][0]["request_sha256"], expected_request_hash)
         self.assertNotIn("thinking_mode", prepared["plan"])
         open_request.assert_not_called()
+
+    def test_prepare_includes_only_manifest_selected_supplement_and_records_it(self):
+        manifest = copy.deepcopy(self.manifest)
+        manifest["dataset_id"] = "diagnosis-werkzeug-explicit-context-v1"
+        manifest["cases"][0]["include_symbols"] = ["app.py::supplement"]
+
+        prepared = prepare_cases(manifest, self.repos_root, "test-model", 120)
+        selected = prepared["contexts"]["bug-01"]["blocks"]
+        self.assertEqual(
+            [(block["symbol"], block["relation"]) for block in selected],
+            [("app.py::broken", "target"), ("app.py::supplement", "user_selected")],
+        )
+        self.assertEqual(
+            prepared["plan"]["cases"][0]["include_symbols"],
+            ["app.py::supplement"],
+        )
+        self.assertEqual(prepared["plan"]["dataset_id"], manifest["dataset_id"])
+
+        default = prepare_cases(self.manifest, self.repos_root, "test-model", 120)
+        self.assertNotIn("include_symbols", default["plan"]["cases"][0])
+        self.assertEqual(
+            [block["symbol"] for block in default["contexts"]["bug-01"]["blocks"]],
+            ["app.py::broken"],
+        )
+
+    def test_manifest_rejects_invalid_include_symbols(self):
+        for extras in (
+            [], ["app.py::supplement", "app.py::supplement"],
+            ["app.py::broken"], ["../outside.py::x"], ["app.py"],
+        ):
+            with self.subTest(extras=extras):
+                manifest = copy.deepcopy(self.manifest)
+                manifest["cases"][0]["include_symbols"] = extras
+                with self.assertRaisesRegex(EvaluationDataError, "include_symbols"):
+                    validate_manifest(manifest)
+
+    def test_prepare_rejects_unknown_include_symbol(self):
+        manifest = copy.deepcopy(self.manifest)
+        manifest["cases"][0]["include_symbols"] = ["app.py::missing"]
+        with self.assertRaisesRegex(EvaluationDataError, "Unknown symbol"):
+            prepare_cases(manifest, self.repos_root, "test-model", 120)
+
+    def test_prepare_rejects_ambiguous_include_symbol(self):
+        self.source.write_text(
+            "def unrelated():\n    return 42\n\n"
+            "def broken():\n    return 1 / 0\n\n"
+            "def supplement():\n    return 99\n\n"
+            "def supplement():\n    return 100\n",
+            encoding="utf-8",
+        )
+        git(self.repo, "add", "app.py")
+        subprocess.run(
+            ["git", "-C", str(self.repo), "-c", "user.name=Fixture", "-c",
+             "user.email=fixture@example.invalid", "commit", "-qm", "Ambiguous supplement"],
+            check=True,
+        )
+        manifest = copy.deepcopy(self.manifest)
+        manifest["cases"][0]["commit"] = git(self.repo, "rev-parse", "HEAD")
+        manifest["cases"][0]["include_symbols"] = ["app.py::supplement"]
+
+        with self.assertRaisesRegex(EvaluationDataError, "Ambiguous symbol"):
+            prepare_cases(manifest, self.repos_root, "test-model", 120)
 
     def test_schema_prepare_fingerprints_exact_responses_body_offline(self):
         with patch("urllib.request.OpenerDirector.open") as open_request:
