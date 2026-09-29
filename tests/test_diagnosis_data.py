@@ -173,6 +173,27 @@ class DiagnosisDataTests(unittest.TestCase):
         with self.assertRaisesRegex(EvaluationDataError, "Unknown symbol"):
             prepare_cases(manifest, self.repos_root, "test-model", 120)
 
+    def test_prepare_rejects_ambiguous_include_symbol(self):
+        self.source.write_text(
+            "def unrelated():\n    return 42\n\n"
+            "def broken():\n    return 1 / 0\n\n"
+            "def supplement():\n    return 99\n\n"
+            "def supplement():\n    return 100\n",
+            encoding="utf-8",
+        )
+        git(self.repo, "add", "app.py")
+        subprocess.run(
+            ["git", "-C", str(self.repo), "-c", "user.name=Fixture", "-c",
+             "user.email=fixture@example.invalid", "commit", "-qm", "Ambiguous supplement"],
+            check=True,
+        )
+        manifest = copy.deepcopy(self.manifest)
+        manifest["cases"][0]["commit"] = git(self.repo, "rev-parse", "HEAD")
+        manifest["cases"][0]["include_symbols"] = ["app.py::supplement"]
+
+        with self.assertRaisesRegex(EvaluationDataError, "Ambiguous symbol"):
+            prepare_cases(manifest, self.repos_root, "test-model", 120)
+
     def test_schema_prepare_fingerprints_exact_responses_body_offline(self):
         with patch("urllib.request.OpenerDirector.open") as open_request:
             prepared = prepare_cases(

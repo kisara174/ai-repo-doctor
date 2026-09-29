@@ -49,17 +49,17 @@ runner and manual review workflow.
 
 ## Task 1: Bind case-selected symbols to evaluation preparation and preflight
 
-- [ ] In `tests/test_diagnosis_data.py`, extend the committed fixture source
+- [x] In `tests/test_diagnosis_data.py`, extend the committed fixture source
   with a distinct `helper` function, update fixture target line numbers and
   source hash if needed, and add a focused test whose manifest case has
   `"include_symbols": ["app.py::helper"]`. Assert the prepared context
   contains that helper with `relation == "user_selected"`, and its plan case
   records the list. The same case without the field must omit both helper and
   plan field. Run only this test and observe failure for the new behavior.
-- [ ] Add manifest validation tests rejecting an empty list, duplicate name,
+- [x] Add manifest validation tests rejecting an empty list, duplicate name,
   target name, malformed name, unknown name, and ambiguous name. The existing
   unknown target test remains separate. Run the focused tests red.
-- [ ] In `tools/diagnosis_data.py`, admit only dataset ID
+- [x] In `tools/diagnosis_data.py`, admit only dataset ID
   `diagnosis-werkzeug-explicit-context-v1`; validate optional extras as a
   nonempty list of distinct `path.py::qualified_name` strings that exclude
   the target. Use `_safe_source_path` for the path. During preparation, use
@@ -68,12 +68,12 @@ runner and manual review workflow.
   `include_symbols` to the plan case only when the manifest contains it.
   Convert unknown/ambiguous extra lookup into `EvaluationDataError` before
   publishing output. Run `python3 -m unittest tests.test_diagnosis_data -q`.
-- [ ] In `tests/test_diagnosis_runner.py`, prepare a manifest with one extra
+- [x] In `tests/test_diagnosis_runner.py`, prepare a manifest with one extra
   symbol and assert the real preflight permits a client returning empty
   findings. Add a tamper case that removes or substitutes the prepared extra
   while keeping the old plan: `run_cases` must reject before output directory
   creation and before the client is called. Run these tests red.
-- [ ] In `tools/diagnosis_runner.py`, require the plan case's optional list to
+- [x] In `tools/diagnosis_runner.py`, require the plan case's optional list to
   equal the manifest case list and rebuild with that tuple. Preserve old-plan
   behavior for absent lists. Run
   `python3 -m unittest tests.test_diagnosis_data tests.test_diagnosis_runner -q`
@@ -84,7 +84,7 @@ old manifests prepare identically, and changed extras cannot reach transport.
 
 ## Task 2: Freeze eight source-backed cases
 
-- [ ] Confirm the four detached checkouts below have the exact HEADs, no tracked
+- [x] Confirm the four detached checkouts below have the exact HEADs, no tracked
   or untracked changes, and that each bug commit is the fixed commit's first
   parent. The existing ignored root is
   `.local/diagnosis/explicit-holdout-checkouts-20260929`:
@@ -96,11 +96,11 @@ old manifests prepare identically, and changed extras cannot reach transport.
   | `3790dc177329` | `3790dc177329a5214bd318be6e1dfd43d680eb64` |
   | `57521600ce04` | `57521600ce04fdf4d977c36f89fc51191aa8a3c9` |
 
-- [ ] Re-read the two upstream repair diffs and regression checks. Confirm
+- [x] Re-read the two upstream repair diffs and regression checks. Confirm
   the source behavior and target SHA-256 table in the spec, plus the selected
   extra method on both snapshots. Reject a row if its mechanism is not
   supported by the pinned source. No target runtime execution.
-- [ ] Create `evaluation/diagnosis/werkzeug-explicit-context-v1.json` with
+- [x] Create `evaluation/diagnosis/werkzeug-explicit-context-v1.json` with
   schema version 1 and dataset ID `diagnosis-werkzeug-explicit-context-v1`.
   Use the existing case keys. For each repair use four case IDs in this order:
   `werkzeug-empty-special-bug-default`,
@@ -117,12 +117,12 @@ old manifests prepare identically, and changed extras cannot reach transport.
   one-element `include_symbols` list from the spec. Bug/fixed arm mates use
   the same `issue_id`, repository URL, and target symbol; snapshot mates use
   the same commit, checkout ID, target span, and target hash.
-- [ ] State narrow ground truth per row: empty special header values yielded
+- [x] State narrow ground truth per row: empty special header values yielded
   by old `EnvironHeaders.__iter__` but skipped after repair, or non-string
   `get` key causing old `AttributeError` but returning a supplied default
   after repair. Do not call a fixed snapshot generally defect-free. Add
   upstream source/fix/test links and UTC primary approval annotations.
-- [ ] Check `validate_manifest`, `_verified_checkout`, `_source_fingerprint`,
+- [x] Check `validate_manifest`, `_verified_checkout`, `_source_fingerprint`,
   unique target and extra symbols, and source budgets. Confirm the eventual
   prompt contains no case ID, arm, ground truth, or reference. Record the
   manifest file's SHA-256 and checkout reproduction instructions in
@@ -133,7 +133,7 @@ offline with exactly the intended source delta.
 
 ## Task 3: Prepare and run the frozen comparison
 
-- [ ] From a clean analyzer commit, run:
+- [x] From a clean analyzer commit, run:
 
   ```sh
   python3 -m tools.evaluate_diagnosis prepare \
@@ -143,11 +143,11 @@ offline with exactly the intended source delta.
     --out-dir .local/diagnosis/explicit-context-plan-20260929
   ```
 
-- [ ] Inspect eight context and request hashes, source line/byte counts,
+- [x] Inspect eight context and request hashes, source line/byte counts,
   selected extra blocks, and the exact JSON Schema serialized body. Confirm
   each default/explicit snapshot mate has the same target SHA-256 and the
   extra method appears only in the explicit arm. Keep the plan immutable.
-- [ ] If the Key is available, run exactly once, sequentially:
+- [x] If the Key is available, run exactly once, sequentially:
 
   ```sh
   python3 -m tools.evaluate_diagnosis run \
@@ -166,18 +166,18 @@ offline-only/partial state without invented quality findings.
 
 ## Task 4: Review, report, and integrate
 
-- [ ] For each completed response, create a review template with
+- [x] For each completed response, create a review template with
   `python3 -m tools.evaluate_diagnosis prepare-review --run-dir
   .local/diagnosis/explicit-context-run-20260929 --out-file
   .local/diagnosis/explicit-context-review-20260929.json`. Inspect accepted
   findings against pinned source and upstream repair. Fill TP, FP,
   uncertain, or duplicate and concise source-backed rationales. Score only
   when the review is complete.
-- [ ] Use `tools.evaluate_diagnosis score` with the frozen manifest, run dir,
+- [x] Use `tools.evaluate_diagnosis score` with the frozen manifest, run dir,
   review JSON, and new ignored JSON/Markdown outputs. Report completion,
   grounding, bug detection and fixed-case alarms per arm, model token usage,
   any uncertain findings, and the preregistered narrow usefulness signal.
-- [ ] Update `docs/evaluations/2026-09-29-paired-explicit-context.md` and
+- [x] Update `docs/evaluations/2026-09-29-paired-explicit-context.md` and
   `docs/execution-status.md`. Keep cloud diagnosis experimental and state
   same-repository, two-repair, primary-only limitations.
 - [ ] Review the full diff, run

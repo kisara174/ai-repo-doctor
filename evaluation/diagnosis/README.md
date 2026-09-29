@@ -226,3 +226,9 @@ one call per case, and no retries. Its usefulness signal is narrow: at least
 one bug detected only with the explicit context, no additional fixed-case
 false alarm, and all eight parseable calls. Even a positive result would not
 justify a general accuracy claim or changing the product default.
+
+The first frozen attempt stopped after one connection failure. One request
+was attempted, no response was available, and seven cases were not attempted.
+The [partial run report](../../docs/evaluations/2026-09-29-paired-explicit-context.md)
+records the hashes and limits. Treat this cohort as consumed for holdout
+purposes and do not rerun it as unseen evidence.
