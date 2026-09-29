@@ -3,7 +3,7 @@
 Updated 2026-09-29. This file is the current project checkpoint; dated reports
 below preserve the earlier experiments.
 
-**Active branch/worktree:** `codex/diagnosis-grounding-label-v0.6` at
+**Active branch/worktree:** `codex/explicit-context-v0.7` at
 `/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor`.
 The stability branch was merged in
 [PR #8](https://github.com/kisara174/ai-repo-doctor/pull/8) at `5d72890`,
@@ -13,10 +13,12 @@ The method-owner context change was merged in
 [PR #10](https://github.com/kisara174/ai-repo-doctor/pull/10) at `74da767`.
 The Werkzeug holdout was merged in
 [PR #11](https://github.com/kisara174/ai-repo-doctor/pull/11) at `2f7cc48`.
+The quotation-only finding label was merged in
+[PR #12](https://github.com/kisara174/ai-repo-doctor/pull/12) at `8d591bf`.
 The experimental prompt was reverted before PR #9 merged. The current branch
-clarifies the human-readable finding label after the holdout exposed a large
-gap between source quotation checks and behavioral correctness; see the
-[Werkzeug report](evaluations/2026-09-29-werkzeug-holdout.md).
+adds explicit supplementary source selection to `context` and `diagnose`;
+its [offline coverage check](evaluations/2026-09-29-explicit-context-coverage.md)
+preserves default request bytes and does not claim improved model accuracy.
 The prior evaluation branch
 was integrated at `86d1022`; its context implementation commit was
 `6791483f9045487285e72aebad2eee7134ce4424`. Focused context
@@ -37,6 +39,7 @@ checkout has separate untracked V3 documents and was left untouched.
 | Latest context change | Local class ancestor definitions and used module import bindings may join the selected source blocks within the same line budget. | Focused fixture covers ancestry order, relevant imports, and the shared budget; PR #8 passed the full offline suite and CI. |
 | Method-owner context | A method target can include its enclosing class declaration as a separate bounded block. | Pinned offline comparisons preserve target lines and existing imports; PR #10 passed local and CI gates. |
 | Finding presentation | Text output calls citation-checked findings `QUOTE-VERIFIED`; the JSON `accepted` key remains stable. | Exact source quotation matching does not establish a true bug; manual review remains required. |
+| Explicit context | `context` and `diagnose` can add user-selected symbols inside the same source budget. | Opt-in selection can expose omitted local code; it does not infer a relationship or prove a model diagnosis. |
 | Distribution | The `0.1.0` wheel installs `repo-doctor` in a clean virtual environment; the public repository can serve as a pip source after integration. | Wheel contents and installed `scan`, `context`, `impact`, and `validate` were checked outside the source tree. The evaluation-only `tools` package is intentionally absent from the wheel. |
 
 The original post-V3 plan's T0–T6 implementation and T7 offline preparation
@@ -128,10 +131,17 @@ inferred.
   and `compileall` on 2026-09-29.
 - PR #11 head `88ef9ec75be2645b4e767c456c1a4c6a65211ce3` passed Python
   3.11, 3.12, and 3.13 in both push and pull-request CI before merging.
-- The current text-label branch first failed then passed its two focused CLI
+- The text-label branch first failed then passed its two focused CLI
   output tests. Its JSON compatibility is covered by the existing CLI test.
   All 321 local offline tests, `compileall`, and `git diff --check` passed on
-  2026-09-29; current-head CI is pending.
+  2026-09-29.
+- PR #12 head `6758416e446b6e05b85685ec1860ce5360a2a7c8` passed Python
+  3.11, 3.12, and 3.13 in push and pull-request CI before merging.
+- The explicit-context branch passed 326 local offline tests, `compileall`,
+  and staged diff checks. Its six default Werkzeug case records and context
+  files matched the prior frozen plan byte for byte. The source-selection
+  comparison and its limits are in the
+  [offline coverage check](evaluations/2026-09-29-explicit-context-coverage.md).
 - Pinned target repository code, tests, and dependencies were not executed or
   installed during these diagnosis experiments. The API key and raw provider
   response bodies were not saved in the evaluation artifacts.
@@ -167,17 +177,15 @@ The stability sequence completed these P0 and P1 gates:
   run records and completed primary review.
 
 The provider parser already separates incomplete, missing-content, and
-invalid-JSON responses with safe error categories. The method-owner change
-removed one observed context omission, but the Werkzeug holdout still missed
-two known bugs and failed its preregistered usefulness gate. In particular,
-the `Headers.__str__` case did not supply the subclass implementation needed
-to recognize the inherited-storage mismatch; the `MultiDict.__init__` case
-supplied its relevant branch but the model missed the bytes behavior. Keep
-cloud diagnosis experimental. Next, choose one measurable failure mode and
-evaluate it on further unseen cases with independent behavioral review. Do
-not tune against the now-visible three cohorts or switch the default
-protocol. Preserve all frozen manifests and partial run records. The current
-branch needs final diff review and current-head CI before integration.
+invalid-JSON responses with safe error categories. The Werkzeug holdout
+missed two known bugs and failed its preregistered usefulness gate. Explicit
+selection can now supply the previously omitted `EnvironHeaders` source, but
+the visible case cannot establish a model-quality gain. Keep cloud diagnosis
+experimental. Next, preregister new bug/fixed cases and compare default and
+explicit-context arms with source-based behavioral review. Do not tune
+against the now-visible three cohorts or switch the default protocol.
+Preserve all frozen manifests and partial run records. The current branch
+needs final diff review and current-head CI before integration.
 
 The earlier [post-V3 execution plan](superpowers/plans/2026-09-24-post-v3-execution.md),
 [handoff audit](evaluations/2026-09-25-handoff-audit.md), and
