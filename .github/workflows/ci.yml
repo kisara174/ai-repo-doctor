@@ -64,3 +64,16 @@ jobs:
           "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" validate repo-doctor-sample findings.json
           env -u DEEPSEEK_API_KEY "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" diagnose repo-doctor-sample 'app.py::answer' --preview > request-preview.json
           "$RUNNER_TEMP/repo-doctor-venv/bin/python" -m json.tool request-preview.json > /dev/null
+          RD="$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor"
+          "$RD" demo create --out "$RUNNER_TEMP/repo-doctor-demo"
+          "$RD" report create "$RUNNER_TEMP/repo-doctor-demo" --out "$RUNNER_TEMP/repo-doctor-case"
+          "$RD" issue "$RUNNER_TEMP/repo-doctor-case" S-001
+          if "$RD" verify "$RUNNER_TEMP/repo-doctor-case" S-001 --phase before -- python -m unittest -q test_regression; then
+            echo "expected the controlled pre-fix regression to fail" >&2
+            exit 1
+          fi
+          python -c "from pathlib import Path; Path('$RUNNER_TEMP/repo-doctor-demo/app.py').write_text('def answer():\\n    return 42\\n', encoding='utf-8')"
+          "$RD" verify "$RUNNER_TEMP/repo-doctor-case" S-001 --phase after -- python -m unittest -q test_regression
+          "$RD" issue "$RUNNER_TEMP/repo-doctor-case" S-001 --status resolved --note 'CI sample fix and regression' --related-test
+          "$RD" report show "$RUNNER_TEMP/repo-doctor-case" > "$RUNNER_TEMP/final-report.md"
+          grep -q '有修复证据' "$RUNNER_TEMP/final-report.md"

@@ -1,0 +1,137 @@
+"""Human-readable investigation report; case.json remains the source of truth."""
+
+import json
+import re
+
+
+def _inline(value: object) -> str:
+    text = " ".join(str(value).splitlines())
+    return re.sub(r"([\\`*_\[\]<>])", r"\\\1", text)
+
+
+def _quote(value: str) -> str:
+    longest = max((len(match.group()) for match in re.finditer(r"`+", value)), default=0)
+    fence = "`" * max(3, longest + 1)
+    return f"{fence}text\n{value}\n{fence}"
+
+
+def _code(value: object) -> str:
+    text = str(value).replace("\n", " ")
+    longest = max((len(match.group()) for match in re.finditer(r"`+", text)), default=0)
+    fence = "`" * max(1, longest + 1)
+    space = " " if text.startswith("`") or text.endswith("`") else ""
+    return f"{fence}{space}{text}{space}{fence}"
+
+
+def repair_state(issue: dict) -> str:
+    history = issue.get("verification", [])
+    after_position = next((position for position in range(len(history) - 1, -1, -1)
+                           if history[position]["phase"] == "after"), None)
+    after = history[after_position] if after_position is not None else None
+    before = None
+    if after is not None:
+        before = next((item for item in reversed(history[:after_position])
+                       if item["phase"] == "before" and item["argv"] == after["argv"]), None)
+    human = issue.get("human_history", [])
+    related = bool(human and human[-1]["status"] == "resolved" and human[-1].get("related_test"))
+    if (
+        issue.get("human_status") == "resolved" and related and before and after
+        and before["status"] == "failed" and after["status"] == "passed"
+        and before["source_fingerprint"] == before.get("source_fingerprint_after")
+        and after["source_fingerprint"] == after.get("source_fingerprint_after")
+        and before["source_fingerprint"] != after["source_fingerprint"]
+    ):
+        return "有修复证据（同一回归命令：修改前失败、源码变更、修改后通过；人工确认关联）"
+    if after and after["status"] != "passed":
+        return "复查未通过"
+    return "仍需复核"
+
+
+def render_report(case: dict) -> str:
+    repo = case["repository"]
+    scan = case["scan"]
+    stats = scan["stats"]
+    lines = [
+        "# AI Repo Doctor 调查报告", "",
+        f"- 仓库：{_code(repo['root'])}",
+        f"- 扫描时间：{_inline(case['created_at'])}",
+        f"- 工具版本：{_inline(case['tool_version'])}",
+        f"- Git 修订：{_code(repo.get('revision') or 'unavailable')}",
+        f"- 源码指纹：{_code(repo['source_fingerprint'])}",
+        f"- 扫描方式：{_inline(repo['scan_mode'])}", "",
+        "## 仓库概况", "",
+        f"- Python 文件：{stats['python_files']}；行数：{stats['python_lines']}；类/函数/方法：{stats['classes']}/{stats['functions']}/{stats['methods']}",
+        f"- 已解析调用：{stats['resolved_calls']}；未解析调用：{stats['unresolved_calls']}（覆盖边界，非缺陷）",
+        f"- 解析失败：{len(scan['parse_errors'])}；局部导入环：{len(scan['import_cycles'])}",
+        "- 省略范围：动态调用、运行时行为与未扫描文件无法由静态图谱证明。", "",
+    ]
+    target = case.get("target")
+    if target:
+        impact = target["impact"]
+        lines.extend(["## 调查目标与静态影响", "", f"- 符号：{_code(target['symbol'])}",
+                      f"- 源码指纹：{_code(target['source_fingerprint'])}",
+                      f"- 反向已解析影响：{len(impact['affected_symbols'])} 个符号", ""])
+        for item in impact["affected_symbols"]:
+            lines.append(f"- {_code(item['symbol'])}：{_code(' → '.join(item['path']))}")
+        lines.append("")
+    lines.extend(["## 请求预览", ""])
+    if not case.get("previews"):
+        lines.extend(["尚无已保存的请求预览。", ""])
+    for preview in case.get("previews", []):
+        lines.extend([
+            f"- {_inline(preview['at'])} · {_code(preview['target_symbol'])} · {_inline(preview['model'])} · {preview['source_lines']} 行/{preview['source_bytes']} 字节",
+            f"  - 请求 SHA-256：{_code(preview['request_sha256'])}", "",
+        ])
+    lines.extend(["## 诊断记录", ""])
+    if not case["diagnoses"]:
+        lines.extend(["尚未发起云端诊断。", ""])
+    for attempt in case["diagnoses"]:
+        lines.append(
+            f"- {_inline(attempt['at'])}：{_inline(attempt['status'])}；"
+            f"目标 {_code(attempt['target_symbol'])}；模型 {_inline(attempt.get('model') or 'unavailable')}；"
+            f"接受 {len(attempt.get('accepted_issue_ids', []))}；拒绝 {len(attempt.get('rejected', []))}"
+        )
+        if attempt.get("error_category"):
+            lines.append(f"  - 失败类别：{_inline(attempt['error_category'])}")
+        for rejected in attempt.get("rejected", []):
+            lines.append(f"  - 引文拒绝：{_inline(rejected.get('title', '(untitled)'))}；{_inline('; '.join(rejected['reasons']))}")
+    lines.extend(["", "## Issues", ""])
+    if not case["issues"]:
+        lines.extend(["目前没有已记录 issue。空发现不证明仓库没有缺陷。", ""])
+    for issue in case["issues"]:
+        lines.extend([
+            f"### {issue['id']} · {_inline(issue['title'])}", "",
+            f"- 来源：{_inline(issue['origin'])}；来源证据：{_inline(issue['evidence_status'])}；人工判断：{_inline(issue['human_status'])}",
+            f"- 修复状态：{repair_state(issue)}", "",
+            "**证据**", "",
+        ])
+        for evidence in issue.get("evidence", []):
+            location = f"{evidence['file']}:{evidence['start_line']}-{evidence['end_line']}"
+            lines.append(f"- {_code(location)}")
+            if evidence.get("quote"):
+                lines.extend(["", _quote(evidence["quote"]), ""])
+            if evidence.get("message"):
+                lines.append(f"  - {_inline(evidence['message'])}")
+        lines.extend(["", f"**推理：** {_inline(issue['reasoning'])}", "",
+                      f"**影响：** {_inline(issue['impact'])}", "",
+                      f"**建议：** {_inline(issue['suggested_fix'])}", ""])
+        if "confidence" in issue:
+            lines.extend([f"模型自报置信度：{issue['confidence']}（不代表产品判定）", ""])
+        if issue.get("human_history"):
+            lines.extend(["**人工记录**", ""])
+            for item in issue["human_history"]:
+                lines.append(f"- {_inline(item['at'])} · {_inline(item['status'])} · {_inline(item['note'])} · 测试关联：{'是' if item.get('related_test') else '未确认'}")
+            lines.append("")
+        if issue.get("verification"):
+            lines.extend(["**回归记录**", ""])
+            for item in issue["verification"]:
+                lines.append(f"- {_inline(item['at'])} · {_inline(item['phase'])} · {_inline(item['status'])} · exit={item['exit_code']} · {item['duration_seconds']}s · 命令 {_code(json.dumps(item['argv'], ensure_ascii=False))} · 源码 {_code(item['source_fingerprint'])}")
+                if item.get("source_fingerprint_after") != item["source_fingerprint"]:
+                    lines.append("  - 运行期间 Python 源码发生变化；该次结果不能作为修复闭环证据。")
+                if item.get("output"):
+                    lines.extend(["", _quote(item["output"]), ""])
+                if item.get("output_truncated"):
+                    lines.append("  - 输出已截断至 16 KiB。")
+            lines.append("")
+    lines.extend(["## 结论边界", "", "静态事实只说明源码结构；引文通过只说明模型引用了已发送的源码；问题是否真实仍需人工与回归验证。", ""])
+    return "\n".join(lines)
