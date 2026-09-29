@@ -663,6 +663,98 @@ def _score_prompt_arms(
     return by_arm
 
 
+def _registered_symptom_v2_signal(
+    run: dict,
+    records: list[dict],
+    manifest_cases: list[dict],
+    by_prompt_arm: dict,
+) -> dict:
+    """Evaluate the frozen V2 success criteria from reviewed prompt-arm data."""
+    symptom_arm = by_prompt_arm["symptom-guided"]["by_repeat"]
+    blind_arm = by_prompt_arm["blind"]["by_repeat"]
+    expected_issue_ids = list(dict.fromkeys(
+        case["issue_id"] for case in manifest_cases
+        if "symptom" in case and case["label"] == "bug"
+    ))
+    detected_issue_ids = [
+        issue_id for issue_id in expected_issue_ids
+        if any(
+            repeat["repairs"][issue_id]["bug_detection_count"] > 0
+            for repeat in symptom_arm
+        )
+    ]
+    symptom_bug_detections = sum(
+        len(repeat["detected_bug_case_ids"]) for repeat in symptom_arm
+    )
+    blind_bug_detections = sum(
+        len(repeat["detected_bug_case_ids"]) for repeat in blind_arm
+    )
+    symptom_fixed_false_alarms = sum(
+        repair["fixed_accepted_false_alarm_findings"]
+        for repeat in symptom_arm
+        for repair in repeat["repairs"].values()
+    )
+    blind_fixed_false_alarms = sum(
+        repair["fixed_accepted_false_alarm_findings"]
+        for repeat in blind_arm
+        for repair in repeat["repairs"].values()
+    )
+    total = len(records)
+    complete_successful_run = (
+        run["repeats"] == 2
+        and run["planned_calls"] == 32
+        and run["attempted_calls"] == 32
+        and run["completed_calls"] == 32
+        and run["state"] == "complete"
+        and total == 32
+        and all(record["status"] == "success" for record in records)
+    )
+    checks = {
+        "complete_successful_two_repeat_run": {
+            "passed": complete_successful_run,
+            "observed": {
+                "repeats": run["repeats"],
+                "planned_calls": run["planned_calls"],
+                "attempted_calls": run["attempted_calls"],
+                "completed_records": total,
+                "successful_records": sum(
+                    record["status"] == "success" for record in records
+                ),
+                "run_state": run["state"],
+            },
+            "required": "2 repeats and 32 of 32 successful parseable calls",
+        },
+        "all_symptom_repairs_detected": {
+            "passed": detected_issue_ids == expected_issue_ids,
+            "detected_issue_ids": detected_issue_ids,
+            "expected_issue_ids": expected_issue_ids,
+            "missing_issue_ids": [
+                issue_id for issue_id in expected_issue_ids
+                if issue_id not in detected_issue_ids
+            ],
+        },
+        "zero_symptom_fixed_false_alarms": {
+            "passed": symptom_fixed_false_alarms == 0,
+            "symptom_fixed_false_alarm_findings": symptom_fixed_false_alarms,
+        },
+        "symptom_bug_detections_exceed_blind": {
+            "passed": symptom_bug_detections >= blind_bug_detections + 1,
+            "symptom_detections": symptom_bug_detections,
+            "blind_detections": blind_bug_detections,
+            "required_minimum_difference": 1,
+        },
+        "symptom_false_alarms_not_above_blind": {
+            "passed": symptom_fixed_false_alarms <= blind_fixed_false_alarms,
+            "symptom_fixed_false_alarm_findings": symptom_fixed_false_alarms,
+            "blind_fixed_false_alarm_findings": blind_fixed_false_alarms,
+        },
+    }
+    return {
+        "passed": all(check["passed"] for check in checks.values()),
+        "checks": checks,
+    }
+
+
 def score_records(manifest: dict, records: list[dict], review: dict) -> dict:
     """Score manually reviewed records without I/O, networking, or source execution."""
     if not isinstance(records, list):
@@ -846,9 +938,16 @@ def score_records(manifest: dict, records: list[dict], review: dict) -> dict:
         report["thinking_mode"] = run["thinking_mode"]
     if "response_format" in run:
         report["response_format"] = run["response_format"]
-    if run["dataset_id"] == "diagnosis-symptom-guided-v1":
+    if run["dataset_id"] in (
+        "diagnosis-symptom-guided-v1",
+        "diagnosis-symptom-guided-v2",
+    ):
         report["by_prompt_arm"] = _score_prompt_arms(
             manifest_cases, records, reviewed, repeats
+        )
+    if run["dataset_id"] == "diagnosis-symptom-guided-v2":
+        report["registered_signal"] = _registered_symptom_v2_signal(
+            run, records, manifest_cases, report["by_prompt_arm"]
         )
     return report
 
@@ -945,6 +1044,50 @@ def render_report(report: dict) -> str:
                 f"| {_markdown(detail['case_id'])} | {_markdown(detail['label'])} | "
                 f"{_markdown(detail['status'])} | {detail['elapsed_seconds']} | "
                 f"{values[0]} | {values[1]} | {values[2]} |"
+            )
+        lines.append("")
+
+    if "registered_signal" in report:
+        signal = report["registered_signal"]
+        lines.extend([
+            "## Registered V2 signal",
+            "",
+            f"Overall: {'PASS' if signal['passed'] else 'FAIL'}",
+            "",
+            "| Check | Result | Observed |",
+            "| --- | --- | --- |",
+        ])
+        for name, check in signal["checks"].items():
+            if name == "complete_successful_two_repeat_run":
+                observed = check["observed"]
+                detail = (
+                    f"{observed['successful_records']}/{observed['completed_records']} "
+                    f"successful records; {observed['repeats']} repeats; "
+                    f"state `{_markdown(observed['run_state'])}`"
+                )
+            elif name == "all_symptom_repairs_detected":
+                detail = (
+                    f"{len(check['detected_issue_ids'])}/{len(check['expected_issue_ids'])} "
+                    "repairs detected; missing: "
+                    f"`{_markdown(', '.join(check['missing_issue_ids']) or 'none')}`"
+                )
+            elif name == "symptom_bug_detections_exceed_blind":
+                detail = (
+                    f"symptom {check['symptom_detections']}, blind "
+                    f"{check['blind_detections']}; minimum difference "
+                    f"{check['required_minimum_difference']}"
+                )
+            elif name == "zero_symptom_fixed_false_alarms":
+                detail = (
+                    f"{check['symptom_fixed_false_alarm_findings']} accepted false alarms"
+                )
+            else:
+                detail = (
+                    f"symptom {check['symptom_fixed_false_alarm_findings']}, "
+                    f"blind {check['blind_fixed_false_alarm_findings']} accepted false alarms"
+                )
+            lines.append(
+                f"| {_markdown(name)} | {'PASS' if check['passed'] else 'FAIL'} | {detail} |"
             )
         lines.append("")
 

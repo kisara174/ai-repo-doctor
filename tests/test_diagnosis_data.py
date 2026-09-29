@@ -414,6 +414,119 @@ class DiagnosisDataTests(unittest.TestCase):
             ],
         }
 
+    def make_symptom_guided_v2_manifest(self):
+        previous = self.make_symptom_guided_manifest()
+        previous_cases = previous["cases"]
+        repairs = [
+            (
+                "pydantic",
+                "https://github.com/pydantic/pydantic",
+                "pydantic/pydantic#13520",
+                "A generic model's defaults and type variables change behavior after an integration inspects annotations.",
+            ),
+            (
+                "jinja",
+                "https://github.com/pallets/jinja",
+                "pallets/jinja#1921",
+                "A very large scientific-notation string passed through the int filter raises OverflowError instead of returning the fallback.",
+            ),
+            (
+                "black",
+                "https://github.com/psf/black",
+                "psf/black#4640",
+                "Formatting a lambda with a standalone comment in a tuple default raises LookupError instead of returning formatted output.",
+            ),
+            (
+                "typer",
+                "https://github.com/fastapi/typer",
+                "fastapi/typer discussion#1068",
+                "With Rich installed, fish-shell completion descriptions contain escaped spaces and are malformed.",
+            ),
+        ]
+        cases = []
+        for repair, repository_url, issue_id, symptom in repairs:
+            for previous_case, arm, label in zip(
+                previous_cases[:4],
+                ("blind", "blind", "symptom", "symptom"),
+                ("bug", "fixed", "bug", "fixed"),
+            ):
+                case = copy.deepcopy(previous_case)
+                case.update({
+                    "id": f"{repair}-{arm}-{label}",
+                    "pair_id": f"{repair}-{arm}",
+                    "repository_url": repository_url,
+                    "checkout_id": repair,
+                    "issue_id": issue_id,
+                })
+                if arm == "symptom":
+                    case["symptom"] = symptom
+                cases.append(case)
+        return {
+            "schema_version": 1,
+            "dataset_id": "diagnosis-symptom-guided-v2",
+            "cases": cases,
+        }
+
+    def test_symptom_guided_v2_dataset_contract(self):
+        validate_manifest(self.make_symptom_guided_v2_manifest())
+
+    def test_symptom_guided_v2_rejects_wrong_shape_and_repository_reuse(self):
+        mutations = [
+            (
+                "missing case",
+                lambda manifest: manifest["cases"].pop(),
+                "exactly 16 cases",
+            ),
+            (
+                "extra case",
+                lambda manifest: manifest["cases"].append(
+                    copy.deepcopy(manifest["cases"][0])
+                ),
+                "exactly 16 cases",
+            ),
+            (
+                "reuse one candidate repository",
+                lambda manifest: [
+                    case.update(repository_url="https://github.com/pydantic/pydantic")
+                    for case in manifest["cases"]
+                    if case["id"].startswith("jinja-")
+                ],
+                "exactly 4 distinct repositories",
+            ),
+            (
+                "reuse a repository from an earlier cohort",
+                lambda manifest: [
+                    case.update(repository_url="https://github.com/pallets/click")
+                    for case in manifest["cases"]
+                    if case["id"].startswith("pydantic-")
+                ],
+                "repository was already used by an earlier diagnosis dataset",
+            ),
+            (
+                "remove one repair's symptom arm",
+                lambda manifest: [
+                    case.pop("symptom", None)
+                    for case in manifest["cases"]
+                    if case["id"].startswith("jinja-symptom-")
+                ],
+                "one blind and one symptom-guided pair",
+            ),
+            (
+                "mismatch symptom pair members",
+                lambda manifest: next(
+                    case for case in manifest["cases"]
+                    if case["id"] == "typer-symptom-fixed"
+                ).update(symptom="A different symptom"),
+                "both members must have the same symptom",
+            ),
+        ]
+        for label, mutate, expected in mutations:
+            with self.subTest(label=label):
+                manifest = self.make_symptom_guided_v2_manifest()
+                mutate(manifest)
+                with self.assertRaisesRegex(EvaluationDataError, expected):
+                    validate_manifest(manifest)
+
     def test_symptom_guided_dataset_contract(self):
         validate_manifest(self.make_symptom_guided_manifest())
 

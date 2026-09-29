@@ -1,0 +1,478 @@
+{
+  "schema_version": 1,
+  "dataset_id": "diagnosis-symptom-guided-v2",
+  "cases": [
+    {
+      "id": "pydantic-blind-bug",
+      "pair_id": "pydantic-blind",
+      "repository_url": "https://github.com/pydantic/pydantic",
+      "checkout_id": "pydantic-a187a654",
+      "commit": "a187a65467a588ccc00761d80f325b45381ca819",
+      "symbol": "pydantic/_internal/_typing_extra.py::safe_get_annotations",
+      "label": "bug",
+      "issue_id": "pydantic/pydantic#13520",
+      "source": {
+        "file": "pydantic/_internal/_typing_extra.py",
+        "start_line": 287,
+        "end_line": 297,
+        "sha256": "4e93b78f9b33a79c19548ee03dfb3ab66c0ae78bdd35b62fe7816206a58832b5"
+      },
+      "ground_truth": "Known Pydantic repair tracked by issue #13520. In the unfixed snapshot, safe_get_annotations uses inherited attribute lookup for classes. A class without its own annotations can therefore expose an inherited or metaclass annotation mapping to field collection, changing which fields and type variables Pydantic sees after another integration inspects annotations. Accept only findings that connect class annotation lookup to the reported order-dependent model behavior. Do not count unrelated generic model behavior.",
+      "references": [
+        "https://github.com/pydantic/pydantic/issues/13520",
+        "https://github.com/pydantic/pydantic/pull/13521",
+        "https://github.com/pydantic/pydantic/blob/a187a65467a588ccc00761d80f325b45381ca819/pydantic/_internal/_typing_extra.py#L287-L297",
+        "https://github.com/pydantic/pydantic/blob/05bc5da8b40540eee8491ec5e81622b36f7db12f/pydantic/_internal/_typing_extra.py#L287-L300",
+        "https://github.com/pydantic/pydantic/blob/05bc5da8b40540eee8491ec5e81622b36f7db12f/tests/test_edge_cases.py#L3167-L3184"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "pydantic-blind-fixed",
+      "pair_id": "pydantic-blind",
+      "repository_url": "https://github.com/pydantic/pydantic",
+      "checkout_id": "pydantic-05bc5da8",
+      "commit": "05bc5da8b40540eee8491ec5e81622b36f7db12f",
+      "symbol": "pydantic/_internal/_typing_extra.py::safe_get_annotations",
+      "label": "fixed",
+      "issue_id": "pydantic/pydantic#13520",
+      "source": {
+        "file": "pydantic/_internal/_typing_extra.py",
+        "start_line": 287,
+        "end_line": 300,
+        "sha256": "270ea280d63f1c2622514558da7631a349db24294adcc535ff01f37ba34b7dc2"
+      },
+      "ground_truth": "Fixed snapshot for the Pydantic annotation lookup repair. safe_get_annotations reads a class’s own __annotations__ from its namespace, while non-class objects retain ordinary attribute lookup. Accept only a different concrete defect in the selected code; do not report inherited annotations from the repaired class path as still present.",
+      "references": [
+        "https://github.com/pydantic/pydantic/issues/13520",
+        "https://github.com/pydantic/pydantic/pull/13521",
+        "https://github.com/pydantic/pydantic/blob/a187a65467a588ccc00761d80f325b45381ca819/pydantic/_internal/_typing_extra.py#L287-L297",
+        "https://github.com/pydantic/pydantic/blob/05bc5da8b40540eee8491ec5e81622b36f7db12f/pydantic/_internal/_typing_extra.py#L287-L300",
+        "https://github.com/pydantic/pydantic/blob/05bc5da8b40540eee8491ec5e81622b36f7db12f/tests/test_edge_cases.py#L3167-L3184"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "pydantic-symptom-bug",
+      "pair_id": "pydantic-symptom",
+      "repository_url": "https://github.com/pydantic/pydantic",
+      "checkout_id": "pydantic-a187a654",
+      "commit": "a187a65467a588ccc00761d80f325b45381ca819",
+      "symbol": "pydantic/_internal/_typing_extra.py::safe_get_annotations",
+      "label": "bug",
+      "issue_id": "pydantic/pydantic#13520",
+      "source": {
+        "file": "pydantic/_internal/_typing_extra.py",
+        "start_line": 287,
+        "end_line": 297,
+        "sha256": "4e93b78f9b33a79c19548ee03dfb3ab66c0ae78bdd35b62fe7816206a58832b5"
+      },
+      "ground_truth": "Known Pydantic repair tracked by issue #13520. In the unfixed snapshot, safe_get_annotations uses inherited attribute lookup for classes. A class without its own annotations can therefore expose an inherited or metaclass annotation mapping to field collection, changing which fields and type variables Pydantic sees after another integration inspects annotations. Accept only findings that connect class annotation lookup to the reported order-dependent model behavior. Do not count unrelated generic model behavior.",
+      "references": [
+        "https://github.com/pydantic/pydantic/issues/13520",
+        "https://github.com/pydantic/pydantic/pull/13521",
+        "https://github.com/pydantic/pydantic/blob/a187a65467a588ccc00761d80f325b45381ca819/pydantic/_internal/_typing_extra.py#L287-L297",
+        "https://github.com/pydantic/pydantic/blob/05bc5da8b40540eee8491ec5e81622b36f7db12f/pydantic/_internal/_typing_extra.py#L287-L300",
+        "https://github.com/pydantic/pydantic/blob/05bc5da8b40540eee8491ec5e81622b36f7db12f/tests/test_edge_cases.py#L3167-L3184"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      },
+      "symptom": "After an integration inspects class annotations during import, some generic models treat defaulted fields as required and fail to substitute their type variables. The behavior depends on whether the integration or model is loaded first. Which supplied code could explain this behavior?"
+    },
+    {
+      "id": "pydantic-symptom-fixed",
+      "pair_id": "pydantic-symptom",
+      "repository_url": "https://github.com/pydantic/pydantic",
+      "checkout_id": "pydantic-05bc5da8",
+      "commit": "05bc5da8b40540eee8491ec5e81622b36f7db12f",
+      "symbol": "pydantic/_internal/_typing_extra.py::safe_get_annotations",
+      "label": "fixed",
+      "issue_id": "pydantic/pydantic#13520",
+      "source": {
+        "file": "pydantic/_internal/_typing_extra.py",
+        "start_line": 287,
+        "end_line": 300,
+        "sha256": "270ea280d63f1c2622514558da7631a349db24294adcc535ff01f37ba34b7dc2"
+      },
+      "ground_truth": "Fixed snapshot for the Pydantic annotation lookup repair. safe_get_annotations reads a class’s own __annotations__ from its namespace, while non-class objects retain ordinary attribute lookup. Accept only a different concrete defect in the selected code; do not report inherited annotations from the repaired class path as still present.",
+      "references": [
+        "https://github.com/pydantic/pydantic/issues/13520",
+        "https://github.com/pydantic/pydantic/pull/13521",
+        "https://github.com/pydantic/pydantic/blob/a187a65467a588ccc00761d80f325b45381ca819/pydantic/_internal/_typing_extra.py#L287-L297",
+        "https://github.com/pydantic/pydantic/blob/05bc5da8b40540eee8491ec5e81622b36f7db12f/pydantic/_internal/_typing_extra.py#L287-L300",
+        "https://github.com/pydantic/pydantic/blob/05bc5da8b40540eee8491ec5e81622b36f7db12f/tests/test_edge_cases.py#L3167-L3184"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      },
+      "symptom": "After an integration inspects class annotations during import, some generic models treat defaulted fields as required and fail to substitute their type variables. The behavior depends on whether the integration or model is loaded first. Which supplied code could explain this behavior?"
+    },
+    {
+      "id": "jinja-blind-bug",
+      "pair_id": "jinja-blind",
+      "repository_url": "https://github.com/pallets/jinja",
+      "checkout_id": "jinja-20be10e5",
+      "commit": "20be10e566a505cc47bdec5fa6ad56d5fbdfb4ae",
+      "symbol": "src/jinja2/filters.py::do_int",
+      "label": "bug",
+      "issue_id": "pallets/jinja#1921",
+      "source": {
+        "file": "src/jinja2/filters.py",
+        "start_line": 984,
+        "end_line": 1003,
+        "sha256": "065e96e9799706f8783b31b8e85e27465985b2c6de763cbc5c5bb5e7e03189e1"
+      },
+      "ground_truth": "Known Jinja repair tracked by issue #1921. For very large scientific-notation strings, the initial integer conversion fails and the fallback float conversion can overflow while converting infinity to int. The unfixed handler does not catch that overflow, so the configured default is not returned. Accept only findings tied to this conversion path and fallback contract.",
+      "references": [
+        "https://github.com/pallets/jinja/issues/1921",
+        "https://github.com/pallets/jinja/pull/1984",
+        "https://github.com/pallets/jinja/blob/20be10e566a505cc47bdec5fa6ad56d5fbdfb4ae/src/jinja2/filters.py#L984-L1003",
+        "https://github.com/pallets/jinja/blob/3ef3ba885bc7a465b022abfd525d6bb4a1c8dd3c/src/jinja2/filters.py#L984-L1003",
+        "https://github.com/pallets/jinja/blob/3ef3ba885bc7a465b022abfd525d6bb4a1c8dd3c/tests/test_filters.py#L190-L204"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "jinja-blind-fixed",
+      "pair_id": "jinja-blind",
+      "repository_url": "https://github.com/pallets/jinja",
+      "checkout_id": "jinja-3ef3ba88",
+      "commit": "3ef3ba885bc7a465b022abfd525d6bb4a1c8dd3c",
+      "symbol": "src/jinja2/filters.py::do_int",
+      "label": "fixed",
+      "issue_id": "pallets/jinja#1921",
+      "source": {
+        "file": "src/jinja2/filters.py",
+        "start_line": 984,
+        "end_line": 1003,
+        "sha256": "ab5d3971d2fd16897f48d4b45eee1db826d37465e44ee1e3dfd2e2fa425e8484"
+      },
+      "ground_truth": "Fixed snapshot for the Jinja int-filter repair. The fallback conversion catches OverflowError and returns the configured default for an unrepresentably large scientific-notation value. Accept only a different concrete defect in the selected function; do not report the repaired overflow path as still uncaught.",
+      "references": [
+        "https://github.com/pallets/jinja/issues/1921",
+        "https://github.com/pallets/jinja/pull/1984",
+        "https://github.com/pallets/jinja/blob/20be10e566a505cc47bdec5fa6ad56d5fbdfb4ae/src/jinja2/filters.py#L984-L1003",
+        "https://github.com/pallets/jinja/blob/3ef3ba885bc7a465b022abfd525d6bb4a1c8dd3c/src/jinja2/filters.py#L984-L1003",
+        "https://github.com/pallets/jinja/blob/3ef3ba885bc7a465b022abfd525d6bb4a1c8dd3c/tests/test_filters.py#L190-L204"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "jinja-symptom-bug",
+      "pair_id": "jinja-symptom",
+      "repository_url": "https://github.com/pallets/jinja",
+      "checkout_id": "jinja-20be10e5",
+      "commit": "20be10e566a505cc47bdec5fa6ad56d5fbdfb4ae",
+      "symbol": "src/jinja2/filters.py::do_int",
+      "label": "bug",
+      "issue_id": "pallets/jinja#1921",
+      "source": {
+        "file": "src/jinja2/filters.py",
+        "start_line": 984,
+        "end_line": 1003,
+        "sha256": "065e96e9799706f8783b31b8e85e27465985b2c6de763cbc5c5bb5e7e03189e1"
+      },
+      "ground_truth": "Known Jinja repair tracked by issue #1921. For very large scientific-notation strings, the initial integer conversion fails and the fallback float conversion can overflow while converting infinity to int. The unfixed handler does not catch that overflow, so the configured default is not returned. Accept only findings tied to this conversion path and fallback contract.",
+      "references": [
+        "https://github.com/pallets/jinja/issues/1921",
+        "https://github.com/pallets/jinja/pull/1984",
+        "https://github.com/pallets/jinja/blob/20be10e566a505cc47bdec5fa6ad56d5fbdfb4ae/src/jinja2/filters.py#L984-L1003",
+        "https://github.com/pallets/jinja/blob/3ef3ba885bc7a465b022abfd525d6bb4a1c8dd3c/src/jinja2/filters.py#L984-L1003",
+        "https://github.com/pallets/jinja/blob/3ef3ba885bc7a465b022abfd525d6bb4a1c8dd3c/tests/test_filters.py#L190-L204"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      },
+      "symptom": "Passing a very large scientific-notation string through the int filter raises OverflowError instead of returning the configured fallback. Which supplied code could explain this behavior?"
+    },
+    {
+      "id": "jinja-symptom-fixed",
+      "pair_id": "jinja-symptom",
+      "repository_url": "https://github.com/pallets/jinja",
+      "checkout_id": "jinja-3ef3ba88",
+      "commit": "3ef3ba885bc7a465b022abfd525d6bb4a1c8dd3c",
+      "symbol": "src/jinja2/filters.py::do_int",
+      "label": "fixed",
+      "issue_id": "pallets/jinja#1921",
+      "source": {
+        "file": "src/jinja2/filters.py",
+        "start_line": 984,
+        "end_line": 1003,
+        "sha256": "ab5d3971d2fd16897f48d4b45eee1db826d37465e44ee1e3dfd2e2fa425e8484"
+      },
+      "ground_truth": "Fixed snapshot for the Jinja int-filter repair. The fallback conversion catches OverflowError and returns the configured default for an unrepresentably large scientific-notation value. Accept only a different concrete defect in the selected function; do not report the repaired overflow path as still uncaught.",
+      "references": [
+        "https://github.com/pallets/jinja/issues/1921",
+        "https://github.com/pallets/jinja/pull/1984",
+        "https://github.com/pallets/jinja/blob/20be10e566a505cc47bdec5fa6ad56d5fbdfb4ae/src/jinja2/filters.py#L984-L1003",
+        "https://github.com/pallets/jinja/blob/3ef3ba885bc7a465b022abfd525d6bb4a1c8dd3c/src/jinja2/filters.py#L984-L1003",
+        "https://github.com/pallets/jinja/blob/3ef3ba885bc7a465b022abfd525d6bb4a1c8dd3c/tests/test_filters.py#L190-L204"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      },
+      "symptom": "Passing a very large scientific-notation string through the int filter raises OverflowError instead of returning the configured fallback. Which supplied code could explain this behavior?"
+    },
+    {
+      "id": "black-blind-bug",
+      "pair_id": "black-blind",
+      "repository_url": "https://github.com/psf/black",
+      "checkout_id": "black-ff094acc",
+      "commit": "ff094acc4e00f8d50f48023cc218ede17879774a",
+      "symbol": "src/black/nodes.py::is_one_sequence_between",
+      "label": "bug",
+      "issue_id": "psf/black#4640",
+      "source": {
+        "file": "src/black/nodes.py",
+        "start_line": 676,
+        "end_line": 710,
+        "sha256": "a401df0aba20221a6e59e3fd933d932b2e8e3ac2520010a14e3e38f82ba46ce1"
+      },
+      "ground_truth": "Known Black repair tracked by issue #4640. While formatting a lambda with a commented tuple default, the opening leaf can be absent from the leaf sequence passed to is_one_sequence_between. The unfixed helper raises LookupError in this case and aborts formatting. Accept only findings connecting this missing-leaf case to the reported formatter failure.",
+      "references": [
+        "https://github.com/psf/black/issues/4640",
+        "https://github.com/psf/black/pull/4993",
+        "https://github.com/psf/black/blob/ff094acc4e00f8d50f48023cc218ede17879774a/src/black/nodes.py#L676-L710",
+        "https://github.com/psf/black/blob/88e78334afa2ff046e8689dc8a8e848dd87792b6/src/black/nodes.py#L676-L710",
+        "https://github.com/psf/black/blob/88e78334afa2ff046e8689dc8a8e848dd87792b6/tests/data/cases/comments_in_lambda_default.py#L1-L27"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "black-blind-fixed",
+      "pair_id": "black-blind",
+      "repository_url": "https://github.com/psf/black",
+      "checkout_id": "black-88e78334",
+      "commit": "88e78334afa2ff046e8689dc8a8e848dd87792b6",
+      "symbol": "src/black/nodes.py::is_one_sequence_between",
+      "label": "fixed",
+      "issue_id": "psf/black#4640",
+      "source": {
+        "file": "src/black/nodes.py",
+        "start_line": 676,
+        "end_line": 710,
+        "sha256": "86266f89ce3d6ddda7e2956a1883b6be12b513f6e9d9f8f2e9b1ec331a0e4b3a"
+      },
+      "ground_truth": "Fixed snapshot for the Black sequence-detection repair. When the opening leaf is absent from the supplied sequence, is_one_sequence_between returns false rather than raising LookupError, allowing formatting to continue. Accept only a different concrete defect in the selected helper; do not report the repaired exception path as still present.",
+      "references": [
+        "https://github.com/psf/black/issues/4640",
+        "https://github.com/psf/black/pull/4993",
+        "https://github.com/psf/black/blob/ff094acc4e00f8d50f48023cc218ede17879774a/src/black/nodes.py#L676-L710",
+        "https://github.com/psf/black/blob/88e78334afa2ff046e8689dc8a8e848dd87792b6/src/black/nodes.py#L676-L710",
+        "https://github.com/psf/black/blob/88e78334afa2ff046e8689dc8a8e848dd87792b6/tests/data/cases/comments_in_lambda_default.py#L1-L27"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "black-symptom-bug",
+      "pair_id": "black-symptom",
+      "repository_url": "https://github.com/psf/black",
+      "checkout_id": "black-ff094acc",
+      "commit": "ff094acc4e00f8d50f48023cc218ede17879774a",
+      "symbol": "src/black/nodes.py::is_one_sequence_between",
+      "label": "bug",
+      "issue_id": "psf/black#4640",
+      "source": {
+        "file": "src/black/nodes.py",
+        "start_line": 676,
+        "end_line": 710,
+        "sha256": "a401df0aba20221a6e59e3fd933d932b2e8e3ac2520010a14e3e38f82ba46ce1"
+      },
+      "ground_truth": "Known Black repair tracked by issue #4640. While formatting a lambda with a commented tuple default, the opening leaf can be absent from the leaf sequence passed to is_one_sequence_between. The unfixed helper raises LookupError in this case and aborts formatting. Accept only findings connecting this missing-leaf case to the reported formatter failure.",
+      "references": [
+        "https://github.com/psf/black/issues/4640",
+        "https://github.com/psf/black/pull/4993",
+        "https://github.com/psf/black/blob/ff094acc4e00f8d50f48023cc218ede17879774a/src/black/nodes.py#L676-L710",
+        "https://github.com/psf/black/blob/88e78334afa2ff046e8689dc8a8e848dd87792b6/src/black/nodes.py#L676-L710",
+        "https://github.com/psf/black/blob/88e78334afa2ff046e8689dc8a8e848dd87792b6/tests/data/cases/comments_in_lambda_default.py#L1-L27"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      },
+      "symptom": "Formatting a lambda whose tuple default contains a standalone comment and trailing comma raises LookupError instead of producing formatted output. Which supplied code could explain this behavior?"
+    },
+    {
+      "id": "black-symptom-fixed",
+      "pair_id": "black-symptom",
+      "repository_url": "https://github.com/psf/black",
+      "checkout_id": "black-88e78334",
+      "commit": "88e78334afa2ff046e8689dc8a8e848dd87792b6",
+      "symbol": "src/black/nodes.py::is_one_sequence_between",
+      "label": "fixed",
+      "issue_id": "psf/black#4640",
+      "source": {
+        "file": "src/black/nodes.py",
+        "start_line": 676,
+        "end_line": 710,
+        "sha256": "86266f89ce3d6ddda7e2956a1883b6be12b513f6e9d9f8f2e9b1ec331a0e4b3a"
+      },
+      "ground_truth": "Fixed snapshot for the Black sequence-detection repair. When the opening leaf is absent from the supplied sequence, is_one_sequence_between returns false rather than raising LookupError, allowing formatting to continue. Accept only a different concrete defect in the selected helper; do not report the repaired exception path as still present.",
+      "references": [
+        "https://github.com/psf/black/issues/4640",
+        "https://github.com/psf/black/pull/4993",
+        "https://github.com/psf/black/blob/ff094acc4e00f8d50f48023cc218ede17879774a/src/black/nodes.py#L676-L710",
+        "https://github.com/psf/black/blob/88e78334afa2ff046e8689dc8a8e848dd87792b6/src/black/nodes.py#L676-L710",
+        "https://github.com/psf/black/blob/88e78334afa2ff046e8689dc8a8e848dd87792b6/tests/data/cases/comments_in_lambda_default.py#L1-L27"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      },
+      "symptom": "Formatting a lambda whose tuple default contains a standalone comment and trailing comma raises LookupError instead of producing formatted output. Which supplied code could explain this behavior?"
+    },
+    {
+      "id": "typer-blind-bug",
+      "pair_id": "typer-blind",
+      "repository_url": "https://github.com/fastapi/typer",
+      "checkout_id": "typer-85ca5b5a",
+      "commit": "85ca5b5adc086dc76e6eccc3878727c3c7297edd",
+      "symbol": "typer/completion.py::shell_complete",
+      "label": "bug",
+      "issue_id": "fastapi/typer discussion#1068",
+      "source": {
+        "file": "typer/completion.py",
+        "start_line": 114,
+        "end_line": 161,
+        "sha256": "5da22c49b35e8d83089264ecdd582c259d5fbd673b6183b401b13eb8e13a24c3"
+      },
+      "ground_truth": "Known Typer shell-completion repair tracked by discussion #1068. In the unfixed snapshot, the complete instruction sends Click completion output through Rich rendering when Rich is installed; this transforms the text protocol that the shell expects and escapes spaces in descriptions. Accept only findings linking the Rich output path to malformed fish completions.",
+      "references": [
+        "https://github.com/fastapi/typer/discussions/1068",
+        "https://github.com/fastapi/typer/pull/1069",
+        "https://github.com/fastapi/typer/blob/85ca5b5adc086dc76e6eccc3878727c3c7297edd/typer/completion.py#L114-L161",
+        "https://github.com/fastapi/typer/blob/4f04666db67a231b4afd0d5b6de86b30242aa70c/typer/completion.py#L108-L149",
+        "https://github.com/fastapi/typer/blob/4f04666db67a231b4afd0d5b6de86b30242aa70c/tests/test_completion/test_completion_complete_rich.py#L66-L82"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "typer-blind-fixed",
+      "pair_id": "typer-blind",
+      "repository_url": "https://github.com/fastapi/typer",
+      "checkout_id": "typer-4f04666d",
+      "commit": "4f04666db67a231b4afd0d5b6de86b30242aa70c",
+      "symbol": "typer/completion.py::shell_complete",
+      "label": "fixed",
+      "issue_id": "fastapi/typer discussion#1068",
+      "source": {
+        "file": "typer/completion.py",
+        "start_line": 108,
+        "end_line": 149,
+        "sha256": "432d2272f3b655440c8158c4e5a5fa6c8fe7024a373541690611f2e443b3bd3f"
+      },
+      "ground_truth": "Fixed snapshot for the Typer completion repair. The complete instruction writes Click’s completion output directly, preserving the shell protocol when Rich is installed. Accept only a different concrete defect in the selected function; do not report Rich rendering of this completion output as still active.",
+      "references": [
+        "https://github.com/fastapi/typer/discussions/1068",
+        "https://github.com/fastapi/typer/pull/1069",
+        "https://github.com/fastapi/typer/blob/85ca5b5adc086dc76e6eccc3878727c3c7297edd/typer/completion.py#L114-L161",
+        "https://github.com/fastapi/typer/blob/4f04666db67a231b4afd0d5b6de86b30242aa70c/typer/completion.py#L108-L149",
+        "https://github.com/fastapi/typer/blob/4f04666db67a231b4afd0d5b6de86b30242aa70c/tests/test_completion/test_completion_complete_rich.py#L66-L82"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "typer-symptom-bug",
+      "pair_id": "typer-symptom",
+      "repository_url": "https://github.com/fastapi/typer",
+      "checkout_id": "typer-85ca5b5a",
+      "commit": "85ca5b5adc086dc76e6eccc3878727c3c7297edd",
+      "symbol": "typer/completion.py::shell_complete",
+      "label": "bug",
+      "issue_id": "fastapi/typer discussion#1068",
+      "source": {
+        "file": "typer/completion.py",
+        "start_line": 114,
+        "end_line": 161,
+        "sha256": "5da22c49b35e8d83089264ecdd582c259d5fbd673b6183b401b13eb8e13a24c3"
+      },
+      "ground_truth": "Known Typer shell-completion repair tracked by discussion #1068. In the unfixed snapshot, the complete instruction sends Click completion output through Rich rendering when Rich is installed; this transforms the text protocol that the shell expects and escapes spaces in descriptions. Accept only findings linking the Rich output path to malformed fish completions.",
+      "references": [
+        "https://github.com/fastapi/typer/discussions/1068",
+        "https://github.com/fastapi/typer/pull/1069",
+        "https://github.com/fastapi/typer/blob/85ca5b5adc086dc76e6eccc3878727c3c7297edd/typer/completion.py#L114-L161",
+        "https://github.com/fastapi/typer/blob/4f04666db67a231b4afd0d5b6de86b30242aa70c/typer/completion.py#L108-L149",
+        "https://github.com/fastapi/typer/blob/4f04666db67a231b4afd0d5b6de86b30242aa70c/tests/test_completion/test_completion_complete_rich.py#L66-L82"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      },
+      "symptom": "With Rich installed, fish-shell completion descriptions contain escaped spaces and become malformed. Which supplied code could explain this behavior?"
+    },
+    {
+      "id": "typer-symptom-fixed",
+      "pair_id": "typer-symptom",
+      "repository_url": "https://github.com/fastapi/typer",
+      "checkout_id": "typer-4f04666d",
+      "commit": "4f04666db67a231b4afd0d5b6de86b30242aa70c",
+      "symbol": "typer/completion.py::shell_complete",
+      "label": "fixed",
+      "issue_id": "fastapi/typer discussion#1068",
+      "source": {
+        "file": "typer/completion.py",
+        "start_line": 108,
+        "end_line": 149,
+        "sha256": "432d2272f3b655440c8158c4e5a5fa6c8fe7024a373541690611f2e443b3bd3f"
+      },
+      "ground_truth": "Fixed snapshot for the Typer completion repair. The complete instruction writes Click’s completion output directly, preserving the shell protocol when Rich is installed. Accept only a different concrete defect in the selected function; do not report Rich rendering of this completion output as still active.",
+      "references": [
+        "https://github.com/fastapi/typer/discussions/1068",
+        "https://github.com/fastapi/typer/pull/1069",
+        "https://github.com/fastapi/typer/blob/85ca5b5adc086dc76e6eccc3878727c3c7297edd/typer/completion.py#L114-L161",
+        "https://github.com/fastapi/typer/blob/4f04666db67a231b4afd0d5b6de86b30242aa70c/typer/completion.py#L108-L149",
+        "https://github.com/fastapi/typer/blob/4f04666db67a231b4afd0d5b6de86b30242aa70c/tests/test_completion/test_completion_complete_rich.py#L66-L82"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T18:13:41+08:00",
+        "status": "approved"
+      },
+      "symptom": "With Rich installed, fish-shell completion descriptions contain escaped spaces and become malformed. Which supplied code could explain this behavior?"
+    }
+  ]
+}

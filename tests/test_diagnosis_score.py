@@ -407,6 +407,128 @@ class DiagnosisScoreTests(unittest.TestCase):
         self.assertIn("pytest-symptom-fixed", rendered)
         self.assertIn("#### Repeat variation by case", rendered)
 
+    def _make_symptom_guided_v2_evaluation(self, *, fixed_false_alarm=False):
+        manifest = self.inputs.fixture.make_symptom_guided_v2_manifest()
+        manifest_bytes = json.dumps(
+            manifest, ensure_ascii=False, sort_keys=True, indent=2
+        ).encode("utf-8") + b"\n"
+        records = []
+        for repeat_index in range(1, 3):
+            for case in manifest["cases"]:
+                symptom_bug = "symptom" in case and case["label"] == "bug"
+                symptom_fixed_alarm = (
+                    fixed_false_alarm
+                    and repeat_index == 1
+                    and "symptom" in case
+                    and case["label"] == "fixed"
+                )
+                has_finding = symptom_bug or symptom_fixed_alarm
+                records.append({
+                    "case_id": case["id"],
+                    "repeat_index": repeat_index,
+                    "request_sha256": _sha(f"request:{case['id']}:{repeat_index}"),
+                    "context_sha256": _sha(f"context:{case['id']}"),
+                    "analyzer_commit": "c" * 40,
+                    "target_commit": case["commit"],
+                    "requested_model": "test-model",
+                    "response_model": "test-model",
+                    "started_at": "2026-09-29T00:00:00Z",
+                    "elapsed_seconds": 1.0,
+                    "status": "success",
+                    "usage": {
+                        "prompt_tokens": 10,
+                        "completion_tokens": 2,
+                        "total_tokens": 12,
+                    },
+                    "accepted": ([{
+                        "index": 0,
+                        "finding": {"title": f"finding {case['id']}"},
+                    }] if has_finding else []),
+                    "rejected": [],
+                    "error": None,
+                })
+        run = {
+            "schema_version": 1,
+            "dataset_id": manifest["dataset_id"],
+            "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+            "plan_sha256": "b" * 64,
+            "analyzer_commit": "c" * 40,
+            "requested_model": "test-model",
+            "response_format": "json-schema",
+            "repeats": 2,
+            "max_calls": 32,
+            "planned_calls": 32,
+            "attempted_calls": 32,
+            "completed_calls": 32,
+            "state": "complete",
+            "record_files": [
+                f"records/{record['case_id']}-r{record['repeat_index']}.json"
+                for record in records
+            ],
+        }
+        review = make_review_template(records)
+        review["run"] = run
+        cases_by_id = {case["id"]: case for case in manifest["cases"]}
+        for row in review["rows"]:
+            case = cases_by_id[row["case_id"]]
+            if case["label"] == "bug":
+                row.update(
+                    verdict="tp",
+                    matched_issue_id=case["issue_id"],
+                    rationale="Accepted finding matches the registered repair.",
+                )
+            else:
+                row.update(
+                    verdict="fp",
+                    matched_issue_id=None,
+                    rationale="Accepted finding is a false alarm on fixed source.",
+                )
+            row["reviewer"] = "primary reviewer"
+        return manifest, records, review
+
+    def test_symptom_guided_v2_registered_signal_passes_only_with_all_conditions(self):
+        manifest, records, review = self._make_symptom_guided_v2_evaluation()
+
+        report = score_records(manifest, records, review)
+        signal = report["registered_signal"]
+
+        self.assertTrue(signal["passed"])
+        self.assertEqual(
+            len(report["by_prompt_arm"]["symptom-guided"]["by_repeat"][0]["repairs"]), 4
+        )
+        self.assertTrue(
+            signal["checks"]["complete_successful_two_repeat_run"]["passed"]
+        )
+        self.assertEqual(
+            signal["checks"]["all_symptom_repairs_detected"]["detected_issue_ids"],
+            list(dict.fromkeys(
+                case["issue_id"] for case in manifest["cases"]
+                if "symptom" in case and case["label"] == "bug"
+            )),
+        )
+        self.assertEqual(
+            signal["checks"]["symptom_bug_detections_exceed_blind"]["symptom_detections"],
+            8,
+        )
+        rendered = render_report(report)
+        self.assertIn("## Registered V2 signal", rendered)
+        self.assertIn("Overall: PASS", rendered)
+
+    def test_symptom_guided_v2_registered_signal_fails_on_fixed_false_alarm(self):
+        manifest, records, review = self._make_symptom_guided_v2_evaluation(
+            fixed_false_alarm=True
+        )
+
+        signal = score_records(manifest, records, review)["registered_signal"]
+
+        self.assertFalse(signal["passed"])
+        self.assertFalse(
+            signal["checks"]["zero_symptom_fixed_false_alarms"]["passed"]
+        )
+        self.assertFalse(
+            signal["checks"]["symptom_false_alarms_not_above_blind"]["passed"]
+        )
+
     def test_false_alarm_rate_counts_fixed_and_control_negative_cases(self):
         records = [
             self.inputs.make_record(
