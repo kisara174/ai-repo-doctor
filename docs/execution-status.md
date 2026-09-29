@@ -1,39 +1,34 @@
 # Execution Status
 
 Updated 2026-09-30. The current public product is
-[v0.3.0](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.3.0),
-merged in [PR #23](https://github.com/kisara174/ai-repo-doctor/pull/23) at
-`479c616`. It retains the v0.2.0 persistent Python repository case, symbol
-search, bounded optional DeepSeek diagnosis, source-grounded issues, human
-review, and explicit before/after regression records. It adds source-backed
-static review leads, architecture and impact summaries, and explicit disabled
-thinking in the default `chat-json` request. The final merge commit passed
-Python 3.11–3.13 CI; 373 local tests passed on the release branch. The wheel
-was rebuilt from the merge commit, installed in a clean environment, and
-downloaded again from the public release with matching SHA-256
-`91025e1462828e280f10aa71924f869fc435761ad1ddfe2be88abdabd6e7f22b`.
-The [product guide](PRODUCT_GUIDE.md) tracks the completed P0 workflow and
-the remaining diagnosis-quality gap. The older dated reports below preserve
-evaluation history.
+[v0.4.0](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.4.0),
+merged in [PR #26](https://github.com/kisara174/ai-repo-doctor/pull/26) at
+`4f176c3edf10c3819ff4a503641421f4abcaa056`. It retains the v0.3.0
+static review, architecture and impact summaries and the v0.2.0 persistent
+case, source-grounded issue, human review, and repair record. The exact merge
+commit passed Python 3.11–3.13 CI; 383 local offline tests passed before merge.
+Its wheel installed in a clean Python 3.14.5 environment and completed an
+offline reproduction/preview/stale-record check. The public release asset was
+downloaded and matched the merge-commit build SHA-256
+`3b3509c7301dfa00f09dae87a4d9ddb03120f80609aa9cc20f6e10a8e112b51b`.
+The [product guide](PRODUCT_GUIDE.md) tracks the completed workflow and
+remaining diagnosis-quality gap. Older dated reports below preserve history.
 
-The v0.4.0 release candidate adds an opt-in, case-level `reproduce` command
+v0.4.0 adds an opt-in, case-level `reproduce` command
 before AI issues exist. Only a latest failed command with complete captured
 output and matching Python source fingerprint may enter a previewed diagnosis
 request; the ordinary blind request bytes are unchanged. A resulting AI issue
 links that failure as its compact before-check, so the existing explicit same
 command after-check and human confirmation can complete a repair record. This
 is a workflow improvement, not evidence that model precision improved.
-Before publication, 383 offline tests and `compileall` passed. A `0.4.0`
-wheel installed outside the source tree and completed a controlled case:
+Before publication, 383 offline tests and `compileall` passed. A pre-merge
+`0.4.0` wheel installed outside the source tree and completed a controlled case:
 `R-002` recorded a failed assertion, one explicit preview-locked Flash request
 (SHA-256 `dafbc91387fcfe1703ad4bd787d61937a3227754b89fa70994ed9db7dbe8898e`)
 returned one quote-backed issue, the same command passed after a source edit,
 and human test-link confirmation made the report show repair evidence. A
 separate offline check rejected that reproduction after the source changed.
-The wheel built for this pre-merge check had SHA-256
-`e3fb41b3d296cfec0e6bdde102117b00bb58974acf37760ee23bda4109e5e106`;
-the final release wheel must be rebuilt from the merge commit. This one
-controlled call checks integration, not general diagnosis quality.
+This one controlled call checks integration, not general diagnosis quality.
 
 PR [#20](https://github.com/kisara174/ai-repo-doctor/pull/20) merged the first
 M1 changes into the default branch at `2ab4e15`; no new release tag was made.
@@ -125,7 +120,7 @@ checkout has separate untracked V3 documents and was left untouched.
 | Method-owner context | A method target can include its enclosing class declaration as a separate bounded block. | Pinned offline comparisons preserve target lines and existing imports; PR #10 passed local and CI gates. |
 | Finding presentation | Text output calls citation-checked findings `QUOTE-VERIFIED`; the JSON `accepted` key remains stable. | Exact source quotation matching does not establish a true bug; manual review remains required. |
 | Explicit context | `context` and `diagnose` can add user-selected symbols inside the same source budget. | Opt-in selection can expose omitted local code; it does not infer a relationship or prove a model diagnosis. |
-| Distribution | The public `0.2.0` tag and attached wheel install `repo-doctor` in a clean virtual environment. | Installed demo creation, task report, request preview, explicit before/after verification, and final report were checked outside the source tree. The evaluation-only `tools` package remains outside the wheel. |
+| Distribution | The public `0.4.0` tag and attached wheel install `repo-doctor` in a clean virtual environment. | The merge-commit wheel passed an offline reproduction/preview/stale-record check outside the source tree. The evaluation-only `tools` package remains outside the wheel. |
 
 The original post-V3 plan's T0–T6 implementation and T7 offline preparation
 were completed. T7's first ten-case online run stopped after one
@@ -196,15 +191,15 @@ actual billing is not inferred.
 
 ## Current next gate
 
-Keep the v0.3.0 human-reviewed workflow stable. The separately registered
+Keep the v0.4.0 human-reviewed workflow stable. The separately registered
 [M1 v2 evaluation](evaluations/2026-09-29-m1-holdout-v2.md) sent six pinned
 requests with thinking explicitly disabled: five responses were parseable,
 one was invalid JSON, source review found **0/3** known repairs, and one
 parseable fixed snapshot had an accepted false alarm. The usefulness gate
 failed, so the blind model path has no unattended-use quality claim. The
-next product-quality task is a user-supplied symptom or reproduction entry
-that keeps source quotation, human review, and a paired repaired-snapshot
-false-alarm gate. Earlier symptom-guided experiments improved hit counts but
+next product-quality task is an independent paired evaluation of the released
+opt-in reproduction-backed path, including repaired snapshots and false-alarm
+review. Earlier symptom-guided experiments improved hit counts but
 also had false alarms; no prompt change is promoted from those results alone.
 The same-context [Pro candidate screen](evaluations/2026-09-30-m1-pro-screen.md)
 returned 6/6 parseable responses but still found **0/3** known defects and
