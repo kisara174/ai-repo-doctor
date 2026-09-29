@@ -7,9 +7,70 @@ from pathlib import Path
 
 from repo_doctor.case import create_case, load_case, save_case, set_target
 from repo_doctor.index import build_index
+from repo_doctor.report import render_report
 
 
 class ProductCaseTests(unittest.TestCase):
+    def test_architecture_summary_uses_resolved_production_edges(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            repo = base / "repo"
+            repo.mkdir()
+            sources = {
+                "core.py": "def save(value):\n    return value\n",
+                "service_one.py": "from core import save\n\ndef first(value):\n    return save(value)\n",
+                "service_two.py": "from core import save\n\ndef second(value):\n    return save(value)\n",
+                "api.py": "from service_one import first\n\ndef route(value):\n    return first(value)\n",
+                "test_core.py": "from core import save\n\ndef test_save():\n    assert save(1) == 1\n",
+            }
+            for name, source in sources.items():
+                (repo / name).write_text(source, encoding="utf-8")
+
+            first = create_case(build_index(repo), base / "first")
+            second = create_case(build_index(repo), base / "second")
+            architecture = first["scan"]["architecture"]
+            self.assertEqual(architecture, second["scan"]["architecture"])
+            self.assertEqual(architecture["production_modules"], 4)
+            self.assertEqual(architecture["local_import_edges"], 3)
+            self.assertEqual(architecture["cross_file_call_edges"], 3)
+            self.assertEqual(len(architecture["focus_modules"]), 1)
+            core = architecture["focus_modules"][0]
+            self.assertEqual(core["file"], "core.py")
+            self.assertEqual(core["dependent_file_count"], 2)
+            self.assertEqual(core["importer_count"], 2)
+            self.assertEqual(core["caller_file_count"], 2)
+            self.assertEqual(
+                [(item["kind"], item["file"], item["line"])
+                 for item in core["evidence"]],
+                [("import", "service_one.py", 1), ("call", "service_one.py", 4),
+                 ("import", "service_two.py", 1), ("call", "service_two.py", 4)],
+            )
+            self.assertNotIn("test_core.py", str(architecture))
+
+            set_target(first, build_index(repo), "core.py::save")
+            save_case(base / "first", first)
+            report = (base / "first" / "report.md").read_text(encoding="utf-8")
+            self.assertIn("## 静态架构摘要", report)
+            self.assertIn("`core.py`", report)
+            self.assertIn("`service_one.py:1`", report)
+            self.assertIn("`service_one.py:4`", report)
+            self.assertIn("`service_two.py:1`", report)
+            self.assertIn("## 直接影响", report)
+            self.assertIn("## 间接影响", report)
+            self.assertIn("`api.py:4`", report)
+
+            old_case = json.loads((base / "second" / "case.json").read_text(encoding="utf-8"))
+            del old_case["scan"]["architecture"]
+            (base / "second" / "case.json").write_text(json.dumps(old_case), encoding="utf-8")
+            self.assertIn("# AI Repo Doctor 调查报告", render_report(load_case(base / "second")))
+
+            solo = base / "solo"
+            solo.mkdir()
+            (solo / "core.py").write_text(sources["core.py"], encoding="utf-8")
+            (solo / "service_one.py").write_text(sources["service_one.py"], encoding="utf-8")
+            one_dependent = create_case(build_index(solo), base / "solo-case")
+            self.assertEqual(one_dependent["scan"]["architecture"]["focus_modules"], [])
+
     def test_review_leads_have_stable_order_and_source_edges(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)

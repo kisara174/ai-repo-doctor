@@ -9,6 +9,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .architecture import build_architecture_summary
 from .context import build_impact
 from .leads import build_review_leads
 from .model import RepoIndex
@@ -130,6 +131,7 @@ def create_case(index: RepoIndex, directory: Path) -> dict:
             "parse_errors": [asdict(item) for item in index.parse_errors],
             "import_cycles": index.import_cycles,
             "review_leads": build_review_leads(index, static_issues),
+            "architecture": build_architecture_summary(index),
         },
         "target": None,
         "previews": [],
@@ -206,6 +208,7 @@ def load_case(directory: Path) -> dict:
         or not isinstance(scan.get("parse_errors"), list)
         or not isinstance(scan.get("import_cycles"), list)
         or ("review_leads" in scan and not isinstance(scan["review_leads"], list))
+        or ("architecture" in scan and not isinstance(scan["architecture"], dict))
         or not isinstance(case.get("issues"), list)
         or not isinstance(case.get("diagnoses"), list)
         or not isinstance(case.get("previews"), list)

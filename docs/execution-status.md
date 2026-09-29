@@ -13,10 +13,12 @@ offline static report without executing its code. See the
 [product guide](PRODUCT_GUIDE.md) for the completed P0 checklist and next
 milestone. The older dated reports below preserve evaluation history.
 
-The current `codex/m1-quality-gate` branch is **not yet released**. It adds a
-fresh six-case M1 repair cohort, makes the CLI `chat-json` request explicitly
-disable thinking, and gives newly created reports ordered source-backed review
-entries for parse failures, import cycles, and cross-file shared call targets.
+PR [#20](https://github.com/kisara174/ai-repo-doctor/pull/20) merged the first
+M1 changes into the default branch at `2ab4e15`; no new release tag was made.
+It added a fresh six-case M1 repair cohort, made the CLI `chat-json` request
+explicitly disable thinking, and gave newly created reports ordered
+source-backed review entries for parse failures, import cycles, and cross-file
+shared call targets.
 The frozen cohort stopped after its first call returned a truncated response;
 five cases were not attempted, so M1 diagnosis quality has not passed. A
 separate small, preview-locked CLI call completed and saved one
@@ -29,6 +31,21 @@ this 56-file repository; the five cross-file entries pointed to concrete
 callers of source reading, diagnosis prompts, request serialization, context
 budgeting, and indexing. The target repository was not executed. The wheel
 still carries project version `0.2.0`; this branch is not the public tag.
+All Python 3.11–3.13 push and pull-request CI jobs for PR #20 passed.
+
+The current `codex/m1-architecture` branch is adding a static architecture
+summary and source-line evidence for each direct or indirect impact hop. It
+uses resolved local production-code import/call edges, excludes detected test
+files from module ranking, and leaves the AI quality gate unchanged.
+The branch passed 373 offline tests, `compileall`, and diff checks. PyPI TLS
+errors interrupted the ordinary isolated wheel build twice, so a bundled
+Python 3.12 runtime with setuptools 84 built the wheel offline without
+installing or changing project dependencies. The wheel installed in a clean
+Python 3.14 virtual environment outside the source tree. Installed CLI
+`report create --symbol` and `report show` produced byte-identical saved and
+reopened reports for this repository: 30 production modules, five focus
+modules, and 6 direct plus 17 indirect static paths for `read_source`, each
+with one source edge per hop. The target repository was not executed.
 
 **Earlier integrated evaluation checkpoint:** `codex/repo-doctor-v1` at `70047c3`
 ([PR #16](https://github.com/kisara174/ai-repo-doctor/pull/16)).
@@ -163,7 +180,9 @@ transport is needed before judging true issue matches, repaired-snapshot
 false alarms, invalid responses, and cost per useful issue. Decide any default
 prompt change only from source-reviewed evidence. The controlled CLI smoke
 shows one request path works but is not a general accuracy estimate. The M1
-architecture and change-impact summary remains the next offline product item.
+static review and architecture items are implemented on the development
+branches; the remaining M1 gate is a new diagnosis-quality evaluation under
+the revised transport.
 
 ## Verification scope
 

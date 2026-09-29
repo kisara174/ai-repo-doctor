@@ -410,6 +410,12 @@ class ContextTests(unittest.TestCase):
             index = self.make_index(Path(directory))
 
             result = build_impact(index, "helpers.py::save", depth=2)
+            (index.root / "service.py").write_text(
+                "from helpers import save\n\ndef process(value):\n    save(value)\n    return save(value)\n",
+                encoding="utf-8",
+            )
+            duplicate_index = build_index(index.root)
+            duplicate = build_impact(duplicate_index, "helpers.py::save", depth=2)
 
         self.assertEqual(
             [(item["symbol"], item["distance"]) for item in result["affected_symbols"]],
@@ -420,6 +426,25 @@ class ContextTests(unittest.TestCase):
             ],
         )
         self.assertEqual(result["module_importers"], ["service.py"])
+        affected = {item["symbol"]: item for item in result["affected_symbols"]}
+        self.assertEqual(
+            [(edge["caller"], edge["callee"], edge["file"], edge["line"])
+             for edge in affected["service.py::process"]["call_path_evidence"]],
+            [("service.py::process", "helpers.py::save", "service.py", 4)],
+        )
+        self.assertEqual(
+            [(edge["caller"], edge["callee"], edge["file"], edge["line"])
+             for edge in affected["api.py::route"]["call_path_evidence"]],
+            [("service.py::process", "helpers.py::save", "service.py", 4),
+             ("api.py::route", "service.py::process", "api.py", 4)],
+        )
+        self.assertEqual(
+            sum(edge.caller == "service.py::process" and edge.callee == "helpers.py::save"
+                for edge in duplicate_index.call_edges),
+            2,
+        )
+        duplicate_affected = {item["symbol"]: item for item in duplicate["affected_symbols"]}
+        self.assertEqual(duplicate_affected["service.py::process"]["call_path_evidence"][0]["line"], 4)
 
     def test_unknown_symbol_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
