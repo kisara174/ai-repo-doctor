@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "dataset_id": "diagnosis-m1-holdout-v2",
+  "cases": [
+    {
+      "id": "tomlkit-470-bug",
+      "pair_id": "tomlkit-470",
+      "repository_url": "https://github.com/python-poetry/tomlkit",
+      "symbol": "tomlkit/parser.py::Parser._parse_string",
+      "issue_id": "python-poetry/tomlkit#470",
+      "checkout_id": "tomlkit-8e32f9cb7fcf",
+      "commit": "8e32f9cb7fcfbc45e893c34e0e9a590a26675fd6",
+      "label": "bug",
+      "source": {
+        "file": "tomlkit/parser.py",
+        "start_line": 801,
+        "end_line": 918,
+        "sha256": "cb3e8768e62562edc591bfec7ee670d69a23e6f7661be8dbd6bed0aaeacc5ed9"
+      },
+      "ground_truth": "Known defect repaired by tomlkit PR #470. In Parser._parse_string, a multiline basic or literal string containing an internal CRLF reaches the carriage-return branch. That branch checks that the next character is a newline under a restoring parser state but neither appends nor advances the current carriage return. The while loop therefore repeats forever instead of returning the parsed string. Accept a finding that identifies this non-advancing CRLF branch and the hang. Do not count the separately handled CRLF immediately after an opening multiline delimiter.",
+      "references": [
+        "https://github.com/python-poetry/tomlkit/pull/470",
+        "https://github.com/python-poetry/tomlkit/commit/5586d4577054cd33ccbccc235c2fb950098e96c5",
+        "https://github.com/python-poetry/tomlkit/blob/8e32f9cb7fcfbc45e893c34e0e9a590a26675fd6/tomlkit/parser.py#L801-L918"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T15:50:51Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "tomlkit-470-fixed",
+      "pair_id": "tomlkit-470",
+      "repository_url": "https://github.com/python-poetry/tomlkit",
+      "symbol": "tomlkit/parser.py::Parser._parse_string",
+      "issue_id": "python-poetry/tomlkit#470",
+      "checkout_id": "tomlkit-5586d4577054",
+      "commit": "5586d4577054cd33ccbccc235c2fb950098e96c5",
+      "label": "fixed",
+      "source": {
+        "file": "tomlkit/parser.py",
+        "start_line": 801,
+        "end_line": 920,
+        "sha256": "01b81abf2a7d82d15beafb47f3ed3906c9e8e7beb8d6ac45defbd30314e198b0"
+      },
+      "ground_truth": "Fixed snapshot for tomlkit PR #470. After validating an internal CRLF in a multiline string, Parser._parse_string appends the carriage return and advances to the newline; normal parsing then preserves the CRLF and terminates. Upstream regression tests cover basic and literal multiline strings with internal CRLF. Do not report the earlier non-advancing loop as still present; any other alleged defect needs independent source evidence.",
+      "references": [
+        "https://github.com/python-poetry/tomlkit/pull/470",
+        "https://github.com/python-poetry/tomlkit/commit/5586d4577054cd33ccbccc235c2fb950098e96c5",
+        "https://github.com/python-poetry/tomlkit/blob/5586d4577054cd33ccbccc235c2fb950098e96c5/tomlkit/parser.py#L801-L920"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T15:50:51Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "attrs-1417-bug",
+      "pair_id": "attrs-1417",
+      "repository_url": "https://github.com/python-attrs/attrs",
+      "checkout_id": "attrs-19943b775d40",
+      "commit": "19943b775d40c018e844f2cb1728442f58112a3b",
+      "symbol": "src/attr/_make.py::_transform_attrs",
+      "label": "bug",
+      "issue_id": "python-attrs/attrs#1417",
+      "source": {
+        "file": "src/attr/_make.py",
+        "start_line": 375,
+        "end_line": 480,
+        "sha256": "a1f769f5851ff09c7a94ab754cbbe2333b8da489433b07db2936110e62ec469e"
+      },
+      "ground_truth": "Known defect fixed by attrs PR #1417. When field_transformer returns a generator, _transform_attrs assigns that one-shot generator to attrs. The mandatory/default order loop consumes it before the alias, name, and AttrsClass construction loops reuse it, so transformed fields can disappear from attrs.fields. Accept a finding that identifies the one-shot iterable reuse and lost fields. Do not count a transformer that returns a reusable list or tuple as this defect.",
+      "references": [
+        "https://github.com/python-attrs/attrs/pull/1417",
+        "https://github.com/python-attrs/attrs/commit/3b0378dd66d33ebddb52be85b8c4aac6a914b1a2",
+        "https://github.com/python-attrs/attrs/blob/19943b775d40c018e844f2cb1728442f58112a3b/src/attr/_make.py#L375-L480"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T12:11:12Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "attrs-1417-fixed",
+      "pair_id": "attrs-1417",
+      "repository_url": "https://github.com/python-attrs/attrs",
+      "checkout_id": "attrs-3b0378dd66d3",
+      "commit": "3b0378dd66d33ebddb52be85b8c4aac6a914b1a2",
+      "symbol": "src/attr/_make.py::_transform_attrs",
+      "label": "fixed",
+      "issue_id": "python-attrs/attrs#1417",
+      "source": {
+        "file": "src/attr/_make.py",
+        "start_line": 375,
+        "end_line": 480,
+        "sha256": "3b147b7e4cc7907c9019ba50a9b1f1d543b0f08f21b36908f2c6023b88cda82f"
+      },
+      "ground_truth": "Fixed snapshot for attrs PR #1417. _transform_attrs materializes field_transformer output with tuple(...), allowing all later passes to inspect the same attributes. The upstream regression test uses a generator hook and checks that attrs.fields retains x. Do not claim the earlier one-shot exhaustion remains; any different claim needs source-backed review.",
+      "references": [
+        "https://github.com/python-attrs/attrs/pull/1417",
+        "https://github.com/python-attrs/attrs/commit/3b0378dd66d33ebddb52be85b8c4aac6a914b1a2",
+        "https://github.com/python-attrs/attrs/blob/3b0378dd66d33ebddb52be85b8c4aac6a914b1a2/src/attr/_make.py#L375-L480"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T12:11:12Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "anyio-947-bug",
+      "pair_id": "anyio-947",
+      "repository_url": "https://github.com/agronholm/anyio",
+      "checkout_id": "anyio-4666df3905af",
+      "commit": "4666df3905af92ac02b515e0827ff9510dcba827",
+      "symbol": "src/anyio/_backends/_asyncio.py::CapacityLimiter.acquire_on_behalf_of",
+      "label": "bug",
+      "issue_id": "agronholm/anyio#947",
+      "source": {
+        "file": "src/anyio/_backends/_asyncio.py",
+        "start_line": 2002,
+        "end_line": 2021,
+        "sha256": "7498028370667bd05a4147a1df7b75d7914f96a862a108e9b98c735d0e0e27ce"
+      },
+      "ground_truth": "Known asyncio CapacityLimiter cancellation defect from AnyIO issue #947, repaired in PR #952. When release_on_behalf_of pops and signals the first waiter, cancellation can reach that waiter before it adds itself to _borrowers. This snapshot only removes it from _wait_queue and re-raises; because the signaled waiter has already been popped, the next queued waiter is never notified despite free capacity. Accept a finding that identifies the lost wake-up and waiting-task hang under this cancellation interleaving. Do not count normal cancellation cleanup without the already-signaled waiter as this defect.",
+      "references": [
+        "https://github.com/agronholm/anyio/issues/947",
+        "https://github.com/agronholm/anyio/pull/952",
+        "https://github.com/agronholm/anyio/commit/19e5477238d37499de42ebedf99c557848479cfb",
+        "https://github.com/agronholm/anyio/blob/4666df3905af92ac02b515e0827ff9510dcba827/src/anyio/_backends/_asyncio.py#L2002-L2021"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T12:11:12Z",
+        "status": "approved"
+      },
+      "include_symbols": [
+        "src/anyio/_backends/_asyncio.py::CapacityLimiter.release_on_behalf_of"
+      ]
+    },
+    {
+      "id": "anyio-947-fixed",
+      "pair_id": "anyio-947",
+      "repository_url": "https://github.com/agronholm/anyio",
+      "checkout_id": "anyio-19e5477238d3",
+      "commit": "19e5477238d37499de42ebedf99c557848479cfb",
+      "symbol": "src/anyio/_backends/_asyncio.py::CapacityLimiter.acquire_on_behalf_of",
+      "label": "fixed",
+      "issue_id": "agronholm/anyio#947",
+      "source": {
+        "file": "src/anyio/_backends/_asyncio.py",
+        "start_line": 2008,
+        "end_line": 2030,
+        "sha256": "dadf32e787a893e114cc044aea08798ae65154e93b200daab882a378c43fe87e"
+      },
+      "ground_truth": "Fixed snapshot for AnyIO issue #947. The cancellation handler checks whether the current event was already signaled and, if so, calls _notify_next_waiter; release_on_behalf_of uses the same helper. The upstream regression test starts two waiting borrowers, cancels the first, and requires the second to acquire. Do not claim this lost wake-up persists; other concurrency claims require independent evidence.",
+      "references": [
+        "https://github.com/agronholm/anyio/issues/947",
+        "https://github.com/agronholm/anyio/pull/952",
+        "https://github.com/agronholm/anyio/commit/19e5477238d37499de42ebedf99c557848479cfb",
+        "https://github.com/agronholm/anyio/blob/19e5477238d37499de42ebedf99c557848479cfb/src/anyio/_backends/_asyncio.py#L2008-L2030"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T12:11:12Z",
+        "status": "approved"
+      },
+      "include_symbols": [
+        "src/anyio/_backends/_asyncio.py::CapacityLimiter.release_on_behalf_of"
+      ]
+    }
+  ]
+}

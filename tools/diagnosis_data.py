@@ -34,6 +34,7 @@ from .diagnosis_prompt import build_evaluation_prompts
 _SYMPTOM_DATASET_ID = "diagnosis-symptom-guided-v1"
 _SYMPTOM_DATASET_V2_ID = "diagnosis-symptom-guided-v2"
 _M1_HOLDOUT_DATASET_ID = "diagnosis-m1-holdout-v1"
+_M1_HOLDOUT_V2_DATASET_ID = "diagnosis-m1-holdout-v2"
 _SYMPTOM_DATASET_IDS = {_SYMPTOM_DATASET_ID, _SYMPTOM_DATASET_V2_ID}
 _PREVIOUS_DIAGNOSIS_REPOSITORIES = {
     "https://github.com/pallets/click",
@@ -52,6 +53,7 @@ _SUPPORTED_DATASET_IDS = {
     _SYMPTOM_DATASET_ID,
     _SYMPTOM_DATASET_V2_ID,
     _M1_HOLDOUT_DATASET_ID,
+    _M1_HOLDOUT_V2_DATASET_ID,
 }
 
 
@@ -402,7 +404,11 @@ def _build_evaluation_context(
     context = build_context(
         index, symbol, max_lines, include_symbols=include_symbols
     )
-    if dataset_id in {_SYMPTOM_DATASET_V2_ID, _M1_HOLDOUT_DATASET_ID}:
+    if dataset_id in {
+        _SYMPTOM_DATASET_V2_ID,
+        _M1_HOLDOUT_DATASET_ID,
+        _M1_HOLDOUT_V2_DATASET_ID,
+    }:
         test_files = {file.path for file in index.files if file.is_test}
         context["blocks"] = [
             block for block in context["blocks"]
