@@ -232,3 +232,11 @@ was attempted, no response was available, and seven cases were not attempted.
 The [partial run report](../../docs/evaluations/2026-09-29-paired-explicit-context.md)
 records the hashes and limits. Treat this cohort as consumed for holdout
 purposes and do not rerun it as unseen evidence.
+
+Before dispatching any new frozen cohort, run
+`python3 -m repo_doctor doctor --deepseek --model deepseek-flash --json .`
+from the analyzer checkout and
+require `deepseek.status` to be `ready`. This models-list check sends no
+repository source and helps catch local Key, model, and TLS setup failures
+before the holdout is attempted. It does not test the Responses endpoint or
+establish model quality.

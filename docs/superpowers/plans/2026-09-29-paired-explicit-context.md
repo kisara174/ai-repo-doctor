@@ -180,7 +180,7 @@ offline-only/partial state without invented quality findings.
 - [x] Update `docs/evaluations/2026-09-29-paired-explicit-context.md` and
   `docs/execution-status.md`. Keep cloud diagnosis experimental and state
   same-repository, two-repair, primary-only limitations.
-- [ ] Review the full diff, run
+- [x] Review the full diff, run
   `python3 -m unittest discover -s tests -q`,
   `python3 -m compileall -q repo_doctor tools tests`, and `git diff --check`
   once. Commit, push, open a PR against `codex/repo-doctor-v1`, attach it to

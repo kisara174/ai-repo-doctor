@@ -3,7 +3,7 @@
 Updated 2026-09-29. This file is the current project checkpoint; dated reports
 below preserve the earlier experiments.
 
-**Active branch/worktree:** `codex/paired-context-eval-v0.8` at
+**Active branch/worktree:** `codex/provider-readiness-v0.9` at
 `/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor`.
 The stability branch was merged in
 [PR #8](https://github.com/kisara174/ai-repo-doctor/pull/8) at `5d72890`,
@@ -17,14 +17,18 @@ The quotation-only finding label was merged in
 [PR #12](https://github.com/kisara174/ai-repo-doctor/pull/12) at `8d591bf`.
 The explicit supplementary context change was merged in
 [PR #13](https://github.com/kisara174/ai-repo-doctor/pull/13) at `94a886a`.
-The experimental prompt was reverted before PR #9 merged. The current branch
-adds manifest-declared explicit source selection to offline evaluation
-preparation and run preflight, and records a partial paired attempt. The
+The paired explicit-context evaluation was merged in
+[PR #14](https://github.com/kisara174/ai-repo-doctor/pull/14) at `9e1f996`.
+The experimental prompt was reverted before PR #9 merged. PR #14 added
+manifest-declared explicit source selection to offline evaluation preparation
+and run preflight, and recorded a partial paired attempt. The
 [offline coverage check](evaluations/2026-09-29-explicit-context-coverage.md)
 preserves default request bytes; the
 [paired evaluation report](evaluations/2026-09-29-paired-explicit-context.md)
 records one connection failure and seven unattempted cases without a quality
-claim.
+claim. A later local transport check found the Python 3.14 CA bundle missing;
+the standard Python certificate installation restored `doctor --deepseek`
+readiness without weakening TLS verification.
 The prior evaluation branch
 was integrated at `86d1022`; its context implementation commit was
 `6791483f9045487285e72aebad2eee7134ce4424`. Focused context
@@ -160,6 +164,9 @@ is not inferred.
   prior six-case Werkzeug default plan produced byte-identical context files
   and unchanged request hashes; only analyzer-commit metadata changed.
   Target checkouts remained clean; no target code or tests were run.
+- PR #14 head `257f050ff07223247062b506dd73742005d3290e` passed Python
+  3.11, 3.12, and 3.13 in pull-request CI before merging. Local 332-test,
+  `compileall`, and diff checks passed on the final code tree.
 - Pinned target repository code, tests, and dependencies were not executed or
   installed during these diagnosis experiments. The API key and raw provider
   response bodies were not saved in the evaluation artifacts.
@@ -199,12 +206,13 @@ invalid-JSON responses with safe error categories. The Werkzeug holdout
 missed two known bugs and failed its preregistered usefulness gate. Explicit
 selection can supply omitted `EnvironHeaders` source, but the visible-case
 probe did not establish a model-quality gain. The latest paired attempt
-stopped at a connection error and provides no quality result. Keep cloud
-diagnosis experimental. A future provider comparison needs a fresh
-preregistered cohort and an operational connection; do not reuse a visible
-cohort as unseen evidence or switch the default protocol. Preserve all
-manifests and partial run records. The current branch needs final diff review
-and current-head CI before integration.
+stopped at a connection error and provides no quality result. The local
+`doctor --deepseek` check now reports `ready` after installing Python's
+missing CA bundle. Keep cloud diagnosis experimental. A future provider
+comparison needs a fresh preregistered cohort and a provider readiness check
+immediately before dispatch; do not reuse a visible cohort as unseen evidence
+or switch the default protocol. Preserve all manifests and partial run
+records.
 
 The earlier [post-V3 execution plan](superpowers/plans/2026-09-24-post-v3-execution.md),
 [handoff audit](evaluations/2026-09-25-handoff-audit.md), and
