@@ -52,8 +52,14 @@ def _class_header_span(source: list[str], symbol: Symbol) -> tuple[int, int] | N
     return node.lineno, min(end, symbol.end_line)
 
 
-def build_context(index: RepoIndex, symbol_id: str, max_lines: int = 120) -> dict:
-    """Return target-first one-hop context with a physical source-line budget."""
+def build_context(
+    index: RepoIndex,
+    symbol_id: str,
+    max_lines: int = 120,
+    *,
+    include_symbols: tuple[str, ...] = (),
+) -> dict:
+    """Return target-first selected and graph context within a source-line budget."""
     target = _require_symbol(index, symbol_id)
     if max_lines < 1:
         raise ValueError("max_lines must be at least 1")
@@ -76,6 +82,18 @@ def build_context(index: RepoIndex, symbol_id: str, max_lines: int = 120) -> dic
                 seen.add(candidate_owner.id)
                 candidates.append((candidate_owner.id, "owner_class"))
                 candidate_spans[candidate_owner.id] = header_span
+
+    for requested_id in include_symbols:
+        requested = _require_symbol(index, requested_id)
+        if requested.id in candidate_spans:
+            del candidate_spans[requested.id]
+            for position, (candidate_id, _relation) in enumerate(candidates):
+                if candidate_id == requested.id:
+                    candidates[position] = (requested.id, "user_selected")
+                    break
+        elif requested.id not in seen:
+            seen.add(requested.id)
+            candidates.append((requested.id, "user_selected"))
 
     def add(symbols: set[str], relation: str) -> None:
         for neighbor_id in sorted(

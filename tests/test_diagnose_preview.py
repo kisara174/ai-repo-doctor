@@ -66,6 +66,39 @@ class DiagnosePreviewTests(unittest.TestCase):
         self.assertEqual(body["input"][1]["role"], "user")
         self.assertIn(hashlib.sha256(result.stdout).hexdigest(), result.stderr.decode())
 
+    def test_explicit_symbol_changes_preview_and_requires_matching_upload_hash(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.make_repo(root)
+            (root / "app.py").write_text(
+                "def target():\n"
+                "    return 1\n"
+                "class Child:\n"
+                "    def __iter__(self):\n"
+                "        return iter(self.values)\n",
+                encoding="utf-8",
+            )
+            ordinary = self.preview(root)
+            selected = self.preview(root, "--include-symbol", "app.py::Child")
+            with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-secret"}, clear=True), patch(
+                "repo_doctor.cli.complete_json"
+            ) as client:
+                status, stdout, stderr = self.run_main(
+                    root, "app.py::target", "--include-symbol", "app.py::Child",
+                    "--expect-request-sha256", hashlib.sha256(ordinary.stdout).hexdigest(),
+                )
+
+        self.assertEqual(ordinary.returncode, 0, ordinary.stderr.decode())
+        self.assertEqual(selected.returncode, 0, selected.stderr.decode())
+        self.assertNotEqual(ordinary.stdout, selected.stdout)
+        context = json.loads(json.loads(selected.stdout)["messages"][1]["content"])
+        self.assertEqual(context["blocks"][1]["symbol"], "app.py::Child")
+        self.assertEqual(context["blocks"][1]["relation"], "user_selected")
+        self.assertEqual(status, 2)
+        self.assertEqual(stdout, "")
+        self.assertIn("request SHA-256", stderr)
+        client.assert_not_called()
+
     def test_preview_bytes_match_actual_transport_for_both_protocols(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -171,8 +204,8 @@ class DiagnosePreviewTests(unittest.TestCase):
             root = Path(directory)
             self.make_repo(root)
 
-            def build_then_mutate(*args):
-                context = build_context(*args)
+            def build_then_mutate(*args, **kwargs):
+                context = build_context(*args, **kwargs)
                 (root / "app.py").write_text("def target():\n    return 2\n", encoding="utf-8")
                 return context
 
