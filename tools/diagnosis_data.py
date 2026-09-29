@@ -91,11 +91,13 @@ def validate_manifest(data: dict) -> None:
         "diagnosis-flask-holdout-v1",
         "diagnosis-werkzeug-holdout-v1",
         "diagnosis-werkzeug-explicit-context-v1",
+        "diagnosis-click-explicit-context-v1",
     }:
         raise EvaluationDataError(
             'manifest.dataset_id must be "diagnosis-v1", "diagnosis-flask-holdout-v1", '
-            '"diagnosis-werkzeug-holdout-v1", or '
-            '"diagnosis-werkzeug-explicit-context-v1"'
+            '"diagnosis-werkzeug-holdout-v1", '
+            '"diagnosis-werkzeug-explicit-context-v1", or '
+            '"diagnosis-click-explicit-context-v1"'
         )
     cases = root.get("cases")
     if not isinstance(cases, list) or not cases:
