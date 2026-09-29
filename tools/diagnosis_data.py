@@ -7,6 +7,7 @@ import json
 import platform
 import re
 import subprocess
+import unicodedata
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit
@@ -27,6 +28,17 @@ from repo_doctor.index import build_index
 from repo_doctor.model import RepoIndex
 from repo_doctor.source import read_source
 from .analyzer_provenance import AnalyzerProvenanceError, require_clean_analyzer
+
+
+_SYMPTOM_DATASET_ID = "diagnosis-symptom-guided-v1"
+_SUPPORTED_DATASET_IDS = {
+    "diagnosis-v1",
+    "diagnosis-flask-holdout-v1",
+    "diagnosis-werkzeug-holdout-v1",
+    "diagnosis-werkzeug-explicit-context-v1",
+    "diagnosis-click-explicit-context-v1",
+    _SYMPTOM_DATASET_ID,
+}
 
 
 class EvaluationDataError(ValueError):
@@ -81,27 +93,83 @@ def _validate_url(value: object, label: str, *, repository: bool = False) -> str
     return url
 
 
+def _validate_symptom(value: object, label: str) -> str:
+    if not isinstance(value, str) or not value.strip() or value != value.strip():
+        raise EvaluationDataError(f"{label} must be trimmed nonempty text")
+    if len(value) > 2000:
+        raise EvaluationDataError(f"{label} must contain at most 2,000 characters")
+    if any(char in "\r\n\u0085\u2028\u2029" for char in value):
+        raise EvaluationDataError(f"{label} must be single-line text")
+    if any(unicodedata.category(char) == "Cc" for char in value):
+        raise EvaluationDataError(f"{label} must not contain control characters")
+    return value
+
+
+def _validate_symptom_guided_dataset(
+    cases: list[dict], pairs: dict[str, list[dict]]
+) -> None:
+    if len(cases) != 8:
+        raise EvaluationDataError(f"{_SYMPTOM_DATASET_ID} must contain exactly 8 cases")
+    if len(pairs) != 4:
+        raise EvaluationDataError(
+            f"{_SYMPTOM_DATASET_ID} must contain exactly 4 bug/fixed pairs"
+        )
+
+    repairs: dict[tuple[str, str], list[dict]] = {}
+    for case in cases:
+        repairs.setdefault((case["repository_url"], case["issue_id"]), []).append(case)
+    if len(repairs) != 2:
+        raise EvaluationDataError(f"{_SYMPTOM_DATASET_ID} must contain exactly 2 repairs")
+
+    for (_, issue_id), repair_cases in repairs.items():
+        pair_members: dict[str, list[dict]] = {}
+        for case in repair_cases:
+            pair_members.setdefault(case["pair_id"], []).append(case)
+        if len(repair_cases) != 4 or len(pair_members) != 2:
+            raise EvaluationDataError(
+                f"repair {issue_id} must contain exactly two bug/fixed pairs"
+            )
+
+        has_symptom_by_pair: list[bool] = []
+        for members in pair_members.values():
+            bug = next(case for case in members if case["label"] == "bug")
+            fixed = next(case for case in members if case["label"] == "fixed")
+            bug_has_symptom = "symptom" in bug
+            fixed_has_symptom = "symptom" in fixed
+            if (
+                bug_has_symptom != fixed_has_symptom
+                or (bug_has_symptom and bug["symptom"] != fixed["symptom"])
+            ):
+                raise EvaluationDataError(
+                    "both members must have the same symptom in a symptom-guided pair"
+                )
+            has_symptom_by_pair.append(bug_has_symptom)
+
+        if sorted(has_symptom_by_pair) != [False, True]:
+            raise EvaluationDataError(
+                f"repair {issue_id} must have one blind and one symptom-guided pair"
+            )
+
+
 def validate_manifest(data: dict) -> None:
     """Validate manifest structure and all values that do not require a checkout."""
     root = _object(data, "manifest")
     if type(root.get("schema_version")) is not int or root["schema_version"] != 1:
         raise EvaluationDataError("manifest.schema_version must be 1")
-    if root.get("dataset_id") not in {
-        "diagnosis-v1",
-        "diagnosis-flask-holdout-v1",
-        "diagnosis-werkzeug-holdout-v1",
-        "diagnosis-werkzeug-explicit-context-v1",
-        "diagnosis-click-explicit-context-v1",
-    }:
+    dataset_id = root.get("dataset_id")
+    if dataset_id not in _SUPPORTED_DATASET_IDS:
         raise EvaluationDataError(
             'manifest.dataset_id must be "diagnosis-v1", "diagnosis-flask-holdout-v1", '
             '"diagnosis-werkzeug-holdout-v1", '
             '"diagnosis-werkzeug-explicit-context-v1", or '
-            '"diagnosis-click-explicit-context-v1"'
+            '"diagnosis-click-explicit-context-v1", or '
+            f'"{_SYMPTOM_DATASET_ID}"'
         )
     cases = root.get("cases")
     if not isinstance(cases, list) or not cases:
         raise EvaluationDataError("manifest.cases must be a nonempty list")
+    if dataset_id == _SYMPTOM_DATASET_ID and len(cases) != 8:
+        raise EvaluationDataError(f"{_SYMPTOM_DATASET_ID} must contain exactly 8 cases")
 
     case_ids: set[str] = set()
     pairs: dict[str, list[dict]] = {}
@@ -113,6 +181,13 @@ def validate_manifest(data: dict) -> None:
         if case_id in case_ids:
             raise EvaluationDataError(f"duplicate case ID: {case_id}")
         case_ids.add(case_id)
+
+        if "symptom" in case:
+            if dataset_id != _SYMPTOM_DATASET_ID:
+                raise EvaluationDataError(
+                    "case.symptom is only supported in diagnosis-symptom-guided-v1"
+                )
+            _validate_symptom(case["symptom"], f"{case_id}.symptom")
 
         pair_id = case.get("pair_id")
         label = case.get("label")
@@ -201,6 +276,9 @@ def validate_manifest(data: dict) -> None:
             or bug["repository_url"] != fixed["repository_url"]
         ):
             raise EvaluationDataError(f"pair {pair_id} must share repository and issue ID")
+
+    if dataset_id == _SYMPTOM_DATASET_ID:
+        _validate_symptom_guided_dataset(cases, pairs)
 
 
 def _analyzer_commit(expected_commit: str | None = None) -> str:

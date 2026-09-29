@@ -352,6 +352,152 @@ class DiagnosisDataTests(unittest.TestCase):
         manifest["cases"] = [bug, fixed]
         validate_manifest(manifest)
 
+    def make_symptom_guided_manifest(self):
+        pytest_symptom = (
+            "When I ask pytest to collect a specific test file together with its "
+            "containing directory, it collects only the file's test and misses "
+            "other tests in that directory. Which code in the supplied context "
+            "could explain this behavior?"
+        )
+        rich_symptom = (
+            "In the terminal, `⬇️` and `⬆️` visually occupy two columns, but Rich "
+            "lays out following text as though each occupies one; lines wrap or "
+            "align incorrectly. Which code in the supplied context could explain "
+            "this behavior?"
+        )
+        base = self.make_manifest()["cases"][0]
+
+        def make_case(case_id, label, pair_id, repair, symptom=None):
+            row = copy.deepcopy(base)
+            row.update({
+                "id": case_id,
+                "pair_id": pair_id,
+                "repository_url": "https://github.com/pytest-dev/pytest"
+                if repair == "pytest-12083"
+                else "https://github.com/Textualize/rich",
+                "checkout_id": repair,
+                "label": label,
+                "issue_id": "12083" if repair == "pytest-12083" else "3897",
+            })
+            if symptom is not None:
+                row["symptom"] = symptom
+            return row
+
+        return {
+            "schema_version": 1,
+            "dataset_id": "diagnosis-symptom-guided-v1",
+            "cases": [
+                make_case(
+                    "pytest-blind-bug", "bug", "pytest-12083-blind", "pytest-12083"
+                ),
+                make_case(
+                    "pytest-blind-fixed", "fixed", "pytest-12083-blind", "pytest-12083"
+                ),
+                make_case(
+                    "pytest-symptom-bug", "bug", "pytest-12083-symptom", "pytest-12083",
+                    symptom=pytest_symptom,
+                ),
+                make_case(
+                    "pytest-symptom-fixed", "fixed", "pytest-12083-symptom", "pytest-12083",
+                    symptom=pytest_symptom,
+                ),
+                make_case("rich-blind-bug", "bug", "rich-3897-blind", "rich-3897"),
+                make_case("rich-blind-fixed", "fixed", "rich-3897-blind", "rich-3897"),
+                make_case(
+                    "rich-symptom-bug", "bug", "rich-3897-symptom", "rich-3897",
+                    symptom=rich_symptom,
+                ),
+                make_case(
+                    "rich-symptom-fixed", "fixed", "rich-3897-symptom", "rich-3897",
+                    symptom=rich_symptom,
+                ),
+            ],
+        }
+
+    def test_symptom_guided_dataset_contract(self):
+        validate_manifest(self.make_symptom_guided_manifest())
+
+    def test_symptom_guided_dataset_rejects_malformed_shape_and_symptoms(self):
+        def remove_symptom(manifest, case_ids):
+            for case in manifest["cases"]:
+                if case["id"] in case_ids:
+                    case.pop("symptom", None)
+
+        def set_pair_symptom(manifest, value):
+            for case in manifest["cases"]:
+                if case["id"] in {"pytest-symptom-bug", "pytest-symptom-fixed"}:
+                    case["symptom"] = value
+
+        def add_legacy_symptom(manifest):
+            manifest["dataset_id"] = "diagnosis-v1"
+            manifest["cases"][0]["symptom"] = "symptom"
+
+        valid = self.make_symptom_guided_manifest()
+        cases = [
+            ("missing case", lambda m: m["cases"].pop(), "exactly 8"),
+            (
+                "extra case",
+                lambda m: m["cases"].append(copy.deepcopy(m["cases"][0])),
+                "exactly 8",
+            ),
+            (
+                "repeated pair",
+                lambda m: m["cases"][4].update(pair_id="pytest-12083-blind"),
+                "pair .* exactly one bug and one fixed",
+            ),
+            (
+                "pair with two bugs",
+                lambda m: m["cases"][1].update(label="bug"),
+                "pair .* exactly one bug and one fixed",
+            ),
+            (
+                "repair missing an arm",
+                lambda m: remove_symptom(m, {"pytest-symptom-bug", "pytest-symptom-fixed"}),
+                "one blind and one symptom-guided pair",
+            ),
+            (
+                "one pair member missing symptom",
+                lambda m: m["cases"][3].pop("symptom"),
+                "both members must have the same symptom",
+            ),
+            (
+                "pair with mismatched symptoms",
+                lambda m: m["cases"][3].update(symptom="Different symptom"),
+                "both members must have the same symptom",
+            ),
+            (
+                "symptom on a legacy dataset",
+                add_legacy_symptom,
+                "only supported in diagnosis-symptom-guided-v1",
+            ),
+            (
+                "whitespace-only symptom",
+                lambda m: set_pair_symptom(m, "  "),
+                "symptom must be trimmed nonempty text",
+            ),
+            (
+                "multiline symptom",
+                lambda m: set_pair_symptom(m, "line one\nline two"),
+                "symptom must be single-line text",
+            ),
+            (
+                "control character in symptom",
+                lambda m: set_pair_symptom(m, "bad\x01text"),
+                "symptom must not contain control characters",
+            ),
+            (
+                "oversized symptom",
+                lambda m: set_pair_symptom(m, "x" * 2001),
+                "symptom must contain at most 2,000 characters",
+            ),
+        ]
+        for label, mutate, expected in cases:
+            with self.subTest(label=label):
+                manifest = copy.deepcopy(valid)
+                mutate(manifest)
+                with self.assertRaisesRegex(EvaluationDataError, expected):
+                    validate_manifest(manifest)
+
     def test_manifest_reports_malformed_url_as_a_validation_error(self):
         manifest = self.make_manifest()
         manifest["cases"][0]["repository_url"] = "https://["
