@@ -586,7 +586,8 @@ def main(argv: list[str] | None = None) -> int:
                 if args.response_format == "json-schema"
                 else _serialize_request_body
             )
-            request_body = serializer(system_prompt, user_prompt, model)
+            chat_options = {"thinking_mode": "disabled"} if args.response_format == "chat-json" else {}
+            request_body = serializer(system_prompt, user_prompt, model, **chat_options)
             if len(request_body) > MAX_REQUEST_BYTES:
                 raise DeepSeekError(
                     "DeepSeek API request exceeds 256 KiB limit", code="request_too_large"
@@ -620,7 +621,8 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             client = complete_json_schema if args.response_format == "json-schema" else complete_json
             try:
-                result = client(system_prompt, user_prompt, api_key=api_key, model=model)
+                result = client(system_prompt, user_prompt, api_key=api_key, model=model,
+                                **chat_options)
                 _verify_selected_source(index, context)
                 report = validate_diagnosis_payload(index, result.payload, context)
             except DeepSeekError as exc:
