@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .context import build_impact
+from .leads import build_review_leads
 from .model import RepoIndex
 from .source import read_source
 
@@ -104,6 +105,7 @@ def create_case(index: RepoIndex, directory: Path) -> dict:
         directory.mkdir(mode=0o700, parents=True)
     os.chmod(directory, 0o700)
     symbols = list(index.symbols.values())
+    static_issues = _static_issues(index)
     case = {
         "schema_version": SCHEMA_VERSION,
         "tool_version": TOOL_VERSION,
@@ -127,11 +129,12 @@ def create_case(index: RepoIndex, directory: Path) -> dict:
             },
             "parse_errors": [asdict(item) for item in index.parse_errors],
             "import_cycles": index.import_cycles,
+            "review_leads": build_review_leads(index, static_issues),
         },
         "target": None,
         "previews": [],
         "diagnoses": [],
-        "issues": _static_issues(index),
+        "issues": static_issues,
     }
     save_case(directory, case)
     return case
@@ -202,6 +205,7 @@ def load_case(directory: Path) -> dict:
         or not isinstance(scan.get("stats"), dict)
         or not isinstance(scan.get("parse_errors"), list)
         or not isinstance(scan.get("import_cycles"), list)
+        or ("review_leads" in scan and not isinstance(scan["review_leads"], list))
         or not isinstance(case.get("issues"), list)
         or not isinstance(case.get("diagnoses"), list)
         or not isinstance(case.get("previews"), list)

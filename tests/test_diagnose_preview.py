@@ -47,6 +47,7 @@ class DiagnosePreviewTests(unittest.TestCase):
         body = json.loads(result.stdout)
         self.assertEqual(body["model"], "deepseek-flash")
         self.assertEqual(body["response_format"], {"type": "json_object"})
+        self.assertEqual(body.get("thinking"), {"type": "disabled"})
         context = json.loads(body["messages"][1]["content"])
         self.assertEqual(context["blocks"][0]["lines"][1]["text"], "    return 1")
         digest = hashlib.sha256(result.stdout).hexdigest()

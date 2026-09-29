@@ -4,7 +4,7 @@
 
 ## 安装与快速开始
 
-需要 Python 3.11+；安装 Git 后扫描会遵循目标仓库的 ignore 规则。公开 `v0.2.0` 可安装版本：
+需要 Python 3.11+；安装 Git 后扫描会遵循目标仓库的 ignore 规则。公开 `v0.2.0` 可安装版本如下。当前开发分支中的 M1 检查入口与默认诊断请求调整尚未发布到该标签。
 
 ```bash
 python3 -m venv .venv
@@ -56,6 +56,8 @@ $RD impact /path/to/python-repo 'app.py::target'
 
 `report create` 写入权限受限的 `case.json` 与 `report.md`；`report show` 不需重新扫描，就能读取已有任务。`case.json` 是原始记录，Markdown 是可阅读视图。已存在的非空任务目录不会被覆盖。报告可能含源码引文与回归输出，请按本地敏感文件保存。发行包提供 `repo-doctor` 和 `repo_doctor`，但不包含源码仓库中的 `tools.evaluate_diagnosis` 评估脚本。
 若选定路径下没有可扫描的 Python 文件，`report create` 会返回错误；该路径可能受上级 Git 仓库的 ignore 规则影响。
+
+当前开发分支的新任务报告含“建议先检查”：先列影响扫描完整性的语法解析失败，再列有证据行的局部导入环，最后列至多五个被至少三个不同生产代码符号、且分布在至少两个其他文件中直接调用的函数或方法。每项都有检查理由、下一步和文件行号；跨文件调用目标是改动影响入口，不是缺陷判断。旧版任务文件仍可打开；这一顺序不是缺陷严重度或模型分数。
 
 `scan`、`symbols`、`report`、`context`、`impact`、`validate`、`demo` 和默认 `doctor` 都离线运行；只有显式 `diagnose` 或 `doctor --deepseek` 会联网。只有显式 `verify` 会执行用户给出的目标仓库命令。`verify` 使用参数数组执行，不经隐式 shell；工作目录是任务中的仓库路径。它仅传递必要环境变量并移除 `DEEPSEEK_API_KEY`，默认 120 秒超时（可在 1–300 秒范围内调整），保存最多 16 KiB 输出。它**不提供操作系统级隔离**，应只对愿意自行运行测试的仓库使用。
 
@@ -161,7 +163,7 @@ python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::User
 
 文本输出完整显示 finding 标题、相对文件与行号、引文、推理、影响和建议，并将通过本地源码及已发送上下文校验的 finding 标为 `QUOTE-VERIFIED`；JSON 输出仍使用 `accepted` 字段以保持兼容。`--case` 将它们作为稳定 ID 的 issue 保存，后续诊断不会覆盖此前人工判断。空发现、引文拒绝、无效 JSON 和连接失败也留在诊断历史。引文匹配不证明推理正确。请人工复核结论，并使用显式 `verify` 记录所选择的回归检查。
 
-`--response-format json-schema` 是显式选择的实验性路径：它在相同的本地上下文与证据校验规则下调用 DeepSeek Responses API，请求结构化输出并关闭 thinking。默认的 `chat-json` 路径保持不变，两种路径都不会自动重试。[最初的单样本格式对照](docs/evaluations/2026-09-28-structured-output.md)之后，结构化路径完成了一轮[十样本诊断基线](docs/evaluations/2026-09-28-schema-ten-case-baseline.md)：十次请求均可解析，但经主代理复核只命中四个已知缺陷中的一个，且有较多误报和待确认发现。这说明输出格式可用不等于诊断质量达标；该定向小样本也不足以证明未来成功率。
+当前开发分支的默认 `chat-json` 路径显式关闭 thinking，以在 4,096 token 输出上限内给 JSON 留出空间；公开 `v0.2.0` 仍使用原请求。新分支的预览请求 SHA-256 与旧版本不同，请重新预览后再发送。这不能保证所有请求都可解析，也不代表诊断质量达标。`--response-format json-schema` 是显式选择的实验性路径：它在相同的本地上下文与证据校验规则下调用 DeepSeek Responses API，请求结构化输出并关闭 thinking。两种路径都不会自动重试。[最初的单样本格式对照](docs/evaluations/2026-09-28-structured-output.md)之后，结构化路径完成了一轮[十样本诊断基线](docs/evaluations/2026-09-28-schema-ten-case-baseline.md)：十次请求均可解析，但经主代理复核只命中四个已知缺陷中的一个，且有较多误报和待确认发现。该定向小样本也不足以证明未来成功率。
 
 ## 影响分析
 

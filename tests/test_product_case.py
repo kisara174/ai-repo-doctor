@@ -10,6 +10,75 @@ from repo_doctor.index import build_index
 
 
 class ProductCaseTests(unittest.TestCase):
+    def test_review_leads_have_stable_order_and_source_edges(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            repo = base / "repo"
+            repo.mkdir()
+            sources = {
+                "broken.py": "def broken(:\n",
+                "a.py": "import b\n",
+                "b.py": "import a\n",
+                "core.py": "def shared():\n    return 1\n\ndef local():\n    return shared()\n",
+                "one.py": "from core import shared\n\ndef one():\n    return shared()\n",
+                "two.py": "from core import shared\n\ndef two():\n    return shared()\n",
+                "three.py": "from core import shared\n\ndef three():\n    return shared()\n",
+                "test_core.py": "from core import shared\n\ndef test_shared():\n    assert shared() == 1\n",
+            }
+            for name, source in sources.items():
+                (repo / name).write_text(source, encoding="utf-8")
+
+            first = create_case(build_index(repo), base / "first")
+            second = create_case(build_index(repo), base / "second")
+            leads = first["scan"]["review_leads"]
+            self.assertEqual(leads, second["scan"]["review_leads"])
+            self.assertEqual([lead["kind"] for lead in leads],
+                             ["parse_error", "import_cycle", "shared_call_target"])
+            self.assertEqual([lead["review_order"] for lead in leads], [1, 2, 3])
+            self.assertEqual(leads[0]["issue_id"], "S-001")
+            self.assertEqual(leads[1]["issue_id"], "S-002")
+            shared = leads[2]
+            self.assertEqual(shared["subject"], "core.py::shared")
+            self.assertEqual(shared["caller_count"], 3)
+            self.assertEqual(
+                [(item["file"], item["start_line"], item["caller"])
+                 for item in shared["evidence"]],
+                [("one.py", 4, "one.py::one"),
+                 ("three.py", 4, "three.py::three"),
+                 ("two.py", 4, "two.py::two")],
+            )
+            self.assertNotIn("test_core.py", str(shared))
+
+            report = (base / "first" / "report.md").read_text(encoding="utf-8")
+            self.assertIn("## 建议先检查", report)
+            self.assertIn("`broken.py:1`", report)
+            self.assertIn("`a.py:1`", report)
+            self.assertIn("`b.py:1`", report)
+            self.assertIn("`core.py::shared`", report)
+            for caller_file in ("one.py", "two.py", "three.py"):
+                self.assertIn(f"`{caller_file}:4`", report)
+            self.assertIn("检查顺序不代表缺陷严重度", report)
+
+            old_case = json.loads((base / "second" / "case.json").read_text(encoding="utf-8"))
+            del old_case["scan"]["review_leads"]
+            (base / "second" / "case.json").write_text(json.dumps(old_case), encoding="utf-8")
+            self.assertNotIn("review_leads", load_case(base / "second")["scan"])
+            old_case["scan"]["review_leads"] = {}
+            (base / "second" / "case.json").write_text(json.dumps(old_case), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "invalid case.json"):
+                load_case(base / "second")
+
+            solo = base / "solo"
+            solo.mkdir()
+            (solo / "core.py").write_text(sources["core.py"], encoding="utf-8")
+            (solo / "one.py").write_text(
+                "from core import shared\n\ndef one():\n    return shared()\n\ndef two():\n    return shared()\n\ndef three():\n    return shared()\n",
+                encoding="utf-8",
+            )
+            solo_case = create_case(build_index(solo), base / "solo-case")
+            self.assertFalse(any(lead["kind"] == "shared_call_target"
+                                 for lead in solo_case["scan"]["review_leads"]))
+
     def test_create_reopen_and_render_static_facts(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)

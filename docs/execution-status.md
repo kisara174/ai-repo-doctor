@@ -13,6 +13,23 @@ offline static report without executing its code. See the
 [product guide](PRODUCT_GUIDE.md) for the completed P0 checklist and next
 milestone. The older dated reports below preserve evaluation history.
 
+The current `codex/m1-quality-gate` branch is **not yet released**. It adds a
+fresh six-case M1 repair cohort, makes the CLI `chat-json` request explicitly
+disable thinking, and gives newly created reports ordered source-backed review
+entries for parse failures, import cycles, and cross-file shared call targets.
+The frozen cohort stopped after its first call returned a truncated response;
+five cases were not attempted, so M1 diagnosis quality has not passed. A
+separate small, preview-locked CLI call completed and saved one
+quotation-verified issue. See the
+[M1 holdout record](evaluations/2026-09-29-m1-holdout.md).
+The new static entries passed 372 local offline tests, `compileall`, and diff
+checks. A wheel built from the branch installed in a clean Python 3.14 virtual
+environment outside the source tree. Its CLI created and reopened a report for
+this 56-file repository; the five cross-file entries pointed to concrete
+callers of source reading, diagnosis prompts, request serialization, context
+budgeting, and indexing. The target repository was not executed. The wheel
+still carries project version `0.2.0`; this branch is not the public tag.
+
 **Earlier integrated evaluation checkpoint:** `codex/repo-doctor-v1` at `70047c3`
 ([PR #16](https://github.com/kisara174/ai-repo-doctor/pull/16)).
 The stability branch was merged in
@@ -139,11 +156,14 @@ actual billing is not inferred.
 
 ## Current next gate
 
-Keep the v0.2 workflow stable. For M1, register a fresh unseen before/after
-cohort and measure true issue matches, false alarms on repaired samples,
-invalid responses, and cost per useful issue. Decide any default prompt change
-only from that new source-reviewed evidence; the controlled v0.2 cloud smoke
-shows the path works but is not a general accuracy estimate.
+Keep the v0.2 workflow stable. The first M1 before/after cohort is registered,
+but its online result is partial after a truncated first response. Preserve
+that failed gate; a new, separately registered evaluation under the revised
+transport is needed before judging true issue matches, repaired-snapshot
+false alarms, invalid responses, and cost per useful issue. Decide any default
+prompt change only from source-reviewed evidence. The controlled CLI smoke
+shows one request path works but is not a general accuracy estimate. The M1
+architecture and change-impact summary remains the next offline product item.
 
 ## Verification scope
 
