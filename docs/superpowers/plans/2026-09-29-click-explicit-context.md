@@ -110,7 +110,7 @@ the model payload contains none of the labels or ground truth.
 
 ## Task 3: Prepare and dispatch once
 
-- [ ] From the clean committed analyzer, run:
+- [x] From the clean committed analyzer, run:
 
   ```sh
   python3 -m tools.evaluate_diagnosis prepare \
@@ -120,16 +120,16 @@ the model payload contains none of the labels or ground truth.
     --out-dir .local/diagnosis/click-explicit-plan-20260929
   ```
 
-- [ ] Inspect all eight contexts and exact serialized request hashes.
+- [x] Inspect all eight contexts and exact serialized request hashes.
   Independently rebuild each hash from the prepared context and existing
   serializer. Verify default bug/fixed request hashes are equal within each
   pair, explicit bug/fixed hashes differ, all targets remain unchanged, and
   prompts contain no labels, case IDs, issues, or ground truth. Record plan
   SHA-256 and analyzer commit before any upload. Stop on any mismatch.
-- [ ] Run `python3 -m repo_doctor doctor --deepseek --model deepseek-flash
+- [x] Run `python3 -m repo_doctor doctor --deepseek --model deepseek-flash
   --json .` and require `deepseek.status == "ready"`. Its model-list request
   contains no source. If not ready, stop before consuming the cohort.
-- [ ] Run exactly once, sequentially:
+- [x] Run exactly once, sequentially:
 
   ```sh
   python3 -m tools.evaluate_diagnosis run \
@@ -140,7 +140,7 @@ the model payload contains none of the labels or ground truth.
     --repeats 1 --max-calls 8 --allow-network
   ```
 
-- [ ] Inspect the safe run summary. If it stops early, preserve the partial
+- [x] Inspect the safe run summary. If it stops early, preserve the partial
   run, make no retry, and report completion plus unknown quality. Do not
   reuse this cohort as unseen data after any request is attempted.
 
@@ -149,26 +149,27 @@ at most eight calls occur, and any failure stops further dispatch.
 
 ## Task 4: Review, report, and integrate
 
-- [ ] Create the review template with `python3 -m tools.evaluate_diagnosis
+- [x] Create the review template with `python3 -m tools.evaluate_diagnosis
   prepare-review --run-dir .local/diagnosis/click-explicit-run-20260929
   --out-file .local/diagnosis/click-explicit-review-20260929.json`. For each
   completed response, inspect every accepted finding against the pinned
   source and repair; mark TP, FP, uncertain, or duplicate with concise
   source-backed rationale. Preserve rejected findings separately.
-- [ ] Run `tools.evaluate_diagnosis score` with the frozen manifest, run dir,
+- [x] Run `tools.evaluate_diagnosis score` with the frozen manifest, run dir,
   completed review file, and new ignored JSON/Markdown outputs. Report
   completed calls, parse and grounding status, bug matches, fixed alarms,
   uncertainty, and provider usage per arm. Apply the spec's narrow usefulness
   rule without treating a partial run or historical sample as an accuracy
   estimate.
-- [ ] Write `docs/evaluations/2026-09-29-click-explicit-context.md`, update
+- [x] Write `docs/evaluations/2026-09-29-click-explicit-context.md`, update
   `evaluation/diagnosis/README.md` and `docs/execution-status.md`. State the
   one-library, two-repair, one-sample, primary-review limitations.
-- [ ] Run the focused data tests, one full `python3 -m unittest discover -s
+- [x] Run the focused data tests, one full `python3 -m unittest discover -s
   tests -q`, `python3 -m compileall -q repo_doctor tools tests`, and
-  `git diff --check`. Review the diff; commit, push, open a PR against
-  `codex/repo-doctor-v1`, attach it to this task, check Python 3.11–3.13 CI
-  on the exact head, and integrate under standing user authorization if clean.
+  `git diff --check`. Review the diff.
+- [ ] Commit, push, open a PR against `codex/repo-doctor-v1`, attach it to
+  this task, check Python 3.11–3.13 CI on the exact head, and integrate under
+  standing user authorization if clean.
 
 **Acceptance:** Reproducible paired evidence and a decision bounded by its
 actual responses, with no product-default change absent the preregistered

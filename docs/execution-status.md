@@ -3,7 +3,7 @@
 Updated 2026-09-29. This file is the current project checkpoint; dated reports
 below preserve the earlier experiments.
 
-**Active branch/worktree:** `codex/provider-readiness-v0.9` at
+**Active branch/worktree:** `codex/click-explicit-holdout-v0.9` at
 `/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor`.
 The stability branch was merged in
 [PR #8](https://github.com/kisara174/ai-repo-doctor/pull/8) at `5d72890`,
@@ -19,6 +19,8 @@ The explicit supplementary context change was merged in
 [PR #13](https://github.com/kisara174/ai-repo-doctor/pull/13) at `94a886a`.
 The paired explicit-context evaluation was merged in
 [PR #14](https://github.com/kisara174/ai-repo-doctor/pull/14) at `9e1f996`.
+The provider-readiness documentation was merged in
+[PR #15](https://github.com/kisara174/ai-repo-doctor/pull/15) at `56535f0`.
 The experimental prompt was reverted before PR #9 merged. PR #14 added
 manifest-declared explicit source selection to offline evaluation preparation
 and run preflight, and recorded a partial paired attempt. The
@@ -29,6 +31,9 @@ records one connection failure and seven unattempted cases without a quality
 claim. A later local transport check found the Python 3.14 CA bundle missing;
 the standard Python certificate installation restored `doctor --deepseek`
 readiness without weakening TLS verification.
+A fresh Click explicit-context comparison then completed all eight calls; its
+[source-reviewed result](evaluations/2026-09-29-click-explicit-context.md)
+did not meet the preregistered usefulness signal.
 The prior evaluation branch
 was integrated at `86d1022`; its context implementation commit was
 `6791483f9045487285e72aebad2eee7134ce4424`. Focused context
@@ -45,7 +50,7 @@ checkout has separate untracked V3 documents and was left untouched.
 | V1 | Read-only Python repository scan; symbol, import, and static call index; bounded `context`; reverse `impact`; evidence `validate`. | Static relationships are conservative and do not execute target code. |
 | V2 | Decorator and overload metadata, explicit local reexports, bounded Click command-registration relationships, and richer static call resolution. | `call_edges` and `semantic_edges` remain distinct. Dynamic dispatch is outside the current precision claim. |
 | V3 | Optional, explicit `diagnose` call to DeepSeek with bounded selected source; local finding evidence checks and safe error handling. | Source quotations can be validated without proving the model's behavioral conclusion. No automatic patching. |
-| Evaluation | Frozen ten-case diagnosis manifest, separate Flask and Werkzeug holdouts, offline preparation, one-case and full-plan runners, manifest-bound supplementary symbols, manual-review template, scoring, reproducible hashes, and offline CI workflow. | The paired explicit-context comparison stopped after one connection failure; seven cases were not attempted. Its cohort is consumed and provides no quality evidence. |
+| Evaluation | Frozen ten-case diagnosis manifest, separate Flask and Werkzeug holdouts, a fresh Click explicit-context comparison, offline preparation, one-case and full-plan runners, manifest-bound supplementary symbols, manual-review template, scoring, reproducible hashes, and offline CI workflow. | The Werkzeug paired attempt stopped at a connection failure. The Click comparison completed 8/8 calls but matched no known bug and produced four false positives on primary review. |
 | Latest context change | Local class ancestor definitions and used module import bindings may join the selected source blocks within the same line budget. | Focused fixture covers ancestry order, relevant imports, and the shared budget; PR #8 passed the full offline suite and CI. |
 | Method-owner context | A method target can include its enclosing class declaration as a separate bounded block. | Pinned offline comparisons preserve target lines and existing imports; PR #10 passed local and CI gates. |
 | Finding presentation | Text output calls citation-checked findings `QUOTE-VERIFIED`; the JSON `accepted` key remains stable. | Exact source quotation matching does not establish a true bug; manual review remains required. |
@@ -104,15 +109,20 @@ record of that run.
   `connection` error; seven were not attempted. No model response arrived,
   so the run provides no quality comparison. See the
   [partial run report](evaluations/2026-09-29-paired-explicit-context.md).
+- At analyzer commit `1f2db12`, a fresh Click explicit-context cohort
+  completed all 8/8 calls. Primary review matched neither of two known
+  repairs in either arm. All four citation-checked findings were false
+  positives; two were on fixed-arm cases. The preregistered signal failed.
+  See the [Click comparison](evaluations/2026-09-29-click-explicit-context.md).
 
 The earlier exploratory calls used one selected case at a time and cannot be
 scored as dataset coverage. The original Chat ten-case run remains partial
 and unchanged; the new JSON Schema ten-case run is complete and has a primary
 review, but no independent second review. The Flask and Werkzeug baselines
 also have only primary review and are too small to estimate general model
-quality. The latest explicit-context comparison is partial and supplies no
-model response. Model token usage is recorded where available; actual billing
-is not inferred.
+quality. The completed Click comparison remains too small and correlated to
+estimate general model quality. Model token usage is recorded where available;
+actual billing is not inferred.
 
 ## Verification scope
 
@@ -167,6 +177,12 @@ is not inferred.
 - PR #14 head `257f050ff07223247062b506dd73742005d3290e` passed Python
   3.11, 3.12, and 3.13 in pull-request CI before merging. Local 332-test,
   `compileall`, and diff checks passed on the final code tree.
+- The Click cohort's four pinned checkouts, eight source fingerprints, context
+  selections, and serialized request hashes were checked before dispatch.
+  The exact dataset-ID data module passed 31 tests; the full offline suite
+  passed 333 tests after the report, along with `compileall` and diff checks.
+  The provider run completed 8/8 calls and all four findings received primary
+  source review. No Click target code or tests were run.
 - Pinned target repository code, tests, and dependencies were not executed or
   installed during these diagnosis experiments. The API key and raw provider
   response bodies were not saved in the evaluation artifacts.
@@ -204,15 +220,13 @@ The stability sequence completed these P0 and P1 gates:
 The provider parser already separates incomplete, missing-content, and
 invalid-JSON responses with safe error categories. The Werkzeug holdout
 missed two known bugs and failed its preregistered usefulness gate. Explicit
-selection can supply omitted `EnvironHeaders` source, but the visible-case
-probe did not establish a model-quality gain. The latest paired attempt
-stopped at a connection error and provides no quality result. The local
-`doctor --deepseek` check now reports `ready` after installing Python's
-missing CA bundle. Keep cloud diagnosis experimental. A future provider
-comparison needs a fresh preregistered cohort and a provider readiness check
-immediately before dispatch; do not reuse a visible cohort as unseen evidence
-or switch the default protocol. Preserve all manifests and partial run
-records.
+selection supplies omitted local methods, but the fresh Click comparison
+matched no known defect and added no demonstrated diagnostic benefit. The
+local `doctor --deepseek` check reports `ready` after installing Python's
+missing CA bundle. Keep cloud diagnosis experimental. The next quality change
+needs a specific failure hypothesis and a new frozen, source-reviewed cohort;
+do not reuse visible cases as unseen evidence or switch the default protocol.
+Preserve all manifests and run records.
 
 The earlier [post-V3 execution plan](superpowers/plans/2026-09-24-post-v3-execution.md),
 [handoff audit](evaluations/2026-09-25-handoff-audit.md), and

@@ -280,3 +280,10 @@ case, no retries, and manual source review. The provider receives selected
 context only, without case labels, issue IDs, or ground truth. Even a positive
 comparison would remain exploratory evidence from two purposive repairs in
 one library, one model sample per arm, and one primary reviewer.
+
+The first frozen run completed all eight calls. Primary review found no match
+to either known repair and marked all four citation-checked findings false
+positives; two findings occurred on fixed-arm cases. The
+[run report](../../docs/evaluations/2026-09-29-click-explicit-context.md)
+records case judgments, usage, and limits. This cohort is now visible and
+consumed; do not reuse it as unseen evidence for a revised context or prompt.
