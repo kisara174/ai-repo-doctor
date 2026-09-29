@@ -17,7 +17,7 @@ from .source import read_source
 
 
 SCHEMA_VERSION = 1
-TOOL_VERSION = "0.3.0"
+TOOL_VERSION = "0.4.0"
 
 
 def timestamp() -> str:
@@ -134,6 +134,7 @@ def create_case(index: RepoIndex, directory: Path) -> dict:
             "architecture": build_architecture_summary(index),
         },
         "target": None,
+        "reproductions": [],
         "previews": [],
         "diagnoses": [],
         "issues": static_issues,
@@ -212,6 +213,7 @@ def load_case(directory: Path) -> dict:
         or not isinstance(case.get("issues"), list)
         or not isinstance(case.get("diagnoses"), list)
         or not isinstance(case.get("previews"), list)
+        or not isinstance(case.get("reproductions", []), list)
     ):
         raise ValueError("invalid case.json structure")
     try:
@@ -229,6 +231,31 @@ def require_issue(case: dict, issue_id: str) -> dict:
     raise ValueError(f"Unknown issue: {issue_id}")
 
 
+def record_reproduction(case: dict, result: dict) -> dict:
+    runs = case.setdefault("reproductions", [])
+    record = {"id": f"R-{len(runs) + 1:03d}", **result}
+    runs.append(record)
+    return record
+
+
+def require_reproduction(case: dict, reproduction_id: str, current_fingerprint: str) -> dict:
+    runs = case.get("reproductions", [])
+    record = next((item for item in runs if item.get("id") == reproduction_id), None)
+    if record is None:
+        raise ValueError(f"Unknown reproduction: {reproduction_id}")
+    if record.get("status") != "failed":
+        raise ValueError("reproduction must be a failed command")
+    if record.get("output_truncated"):
+        raise ValueError("reproduction output was truncated; rerun a narrower command")
+    if record.get("source_fingerprint") != record.get("source_fingerprint_after"):
+        raise ValueError("reproduction changed Python source during execution")
+    if record.get("source_fingerprint") != current_fingerprint:
+        raise ValueError("Python source changed since reproduction; rerun reproduce")
+    if next((item for item in reversed(runs) if item.get("argv") == record.get("argv")), None) is not record:
+        raise ValueError("a newer run of this command supersedes the reproduction")
+    return record
+
+
 def update_issue(case: dict, issue_id: str, status: str, note: str, *, related_test: bool = False) -> dict:
     if not note.strip():
         raise ValueError("--note is required when changing issue status")
@@ -244,9 +271,13 @@ def update_issue(case: dict, issue_id: str, status: str, note: str, *, related_t
 
 def record_diagnosis(
     case: dict, index: RepoIndex, context: dict, request_sha256: str,
-    response_format: str, model: str, report: dict,
+    response_format: str, model: str, report: dict, *, reproduction_id: str | None = None,
 ) -> dict:
     set_target(case, index, context["symbol"])
+    reproduction = (
+        require_reproduction(case, reproduction_id, source_fingerprint(index))
+        if reproduction_id is not None else None
+    )
     next_id = 1 + max(
         (int(issue["id"][2:]) for issue in case["issues"] if issue["id"].startswith("A-")),
         default=0,
@@ -256,7 +287,7 @@ def record_diagnosis(
         finding = entry["finding"]
         issue_id = f"A-{next_id:03d}"
         next_id += 1
-        case["issues"].append({
+        issue = {
             "id": issue_id,
             "origin": "ai",
             "title": finding["title"],
@@ -271,7 +302,16 @@ def record_diagnosis(
             "human_status": "unreviewed",
             "human_history": [],
             "verification": [],
-        })
+        }
+        if reproduction is not None:
+            issue["reproduction_id"] = reproduction_id
+            issue["verification"].append({
+                key: reproduction[key] for key in (
+                    "at", "status", "exit_code", "duration_seconds", "argv",
+                    "source_fingerprint", "source_fingerprint_after",
+                )
+            } | {"phase": "before", "reproduction_id": reproduction_id})
+        case["issues"].append(issue)
         accepted_ids.append(issue_id)
     rejected = [
         {
@@ -295,6 +335,8 @@ def record_diagnosis(
         "accepted_issue_ids": accepted_ids,
         "rejected": rejected,
     }
+    if reproduction_id is not None:
+        attempt["reproduction_id"] = reproduction_id
     case["diagnoses"].append(attempt)
     return attempt
 
@@ -302,22 +344,27 @@ def record_diagnosis(
 def record_preview(
     case: dict, index: RepoIndex, context: dict, request_sha256: str,
     response_format: str, model: str, line_count: int, byte_count: int,
+    *, reproduction_id: str | None = None,
 ) -> None:
     set_target(case, index, context["symbol"])
-    case["previews"].append({
+    preview = {
         "at": timestamp(), "target_symbol": context["symbol"],
         "context_sha256": hashlib.sha256(json.dumps(context, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest(),
         "request_sha256": request_sha256, "response_format": response_format,
         "model": model, "source_lines": line_count, "source_bytes": byte_count,
-    })
+    }
+    if reproduction_id is not None:
+        preview["reproduction_id"] = reproduction_id
+    case["previews"].append(preview)
 
 
 def record_diagnosis_failure(
     case: dict, index: RepoIndex, context: dict, request_sha256: str,
     response_format: str, model: str, status: str, category: str,
+    *, reproduction_id: str | None = None,
 ) -> None:
     set_target(case, index, context["symbol"])
-    case["diagnoses"].append({
+    attempt = {
         "at": timestamp(),
         "status": status,
         "target_symbol": context["symbol"],
@@ -328,4 +375,7 @@ def record_diagnosis_failure(
         "accepted_issue_ids": [],
         "rejected": [],
         "error_category": category,
-    })
+    }
+    if reproduction_id is not None:
+        attempt["reproduction_id"] = reproduction_id
+    case["diagnoses"].append(attempt)

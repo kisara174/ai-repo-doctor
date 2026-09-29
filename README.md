@@ -1,14 +1,14 @@
 # AI Repo Doctor
 
-一个以证据为先的 Python 代码库诊断 CLI。它在本地建立符号、局部导入和静态调用关系，保存调查任务与报告，并把可选 DeepSeek 诊断转换为可复核的 issue。扫描、报告和诊断不会运行目标仓库代码；只有用户显式调用 `verify -- <命令>` 才会在该仓库运行回归检查。
+一个以证据为先的 Python 代码库诊断 CLI。它在本地建立符号、局部导入和静态调用关系，保存调查任务与报告，并把可选 DeepSeek 诊断转换为可复核的 issue。扫描、报告和诊断不会运行目标仓库代码；只有用户显式调用 `reproduce` 或 `verify -- <命令>` 才会在该仓库运行检查。
 
 ## 安装与快速开始
 
-需要 Python 3.11+；安装 Git 后扫描会遵循目标仓库的 ignore 规则。安装 `v0.3.0`：
+需要 Python 3.11+；安装 Git 后扫描会遵循目标仓库的 ignore 规则。安装 `v0.4.0`：
 
 ```bash
 python3 -m venv .venv
-.venv/bin/python -m pip install 'git+https://github.com/kisara174/ai-repo-doctor.git@v0.3.0'
+.venv/bin/python -m pip install 'git+https://github.com/kisara174/ai-repo-doctor.git@v0.4.0'
 .venv/bin/repo-doctor --help
 ```
 
@@ -16,7 +16,7 @@ python3 -m venv .venv
 
 ```bash
 python3 -m pip wheel --no-deps --wheel-dir dist .
-.venv/bin/python -m pip install dist/ai_repo_doctor-0.3.0-py3-none-any.whl
+.venv/bin/python -m pip install dist/ai_repo_doctor-0.4.0-py3-none-any.whl
 ```
 
 ### 五分钟走完一条离线闭环
@@ -61,7 +61,7 @@ $RD impact /path/to/python-repo 'app.py::target'
 
 新建任务还会给出“静态架构摘要”：最多列五个被至少两个其他生产代码文件依赖的本地模块，展示不同依赖文件数、导入者数、跨文件调用者数与具体导入/调用边。排序只用于浏览已解析的依赖，不是代码质量分数；测试文件、外部包、动态导入和未解析调用不参与。指定 `--symbol` 后，报告把反向调用分为直接和间接影响，并列出每一跳的调用行、目标模块的直接导入行。旧任务照旧可打开，但需新建任务才能保存这些新增的扫描摘要。
 
-`scan`、`symbols`、`report`、`context`、`impact`、`validate`、`demo` 和默认 `doctor` 都离线运行；只有显式 `diagnose` 或 `doctor --deepseek` 会联网。只有显式 `verify` 会执行用户给出的目标仓库命令。`verify` 使用参数数组执行，不经隐式 shell；工作目录是任务中的仓库路径。它仅传递必要环境变量并移除 `DEEPSEEK_API_KEY`，默认 120 秒超时（可在 1–300 秒范围内调整），保存最多 16 KiB 输出。它**不提供操作系统级隔离**，应只对愿意自行运行测试的仓库使用。
+`scan`、`symbols`、`report`、`context`、`impact`、`validate`、`demo` 和默认 `doctor` 都离线运行；只有显式 `diagnose` 或 `doctor --deepseek` 会联网。只有显式 `reproduce` 或 `verify` 会执行用户给出的目标仓库命令。两者使用参数数组执行，不经隐式 shell；工作目录是任务中的仓库路径。它们仅传递必要环境变量并移除 `DEEPSEEK_API_KEY`，默认 120 秒超时（可在 1–300 秒范围内调整），保存最多 16 KiB 输出。它们**不提供操作系统级隔离**，应只对愿意自行运行测试的仓库使用。
 
 任务状态分三层：静态事实或引文是否得到来源校验；人工状态 `unreviewed`、`confirmed`、`rejected`、`resolved`；回归命令的 `before`/`after` 记录。只有同一命令在修改前失败、Python 源码指纹变化、修改后通过、两次执行期间源码都未变，并且用户用 `--related-test` 确认关联时，报告才写“有修复证据”。否则显示“仍需复核”或“复查未通过”。这仍不等于整仓无缺陷。
 
@@ -155,11 +155,30 @@ $RD issue ./my-case A-001 --status confirmed --note '复核后认为与预期行
 python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::UserService.create' --response-format json-schema
 ```
 
-`diagnose` 只发送所选的、有上限的源码片段，以及仓库相对路径、行号、关系标签和静态调用证据。片段可能包含本地类父级定义、类方法所属的类声明和被引用的模块级导入行；预算不足时会截断或省略排在后面的片段。它不会发送整个仓库、绝对仓库路径或未选中的源码。每次请求最多包含 120 行和 64 KiB 源码文本，完整序列化后的 HTTP 请求体另有 256 KiB 上限，超出会在联网前失败。客户端拒绝所有重定向，只连接固定的 DeepSeek endpoint。发出请求前，命令会在标准错误中显示将发送的文件、行范围、源码大小、请求体字节数和 SHA-256，不会在提示中重复源码。
+普通 `diagnose` 只发送所选的、有上限的源码片段，以及仓库相对路径、行号、关系标签和静态调用证据。片段可能包含本地类父级定义、类方法所属的类声明和被引用的模块级导入行；预算不足时会截断或省略排在后面的片段。普通请求不会发送整个仓库、绝对仓库路径或未选中的源码；显式使用 `--reproduction` 时还会发送命令参数和捕获的输出，它们可能自带绝对路径或敏感信息。每次请求最多包含 120 行和 64 KiB 源码文本，完整序列化后的 HTTP 请求体另有 256 KiB 上限，超出会在联网前失败。客户端拒绝所有重定向，只连接固定的 DeepSeek endpoint。发出请求前，命令会在标准错误中显示将发送的文件、行范围、源码大小、请求体字节数和 SHA-256，不会在提示中重复源码。
 
 `--preview` 只输出将要发送的 JSON 请求体，不需要 API Key，也不联网；其内容含所选源码，请仅保存到受保护的位置。把标准错误中显示的 64 位 SHA-256 赋给 `REQUEST_SHA256` 后使用 `--expect-request-sha256`。若源码、模型、输出格式或提示内容使请求体变化，正式诊断会在联网前拒绝发送。命令还会在请求前和收到响应后核对已选源码行；若核对时与构造请求时不同，就丢弃返回的 finding。`--preview` 输出的是 HTTP 请求体，不含 Key 或请求头；`--json` 在预览模式下仍输出这个原始请求体。
 
 `diagnose` 也支持重复使用 `--include-symbol`。预览和正式发送时须提供相同的额外符号及顺序，否则预览 SHA-256 不会匹配。额外符号同样受 120 行、64 KiB 源码和 256 KiB 请求体限制，并会列在发送前显示的文件与行号中；请一并检查是否含有敏感内容。
+
+### 可选：把实际失败记录绑定到诊断（v0.4.0）
+
+当你已经有一个针对目标行为的回归命令时，可以先明确运行并保存结果，再决定是否将它发给 DeepSeek。`reproduce` 可以在 AI issue 出现之前使用；命令退出非零时返回码 1，并保存 `R-001` 等稳定 ID。
+
+```bash
+$RD report create /path/to/python-repo --out ./my-case
+$RD reproduce ./my-case -- python -m pytest -q tests/test_specific.py
+$RD diagnose /path/to/python-repo 'app.py::target' --case ./my-case --reproduction R-001 --preview > request.json
+# 检查 request.json 中的源码、命令和输出；复制标准错误显示的 SHA-256
+REQUEST_SHA256='paste-the-64-character-digest-here'
+$RD diagnose /path/to/python-repo 'app.py::target' --case ./my-case --reproduction R-001 --expect-request-sha256 "$REQUEST_SHA256"
+# 若产生 issue，按实际 ID 查看；修改源码后仍需显式运行同一回归命令
+$RD verify ./my-case A-001 --phase after -- python -m pytest -q tests/test_specific.py
+$RD issue ./my-case A-001 --status resolved --note '确认该测试覆盖此问题' --related-test
+$RD report show ./my-case
+```
+
+只有同一命令的最新记录为失败、输出未被 16 KiB 截断、运行中 Python 源码未改变且当前源码指纹相同时，`--reproduction` 才可用于诊断。正式发送必须带预览哈希；这会把所选命令、退出码和已捕获的输出一起发送。输出可能含密钥或个人信息，请先检查完整预览；不想上传时直接停在本地报告。源码指纹只覆盖扫描到的 Python 文件，其他文件的变化无法由此检查发现。通过引文校验的 AI 结果仍是待人工复核的假设；一次失败命令不能自动证明任何 issue。之前的症状提示实验有误报，这条新流程尚无独立的诊断准确率结论。
 
 源码片段可能含有密钥或其他敏感内容。调用前请用 `context` 查看实际选中的代码；发现不应上传的内容时，不要运行 `diagnose`。不带 `--case` 的普通 `diagnose` 不保存请求或结果。带 `--case` 时仅保存请求及上下文哈希、经证据校验的 finding、被拒发现的标题与原因、调用状态和失败类别；不保存完整请求体或原始服务端正文。报告中的 finding 含源码引文。API Key 仅从 `DEEPSEEK_API_KEY` 读取，不作为命令参数，也不会写入任务。
 
@@ -184,7 +203,7 @@ python3 -m repo_doctor impact /path/to/python-repo 'app/services/user.py::UserSe
 - Git 仓库采用 Git 标准 ignore 规则；非 Git 目录使用常见生成目录排除规则，不解释 `.gitignore`。
 - 调用图只连向静态可定位的局部目标。对局部变量，只解析调用前唯一且无条件的简单本地类构造绑定（例如 `client = Client()`）；`with ... as client` 还要求对应的 `__enter__` / `__aenter__` 能直接证明返回 `self`、无需额外必填参数，并且类上存在匹配的 `__exit__` / `__aexit__`。复杂工厂、重绑定和多态分派仍可能无法解析。重名的条件定义会标为歧义；函数内部 import 的别名、动态 import、反射、猴子补丁、别名传播和外部包调用也可能无法解析。关联测试仅表示静态引用，不等于测试覆盖率。
 - 上下文预算以源码行数计算；片段被截断时会标记。每次命令重新扫描当前工作树，不保留旧索引。
-- 自动生成或应用补丁、自动运行目标仓库测试，以及跨多个目标符号的整体审查不在当前范围内。`verify` 只执行用户明确输入的单条命令。
+- 自动生成或应用补丁、自动运行目标仓库测试，以及跨多个目标符号的整体审查不在当前范围内。`reproduce` 和 `verify` 只执行用户明确输入的单条命令。
 
 ## 诊断评估
 

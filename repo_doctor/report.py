@@ -150,14 +150,33 @@ def render_report(case: dict) -> str:
                 location = f"{edge['source']}:{edge['line']}"
                 lines.append(f"- {_code(location)} → {_code(edge['target'])}")
             lines.append("")
+    lines.extend(["## 显式复现记录", "", "以下只是命令运行时的观察，不证明根因；源码指纹仅覆盖扫描到的 Python 文件。", ""])
+    if not case.get("reproductions"):
+        lines.extend(["尚无显式复现记录。", ""])
+    for run in case.get("reproductions", []):
+        lines.append(
+            f"- {_code(run['id'])} · {_inline(run['at'])} · {_inline(run['status'])} · "
+            f"exit={run['exit_code']} · 命令 {_code(json.dumps(run['argv'], ensure_ascii=False))} · "
+            f"Python 源码 {_code(run['source_fingerprint'])}"
+        )
+        if run["source_fingerprint"] != run["source_fingerprint_after"]:
+            lines.append("  - 执行期间 Python 源码发生变化；不能用于诊断。")
+        if run.get("output"):
+            lines.extend(["", _quote(run["output"]), ""])
+        if run.get("output_truncated"):
+            lines.append("  - 输出已截断至 16 KiB。")
+        lines.append("")
     lines.extend(["## 请求预览", ""])
     if not case.get("previews"):
         lines.extend(["尚无已保存的请求预览。", ""])
     for preview in case.get("previews", []):
         lines.extend([
             f"- {_inline(preview['at'])} · {_code(preview['target_symbol'])} · {_inline(preview['model'])} · {preview['source_lines']} 行/{preview['source_bytes']} 字节",
-            f"  - 请求 SHA-256：{_code(preview['request_sha256'])}", "",
+            f"  - 请求 SHA-256：{_code(preview['request_sha256'])}",
         ])
+        if preview.get("reproduction_id"):
+            lines.append(f"  - 显式复现：{_code(preview['reproduction_id'])}")
+        lines.append("")
     lines.extend(["## 诊断记录", ""])
     if not case["diagnoses"]:
         lines.extend(["尚未发起云端诊断。", ""])
@@ -169,6 +188,8 @@ def render_report(case: dict) -> str:
         )
         if attempt.get("error_category"):
             lines.append(f"  - 失败类别：{_inline(attempt['error_category'])}")
+        if attempt.get("reproduction_id"):
+            lines.append(f"  - 关联显式复现：{_code(attempt['reproduction_id'])}；AI 结论仍待人工复核。")
         for rejected in attempt.get("rejected", []):
             lines.append(f"  - 引文拒绝：{_inline(rejected.get('title', '(untitled)'))}；{_inline('; '.join(rejected['reasons']))}")
     lines.extend(["", "## Issues", ""])
@@ -178,9 +199,13 @@ def render_report(case: dict) -> str:
         lines.extend([
             f"### {issue['id']} · {_inline(issue['title'])}", "",
             f"- 来源：{_inline(issue['origin'])}；来源证据：{_inline(issue['evidence_status'])}；人工判断：{_inline(issue['human_status'])}",
-            f"- 修复状态：{repair_state(issue)}", "",
-            "**证据**", "",
+            f"- 修复状态：{repair_state(issue)}",
         ])
+        if issue["origin"] == "ai":
+            lines.append("- 判断性质：AI 假设；引文通过不代表缺陷已证实。")
+        if issue.get("reproduction_id"):
+            lines.append(f"- 关联显式复现：{_code(issue['reproduction_id'])}；失败命令不自动证明此 issue。")
+        lines.extend(["", "**证据**", ""])
         for evidence in issue.get("evidence", []):
             location = f"{evidence['file']}:{evidence['start_line']}-{evidence['end_line']}"
             lines.append(f"- {_code(location)}")

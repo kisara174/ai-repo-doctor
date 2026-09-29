@@ -16,6 +16,25 @@ The [product guide](PRODUCT_GUIDE.md) tracks the completed P0 workflow and
 the remaining diagnosis-quality gap. The older dated reports below preserve
 evaluation history.
 
+The v0.4.0 release candidate adds an opt-in, case-level `reproduce` command
+before AI issues exist. Only a latest failed command with complete captured
+output and matching Python source fingerprint may enter a previewed diagnosis
+request; the ordinary blind request bytes are unchanged. A resulting AI issue
+links that failure as its compact before-check, so the existing explicit same
+command after-check and human confirmation can complete a repair record. This
+is a workflow improvement, not evidence that model precision improved.
+Before publication, 383 offline tests and `compileall` passed. A `0.4.0`
+wheel installed outside the source tree and completed a controlled case:
+`R-002` recorded a failed assertion, one explicit preview-locked Flash request
+(SHA-256 `dafbc91387fcfe1703ad4bd787d61937a3227754b89fa70994ed9db7dbe8898e`)
+returned one quote-backed issue, the same command passed after a source edit,
+and human test-link confirmation made the report show repair evidence. A
+separate offline check rejected that reproduction after the source changed.
+The wheel built for this pre-merge check had SHA-256
+`e3fb41b3d296cfec0e6bdde102117b00bb58974acf37760ee23bda4109e5e106`;
+the final release wheel must be rebuilt from the merge commit. This one
+controlled call checks integration, not general diagnosis quality.
+
 PR [#20](https://github.com/kisara174/ai-repo-doctor/pull/20) merged the first
 M1 changes into the default branch at `2ab4e15`; no new release tag was made.
 It added a fresh six-case M1 repair cohort, made the CLI `chat-json` request
@@ -191,6 +210,8 @@ The same-context [Pro candidate screen](evaluations/2026-09-30-m1-pro-screen.md)
 returned 6/6 parseable responses but still found **0/3** known defects and
 accepted one false alarm on a repaired snapshot. Its registered gate failed;
 keep Flash as the released default and symptom guidance evaluation-only.
+The opt-in reproduction-backed path does not change that quality judgment; a
+fresh paired evaluation would be needed for an accuracy claim.
 
 ## Verification scope
 
