@@ -336,6 +336,10 @@ def _parser() -> argparse.ArgumentParser:
     context.add_argument("path", type=Path)
     context.add_argument("symbol")
     context.add_argument("--max-lines", type=int, default=120)
+    context.add_argument(
+        "--include-symbol", action="append", default=[], metavar="SYMBOL",
+        help="Add a selected repository symbol within the same source-line budget; repeatable",
+    )
     context.add_argument("--json", action="store_true")
     impact = subcommands.add_parser("impact", help="Follow reverse static dependencies for one symbol")
     impact.add_argument("path", type=Path)
@@ -364,6 +368,10 @@ def _parser() -> argparse.ArgumentParser:
     diagnose.add_argument("path", type=Path)
     diagnose.add_argument("symbol")
     diagnose.add_argument("--max-lines", type=int, default=MAX_CONTEXT_LINES)
+    diagnose.add_argument(
+        "--include-symbol", action="append", default=[], metavar="SYMBOL",
+        help="Add a selected repository symbol within the same upload budget; repeatable",
+    )
     diagnose.add_argument("--model")
     diagnose.add_argument(
         "--response-format", choices=("chat-json", "json-schema"), default="chat-json",
@@ -396,7 +404,10 @@ def main(argv: list[str] | None = None) -> int:
             payload = _scan_data(index)
             printer = _print_scan
         elif args.command == "context":
-            payload = build_context(index, args.symbol, args.max_lines)
+            payload = build_context(
+                index, args.symbol, args.max_lines,
+                include_symbols=tuple(args.include_symbol),
+            )
             printer = _print_context
         elif args.command == "impact":
             payload = build_impact(index, args.symbol, args.depth)
@@ -406,7 +417,10 @@ def main(argv: list[str] | None = None) -> int:
                 payload = validate_findings(index, json.load(stream))
             printer = _print_validation
         else:
-            context = build_context(index, args.symbol, args.max_lines)
+            context = build_context(
+                index, args.symbol, args.max_lines,
+                include_symbols=tuple(args.include_symbol),
+            )
             line_count, byte_count = validate_context_budget(context)
             model = args.model or os.environ.get("DEEPSEEK_MODEL") or DEFAULT_MODEL
             model = model.strip() or DEFAULT_MODEL

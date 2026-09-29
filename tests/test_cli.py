@@ -163,6 +163,32 @@ class CliTests(unittest.TestCase):
         self.assertIn("Semantic relationships:", impact_result.stdout)
         self.assertIn("outgoing: app.py::cli -> app.py::leaf", impact_result.stdout)
 
+    def test_context_cli_includes_explicit_symbol(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "class Base:\n"
+                "    def render(self):\n"
+                "        return list(self._list)\n"
+                "class Child(Base):\n"
+                "    def __iter__(self):\n"
+                "        return iter(self.values)\n",
+                encoding="utf-8",
+            )
+            result = self.run_cli(
+                "context", root, "app.py::Base.render",
+                "--include-symbol", "app.py::Child", "--json",
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        blocks = json.loads(result.stdout)["blocks"]
+        self.assertEqual(blocks[2]["symbol"], "app.py::Child")
+        self.assertEqual(blocks[2]["relation"], "user_selected")
+        self.assertIn(
+            "        return iter(self.values)",
+            [line["text"] for line in blocks[2]["lines"]],
+        )
+
     def test_context_and_impact_json_use_schema_v2(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

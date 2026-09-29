@@ -315,6 +315,85 @@ class ContextTests(unittest.TestCase):
         owner = next(block for block in context["blocks"] if block["relation"] == "owner_class")
         self.assertEqual([line["text"] for line in owner["lines"]], ["class Child:"])
 
+    def test_explicit_symbol_adds_subclass_source_with_shared_line_budget(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.py").write_text(
+                "class Base:\n"
+                "    def render(self):\n"
+                "        return list(self._list)\n"
+                "\n"
+                "class Child(Base):\n"
+                "    def __init__(self, values):\n"
+                "        self._list = []\n"
+                "        self.values = values\n"
+                "    def __iter__(self):\n"
+                "        return iter(self.values)\n",
+                encoding="utf-8",
+            )
+            index = build_index(root)
+            ordinary = build_context(index, "sample.py::Base.render", max_lines=16)
+            selected = build_context(
+                index, "sample.py::Base.render", max_lines=16,
+                include_symbols=("sample.py::Child",),
+            )
+            tight = build_context(
+                index, "sample.py::Base.render", max_lines=5,
+                include_symbols=("sample.py::Child",),
+            )
+
+        self.assertFalse(any(block["symbol"] == "sample.py::Child" for block in ordinary["blocks"]))
+        self.assertEqual(
+            [(block["symbol"], block["relation"]) for block in selected["blocks"]],
+            [
+                ("sample.py::Base.render", "target"),
+                ("sample.py::Base", "owner_class"),
+                ("sample.py::Child", "user_selected"),
+            ],
+        )
+        self.assertIn(
+            "        return iter(self.values)",
+            [line["text"] for line in selected["blocks"][2]["lines"]],
+        )
+        self.assertEqual(sum(len(block["lines"]) for block in tight["blocks"]), 5)
+        self.assertTrue(tight["blocks"][2]["truncated"])
+        self.assertTrue(tight["budget_exhausted"])
+
+    def test_explicit_symbol_must_resolve_in_index(self):
+        with tempfile.TemporaryDirectory() as directory:
+            index = self.make_index(Path(directory))
+            with self.assertRaisesRegex(ValueError, "Unknown symbol"):
+                build_context(
+                    index, "service.py::process", include_symbols=("outside.py::Missing",)
+                )
+
+    def test_explicit_owner_class_expands_abbreviated_header(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.py").write_text(
+                "class Base:\n"
+                "    def render(self):\n"
+                "        return self._list\n"
+                "    def populate(self):\n"
+                "        self._list = [1]\n",
+                encoding="utf-8",
+            )
+            index = build_index(root)
+            context = build_context(
+                index, "sample.py::Base.render", max_lines=10,
+                include_symbols=("sample.py::Base",),
+            )
+
+        self.assertEqual(
+            [block["symbol"] for block in context["blocks"]],
+            ["sample.py::Base.render", "sample.py::Base"],
+        )
+        self.assertEqual(context["blocks"][1]["relation"], "user_selected")
+        self.assertIn(
+            "    def populate(self):",
+            [line["text"] for line in context["blocks"][1]["lines"]],
+        )
+
     def test_context_marks_truncation_and_respects_budget(self):
         with tempfile.TemporaryDirectory() as directory:
             index = self.make_index(Path(directory))
