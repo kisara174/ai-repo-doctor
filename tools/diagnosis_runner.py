@@ -37,6 +37,7 @@ from .diagnosis_data import (
     _verified_checkout,
     validate_manifest,
 )
+from .diagnosis_prompt import build_evaluation_prompts
 
 
 def _analyzer_snapshot() -> tuple[str, bool]:
@@ -222,8 +223,11 @@ def _validate_plan_and_contexts(
                 include_symbols=tuple(manifest_case.get("include_symbols", [])),
             )
             validate_context_budget(rebuilt_context)
-            system_prompt, user_prompt = build_diagnosis_prompts(rebuilt_context)
-            expected_context = json.loads(user_prompt)
+            _, context_prompt = build_diagnosis_prompts(rebuilt_context)
+            expected_context = json.loads(context_prompt)
+            system_prompt, user_prompt = build_evaluation_prompts(
+                expected_context, manifest_case.get("symptom")
+            )
         except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
             raise EvaluationDataError(f"{case_id}: cannot rebuild prepared context") from exc
         if context != expected_context:
