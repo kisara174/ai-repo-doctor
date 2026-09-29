@@ -156,8 +156,10 @@ is not inferred.
   [offline coverage check](evaluations/2026-09-29-explicit-context-coverage.md).
 - Manifest-declared `include_symbols` support passed the full 332-test
   offline suite, `compileall`, and diff checks. The eight case contexts and
-  serialized request hashes were rebuilt before dispatch. Target checkouts
-  remained clean; no target code or tests were run.
+  serialized request hashes were rebuilt before dispatch. Re-preparing the
+  prior six-case Werkzeug default plan produced byte-identical context files
+  and unchanged request hashes; only analyzer-commit metadata changed.
+  Target checkouts remained clean; no target code or tests were run.
 - Pinned target repository code, tests, and dependencies were not executed or
   installed during these diagnosis experiments. The API key and raw provider
   response bodies were not saved in the evaluation artifacts.

@@ -22,6 +22,10 @@ not provide model-quality evidence.
 - The largest selected context was 70 lines and 2,960 source bytes; the
   largest serialized request was 9,320 bytes. No target code, tests, or
   dependencies were executed or installed.
+- After the code change, the prior six-case Werkzeug default plan was
+  prepared again at commit `69415f7`. All six case records, context files,
+  and request hashes matched the earlier frozen plan; only analyzer-commit
+  metadata changed.
 
 ## Dispatch outcome
 
