@@ -156,6 +156,14 @@ class DiagnosisDataTests(unittest.TestCase):
             ["app.py::broken"],
         )
 
+    def test_click_explicit_dataset_id_is_exact(self):
+        manifest = copy.deepcopy(self.manifest)
+        manifest["dataset_id"] = "diagnosis-click-explicit-context-v1"
+        validate_manifest(manifest)
+        manifest["dataset_id"] = "diagnosis-click-explicit-context-v2"
+        with self.assertRaises(EvaluationDataError):
+            validate_manifest(manifest)
+
     def test_manifest_rejects_invalid_include_symbols(self):
         for extras in (
             [], ["app.py::supplement", "app.py::supplement"],
