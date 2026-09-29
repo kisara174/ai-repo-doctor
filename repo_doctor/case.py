@@ -272,6 +272,10 @@ def record_diagnosis(
     response_format: str, model: str, report: dict, *, reproduction_id: str | None = None,
 ) -> dict:
     set_target(case, index, context["symbol"])
+    reproduction = (
+        require_reproduction(case, reproduction_id, source_fingerprint(index))
+        if reproduction_id is not None else None
+    )
     next_id = 1 + max(
         (int(issue["id"][2:]) for issue in case["issues"] if issue["id"].startswith("A-")),
         default=0,
@@ -281,7 +285,7 @@ def record_diagnosis(
         finding = entry["finding"]
         issue_id = f"A-{next_id:03d}"
         next_id += 1
-        case["issues"].append({
+        issue = {
             "id": issue_id,
             "origin": "ai",
             "title": finding["title"],
@@ -296,7 +300,16 @@ def record_diagnosis(
             "human_status": "unreviewed",
             "human_history": [],
             "verification": [],
-        })
+        }
+        if reproduction is not None:
+            issue["reproduction_id"] = reproduction_id
+            issue["verification"].append({
+                key: reproduction[key] for key in (
+                    "at", "status", "exit_code", "duration_seconds", "argv",
+                    "source_fingerprint", "source_fingerprint_after",
+                )
+            } | {"phase": "before", "reproduction_id": reproduction_id})
+        case["issues"].append(issue)
         accepted_ids.append(issue_id)
     rejected = [
         {
