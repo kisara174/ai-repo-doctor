@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "dataset_id": "diagnosis-werkzeug-holdout-v1",
+  "cases": [
+    {
+      "id": "werkzeug-2843-bug",
+      "pair_id": "pallets-werkzeug-2842",
+      "repository_url": "https://github.com/pallets/werkzeug",
+      "checkout_id": "werkzeug-4c09d1b3b08d",
+      "commit": "4c09d1b3b08deb939803a4beb53483cbc54dfb8d",
+      "symbol": "src/werkzeug/datastructures/structures.py::TypeConversionDict.get",
+      "label": "bug",
+      "issue_id": "pallets/werkzeug#2842",
+      "source": {
+        "file": "src/werkzeug/datastructures/structures.py",
+        "start_line": 55,
+        "end_line": 85,
+        "sha256": "49a2e7b78e6816bfa9e37767622aae2c0e0196cc602fa6c5019157b108f2c05d"
+      },
+      "ground_truth": "Known Werkzeug issue #2842. Trigger: a stored value is None and TypeConversionDict.get is called with type=int and an explicit default. int(None) raises TypeError, but the method only catches ValueError, so TypeError escapes instead of returning the default. Accept a finding that links this concrete conversion failure to the missing TypeError handling. Do not count generic missing-key behavior or ValueError handling as this defect.",
+      "references": [
+        "https://github.com/pallets/werkzeug/issues/2842",
+        "https://github.com/pallets/werkzeug/pull/2843",
+        "https://github.com/pallets/werkzeug/commit/f516c4005c7c4510b61ae07969450771b929809d",
+        "https://github.com/pallets/werkzeug/blob/4c09d1b3b08deb939803a4beb53483cbc54dfb8d/src/werkzeug/datastructures/structures.py#L55-L85"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T00:08:18Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "werkzeug-2843-fixed",
+      "pair_id": "pallets-werkzeug-2842",
+      "repository_url": "https://github.com/pallets/werkzeug",
+      "checkout_id": "werkzeug-f516c4005c7c",
+      "commit": "f516c4005c7c4510b61ae07969450771b929809d",
+      "symbol": "src/werkzeug/datastructures/structures.py::TypeConversionDict.get",
+      "label": "fixed",
+      "issue_id": "pallets/werkzeug#2842",
+      "source": {
+        "file": "src/werkzeug/datastructures/structures.py",
+        "start_line": 55,
+        "end_line": 89,
+        "sha256": "37268a2b4d145b30ee22d187fa33b789f8d50c03986933bb3c2f5c2da1417534"
+      },
+      "ground_truth": "Fixed snapshot for Werkzeug issue #2842. TypeConversionDict.get catches both ValueError and TypeError from a supplied conversion callable, so int(None) returns the requested default; the upstream regression test covers a stored None. Accept only a finding demonstrating a different actual violation in the selected implementation. Do not report the repaired TypeError path as still broken.",
+      "references": [
+        "https://github.com/pallets/werkzeug/issues/2842",
+        "https://github.com/pallets/werkzeug/pull/2843",
+        "https://github.com/pallets/werkzeug/commit/f516c4005c7c4510b61ae07969450771b929809d",
+        "https://github.com/pallets/werkzeug/blob/f516c4005c7c4510b61ae07969450771b929809d/tests/test_datastructures.py#L550-L560"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T00:08:18Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "werkzeug-2985-bug",
+      "pair_id": "pallets-werkzeug-2985",
+      "repository_url": "https://github.com/pallets/werkzeug",
+      "checkout_id": "werkzeug-d1f60d68ac97",
+      "commit": "d1f60d68ac9788aec05712aca29867abd00d5cc3",
+      "symbol": "src/werkzeug/datastructures/headers.py::Headers.__str__",
+      "label": "bug",
+      "issue_id": "pallets/werkzeug#2985",
+      "source": {
+        "file": "src/werkzeug/datastructures/headers.py",
+        "start_line": 568,
+        "end_line": 574,
+        "sha256": "2d47f839a2d8f6546400d0a0104b48c4bdfc52caffca29c12d53d07550288b58"
+      },
+      "ground_truth": "Known Werkzeug issue #2985. Trigger: stringify a populated EnvironHeaders instance inherited from Headers. Headers.__str__ loops over self._list, but EnvironHeaders supplies values from the WSGI environment rather than that list, so the string is only the final CRLF despite present headers. Accept a finding that identifies this inherited private-storage mismatch and the empty output. Do not count claims that incoming HTTP headers are absent from the request environment.",
+      "references": [
+        "https://github.com/pallets/werkzeug/issues/2985",
+        "https://github.com/pallets/werkzeug/pull/2986",
+        "https://github.com/pallets/werkzeug/commit/64d27f79eb84880b33f4451e078dab0b49c4c2c2",
+        "https://github.com/pallets/werkzeug/blob/d1f60d68ac9788aec05712aca29867abd00d5cc3/src/werkzeug/datastructures/headers.py#L568-L574"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T00:08:18Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "werkzeug-2985-fixed",
+      "pair_id": "pallets-werkzeug-2985",
+      "repository_url": "https://github.com/pallets/werkzeug",
+      "checkout_id": "werkzeug-64d27f79eb84",
+      "commit": "64d27f79eb84880b33f4451e078dab0b49c4c2c2",
+      "symbol": "src/werkzeug/datastructures/headers.py::Headers.__str__",
+      "label": "fixed",
+      "issue_id": "pallets/werkzeug#2985",
+      "source": {
+        "file": "src/werkzeug/datastructures/headers.py",
+        "start_line": 568,
+        "end_line": 574,
+        "sha256": "7f640552c9cc12b1e5eebc1e03cd034a7d8e949efabd911357950ac272a9021f"
+      },
+      "ground_truth": "Fixed snapshot for Werkzeug issue #2985. Headers.__str__ formats self.to_wsgi_list(), which exposes populated values for EnvironHeaders as well as ordinary Headers. The upstream regression test checks a populated EnvironHeaders string. Accept only a demonstrated remaining contract failure in the selected implementation. Do not claim that the old private _list iteration still discards request headers.",
+      "references": [
+        "https://github.com/pallets/werkzeug/issues/2985",
+        "https://github.com/pallets/werkzeug/pull/2986",
+        "https://github.com/pallets/werkzeug/commit/64d27f79eb84880b33f4451e078dab0b49c4c2c2",
+        "https://github.com/pallets/werkzeug/blob/64d27f79eb84880b33f4451e078dab0b49c4c2c2/tests/test_datastructures.py#L885-L892"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T00:08:18Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "werkzeug-2994-bug",
+      "pair_id": "pallets-werkzeug-2994",
+      "repository_url": "https://github.com/pallets/werkzeug",
+      "checkout_id": "werkzeug-1a1728ed8893",
+      "commit": "1a1728ed88939ca68928dade168e1989be062c6f",
+      "symbol": "src/werkzeug/datastructures/structures.py::MultiDict.__init__",
+      "label": "bug",
+      "issue_id": "pallets/werkzeug#2994",
+      "source": {
+        "file": "src/werkzeug/datastructures/structures.py",
+        "start_line": 181,
+        "end_line": 210,
+        "sha256": "509c2d83cf82c57d891032f1ea9763134795364eed56e57d41210a5a1481c671"
+      },
+      "ground_truth": "Known Werkzeug issue #2994. Trigger: construct MultiDict from a mapping whose value is bytes, such as {'bytes_value': b'abc'}. MultiDict.__init__ treats every non-str Collection as multiple values, so bytes becomes a list of integer byte values and the original scalar bytes value is lost. Accept a finding identifying this specific input, the Collection branch, and the changed observable MultiDict values. Do not count ordinary list/tuple/set multi-value expansion as a defect.",
+      "references": [
+        "https://github.com/pallets/werkzeug/issues/2994",
+        "https://github.com/pallets/werkzeug/pull/2995",
+        "https://github.com/pallets/werkzeug/commit/ea93b549a93f65b216070e72a26cf0cc31d1e9ad",
+        "https://github.com/pallets/werkzeug/blob/1a1728ed88939ca68928dade168e1989be062c6f/src/werkzeug/datastructures/structures.py#L181-L210"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T00:08:18Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "werkzeug-2994-fixed",
+      "pair_id": "pallets-werkzeug-2994",
+      "repository_url": "https://github.com/pallets/werkzeug",
+      "checkout_id": "werkzeug-ea93b549a93f",
+      "commit": "ea93b549a93f65b216070e72a26cf0cc31d1e9ad",
+      "symbol": "src/werkzeug/datastructures/structures.py::MultiDict.__init__",
+      "label": "fixed",
+      "issue_id": "pallets/werkzeug#2994",
+      "source": {
+        "file": "src/werkzeug/datastructures/structures.py",
+        "start_line": 181,
+        "end_line": 210,
+        "sha256": "6eb95ab3086d14d44304b3163b7eb7bdfd1fcf38288e45b4dde718d34adbed33"
+      },
+      "ground_truth": "Fixed snapshot for Werkzeug issue #2994. MultiDict.__init__ expands only list, tuple, or set mapping values as multiple entries, so a bytes value remains one scalar bytes entry. The upstream regression test directly covers bytes in iter_multi_items; the constructor's changed type branch covers the stated constructor contract. Accept only a demonstrated violation in the selected implementation. Do not claim that bytes are still split into integers by this constructor.",
+      "references": [
+        "https://github.com/pallets/werkzeug/issues/2994",
+        "https://github.com/pallets/werkzeug/pull/2995",
+        "https://github.com/pallets/werkzeug/commit/ea93b549a93f65b216070e72a26cf0cc31d1e9ad",
+        "https://github.com/pallets/werkzeug/blob/ea93b549a93f65b216070e72a26cf0cc31d1e9ad/src/werkzeug/datastructures/structures.py#L181-L210"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T00:08:18Z",
+        "status": "approved"
+      }
+    }
+  ]
+}
