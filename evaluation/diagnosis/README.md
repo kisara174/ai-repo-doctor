@@ -148,3 +148,43 @@ The target code and its tests must not be executed or installed by this
 evaluation. The analyzer selects source statically; its largest observed
 holdout context is 120 lines and 4,635 source bytes. Model claims require
 source review even if the local quotation validator accepts their evidence.
+
+## Werkzeug holdout v1
+
+`werkzeug-holdout-v1.json` freezes three new bug/fixed pairs from Werkzeug:
+[#2842](https://github.com/pallets/werkzeug/issues/2842),
+[#2985](https://github.com/pallets/werkzeug/issues/2985), and
+[#2994](https://github.com/pallets/werkzeug/issues/2994). Each bug checkout
+is its repair commit's first parent. Exact symbols, source fingerprints,
+trigger/outcome contracts, PRs, and primary-agent annotations are in the
+manifest. Its byte-for-byte SHA-256 is
+`09c42643a0e21f5468882c562c7326c2f731c9f0d3c3e9b00cec9bf3fe0d7bda`.
+The [preregistered design](../../docs/superpowers/specs/2026-09-29-werkzeug-holdout-design.md)
+uses one current-product arm; it does not reuse or relabel either earlier
+dataset. No response from this cohort was read before the cases were frozen.
+
+To recreate six detached, clean source checkouts without running target code:
+
+```sh
+WERKZEUG_ROOT=/tmp/ai-repo-doctor-werkzeug-holdout
+mkdir -p "$WERKZEUG_ROOT/.bare"
+git clone --bare https://github.com/pallets/werkzeug.git "$WERKZEUG_ROOT/.bare/werkzeug.git"
+git --git-dir="$WERKZEUG_ROOT/.bare/werkzeug.git" worktree add --detach "$WERKZEUG_ROOT/werkzeug-4c09d1b3b08d" 4c09d1b3b08deb939803a4beb53483cbc54dfb8d
+git --git-dir="$WERKZEUG_ROOT/.bare/werkzeug.git" worktree add --detach "$WERKZEUG_ROOT/werkzeug-f516c4005c7c" f516c4005c7c4510b61ae07969450771b929809d
+git --git-dir="$WERKZEUG_ROOT/.bare/werkzeug.git" worktree add --detach "$WERKZEUG_ROOT/werkzeug-d1f60d68ac97" d1f60d68ac9788aec05712aca29867abd00d5cc3
+git --git-dir="$WERKZEUG_ROOT/.bare/werkzeug.git" worktree add --detach "$WERKZEUG_ROOT/werkzeug-64d27f79eb84" 64d27f79eb84880b33f4451e078dab0b49c4c2c2
+git --git-dir="$WERKZEUG_ROOT/.bare/werkzeug.git" worktree add --detach "$WERKZEUG_ROOT/werkzeug-1a1728ed8893" 1a1728ed88939ca68928dade168e1989be062c6f
+git --git-dir="$WERKZEUG_ROOT/.bare/werkzeug.git" worktree add --detach "$WERKZEUG_ROOT/werkzeug-ea93b549a93f" ea93b549a93f65b216070e72a26cf0cc31d1e9ad
+```
+
+Pass `"$WERKZEUG_ROOT"` as `--repos-root` during offline preparation.
+The six currently selected contexts range from 9 to 36 physical source
+lines and 339 to 1,409 source bytes. Fixed cases cover only their paired
+repair; any model finding still needs behavioral review.
+
+The current-product JSON Schema arm completed six calls. Primary review
+matched one of three known defects and found accepted false positives on two
+fixed snapshots. The [run report](../../docs/evaluations/2026-09-29-werkzeug-holdout.md)
+records case judgments, hashes, usage, and limits. This cohort is now visible
+to the implementer and must not be reused as unseen evidence for a tuned
+prompt or context change.

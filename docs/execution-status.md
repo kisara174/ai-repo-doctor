@@ -3,16 +3,18 @@
 Updated 2026-09-29. This file is the current project checkpoint; dated reports
 below preserve the earlier experiments.
 
-**Active branch/worktree:** `codex/context-class-owner-v0.4` at
+**Active branch/worktree:** `codex/werkzeug-holdout-v0.5` at
 `/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor`.
 The stability branch was merged in
 [PR #8](https://github.com/kisara174/ai-repo-doctor/pull/8) at `5d72890`,
 and the separate Flask holdout was merged in
 [PR #9](https://github.com/kisara174/ai-repo-doctor/pull/9) at `dbd8a1c`.
+The method-owner context change was merged in
+[PR #10](https://github.com/kisara174/ai-repo-doctor/pull/10) at `74da767`.
 The experimental prompt was reverted before PR #9 merged. The current branch
-adds the enclosing class declaration to eligible method contexts without
-expanding the whole class; its offline comparison is recorded in the
-[method-owner context report](evaluations/2026-09-29-method-owner-context.md).
+freezes a third-repository Werkzeug holdout and records one current-product
+baseline without changing the prompt; see the
+[Werkzeug report](evaluations/2026-09-29-werkzeug-holdout.md).
 The prior evaluation branch
 was integrated at `86d1022`; its context implementation commit was
 `6791483f9045487285e72aebad2eee7134ce4424`. Focused context
@@ -29,9 +31,9 @@ checkout has separate untracked V3 documents and was left untouched.
 | V1 | Read-only Python repository scan; symbol, import, and static call index; bounded `context`; reverse `impact`; evidence `validate`. | Static relationships are conservative and do not execute target code. |
 | V2 | Decorator and overload metadata, explicit local reexports, bounded Click command-registration relationships, and richer static call resolution. | `call_edges` and `semantic_edges` remain distinct. Dynamic dispatch is outside the current precision claim. |
 | V3 | Optional, explicit `diagnose` call to DeepSeek with bounded selected source; local finding evidence checks and safe error handling. | Source quotations can be validated without proving the model's behavioral conclusion. No automatic patching. |
-| Evaluation | Frozen ten-case diagnosis manifest, a separate six-case Flask holdout, offline preparation, one-case and full-plan runners, manual-review template, scoring, reproducible hashes, and offline CI workflow. | The original Chat ten-case online run is partial; later JSON Schema ten-case and Flask baseline runs are complete with primary-only review. |
+| Evaluation | Frozen ten-case diagnosis manifest, separate six-case Flask and Werkzeug holdouts, offline preparation, one-case and full-plan runners, manual-review template, scoring, reproducible hashes, and offline CI workflow. | The original Chat ten-case online run is partial; later JSON Schema runs are complete with primary-only review. |
 | Latest context change | Local class ancestor definitions and used module import bindings may join the selected source blocks within the same line budget. | Focused fixture covers ancestry order, relevant imports, and the shared budget; PR #8 passed the full offline suite and CI. |
-| Current context branch | A method target can include its enclosing class declaration as a separate bounded block. | Pinned offline comparisons preserve target lines and existing imports; no new model-quality claim. |
+| Method-owner context | A method target can include its enclosing class declaration as a separate bounded block. | Pinned offline comparisons preserve target lines and existing imports; PR #10 passed local and CI gates. |
 | Distribution | The `0.1.0` wheel installs `repo-doctor` in a clean virtual environment; the public repository can serve as a pip source after integration. | Wheel contents and installed `scan`, `context`, `impact`, and `validate` were checked outside the source tree. The evaluation-only `tools` package is intentionally absent from the wheel. |
 
 The original post-V3 plan's T0–T6 implementation and T7 offline preparation
@@ -75,13 +77,20 @@ record of that run.
   after its first call returned `invalid_content_json`; five calls were not
   attempted. The prompt was reverted at `d66ec4c`. See the
   [Flask holdout report](evaluations/2026-09-28-flask-holdout.md).
+- At analyzer commit `a9155de`, the pinned Werkzeug six-case baseline
+  completed 6/6 calls. Primary review found one match among three known bug
+  cases, four accepted false positives, three uncertain findings, and fixed
+  case false alarms in two of three repaired snapshots. All eight findings
+  passed quotation grounding. The preregistered quality gate failed; see the
+  [Werkzeug holdout report](evaluations/2026-09-29-werkzeug-holdout.md).
 
 The earlier exploratory calls used one selected case at a time and cannot be
 scored as dataset coverage. The original Chat ten-case run remains partial
 and unchanged; the new JSON Schema ten-case run is complete and has a primary
-review, but no independent second review. The Flask baseline also has only
-primary review and is too small to estimate general model quality. Model
-token usage is recorded where available; actual billing is not inferred.
+review, but no independent second review. The Flask and Werkzeug baselines
+also have only primary review and are too small to estimate general model
+quality. Model token usage is recorded where available; actual billing is not
+inferred.
 
 ## Verification scope
 
@@ -107,6 +116,13 @@ token usage is recorded where available; actual billing is not inferred.
   and `git diff --check` on 2026-09-29. Its two pinned offline sets retained
   all target-method lines and previously selected import bindings; see the
   [comparison](evaluations/2026-09-29-method-owner-context.md).
+- PR #10 head `5d7fd59c61805e81323829bceb51a18010bcdf67` passed Python
+  3.11, 3.12, and 3.13 in both push and pull-request CI before merging.
+- The Werkzeug dataset-ID focused test and all 26 diagnosis-data tests passed
+  after the exact allowlist extension. Six clean target checkouts, source
+  fingerprints, context budgets, and serialized request hashes were checked
+  before the online run. The current branch passed 319 local offline tests and
+  `compileall` on 2026-09-29; current-head CI is still pending.
 - Pinned target repository code, tests, and dependencies were not executed or
   installed during these diagnosis experiments. The API key and raw provider
   response bodies were not saved in the evaluation artifacts.
@@ -141,17 +157,18 @@ The stability sequence completed these P0 and P1 gates:
   `091dc2d`; the corrected score is a later offline derivation from unchanged
   run records and completed primary review.
 
-The current provider parser already separates incomplete, missing-content,
-and invalid-JSON responses with safe error categories; no redundant parser
-change was needed. The current branch addresses one observed context omission
-through an offline class-header selection change. The Flask holdout fulfilled
-the independent-sample gate, but the preregistered prompt comparison is
-incomplete and cannot justify a prompt change. After integrating this branch,
-evaluate on further unseen cases with independent behavioral review. Do not
-tune only against the now-visible ten-case and Flask samples or switch the
-default protocol. Preserve both frozen manifests and all partial run records.
-The method-owner change's integration gate is final diff review and
-current-head CI; the GitHub pull request records its outcome.
+The provider parser already separates incomplete, missing-content, and
+invalid-JSON responses with safe error categories. The method-owner change
+removed one observed context omission, but the Werkzeug holdout still missed
+two known bugs and failed its preregistered usefulness gate. In particular,
+the `Headers.__str__` case did not supply the subclass implementation needed
+to recognize the inherited-storage mismatch; the `MultiDict.__init__` case
+supplied its relevant branch but the model missed the bytes behavior. Keep
+cloud diagnosis experimental. Next, choose one measurable failure mode and
+evaluate it on further unseen cases with independent behavioral review. Do
+not tune against the now-visible three cohorts or switch the default
+protocol. Preserve all frozen manifests and partial run records. The current
+branch needs final diff review and current-head CI before integration.
 
 The earlier [post-V3 execution plan](superpowers/plans/2026-09-24-post-v3-execution.md),
 [handoff audit](evaluations/2026-09-25-handoff-audit.md), and
