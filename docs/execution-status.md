@@ -1,9 +1,19 @@
 # Execution Status
 
-Updated 2026-09-29. This file is the current project checkpoint; dated reports
-below preserve the earlier experiments.
+Updated 2026-09-29. The current public product is
+[v0.2.0](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.2.0),
+merged in [PR #18](https://github.com/kisara174/ai-repo-doctor/pull/18) at
+`603e8cd`. It provides a persistent Python repository case, symbol search,
+bounded optional DeepSeek diagnosis, source-grounded issues, human review,
+and explicit before/after regression records. The bundled offline demo and
+a controlled single cloud issue both completed the issue-to-report loop.
+The 370-test local suite, clean installed wheel smoke, public tag installation,
+and Python 3.11–3.13 CI passed. An external ItsDangerous checkout produced an
+offline static report without executing its code. See the
+[product guide](PRODUCT_GUIDE.md) for the completed P0 checklist and next
+milestone. The older dated reports below preserve evaluation history.
 
-**Latest integrated evaluation:** `codex/repo-doctor-v1` at `70047c3`
+**Earlier integrated evaluation checkpoint:** `codex/repo-doctor-v1` at `70047c3`
 ([PR #16](https://github.com/kisara174/ai-repo-doctor/pull/16)).
 The stability branch was merged in
 [PR #8](https://github.com/kisara174/ai-repo-doctor/pull/8) at `5d72890`,
@@ -52,12 +62,13 @@ checkout has separate untracked V3 documents and was left untouched.
 | V1 | Read-only Python repository scan; symbol, import, and static call index; bounded `context`; reverse `impact`; evidence `validate`. | Static relationships are conservative and do not execute target code. |
 | V2 | Decorator and overload metadata, explicit local reexports, bounded Click command-registration relationships, and richer static call resolution. | `call_edges` and `semantic_edges` remain distinct. Dynamic dispatch is outside the current precision claim. |
 | V3 | Optional, explicit `diagnose` call to DeepSeek with bounded selected source; local finding evidence checks and safe error handling. | Source quotations can be validated without proving the model's behavioral conclusion. No automatic patching. |
+| V0.2 product loop | Persistent `case.json` and `report.md`, symbol search, stable static and AI issue IDs, optional case-linked preview and diagnosis, human review, explicit bounded regression verification, and a bundled offline demo. | A repair-evidence claim requires the same command failing before and passing after a Python source change, stable source during each run, and human confirmation. `verify` is not an OS sandbox. |
 | Evaluation | Frozen ten-case diagnosis manifest, separate Flask and Werkzeug holdouts, a fresh Click explicit-context comparison, offline preparation, one-case and full-plan runners, manifest-bound supplementary symbols, manual-review template, scoring, reproducible hashes, and offline CI workflow. | The Werkzeug paired attempt stopped at a connection failure. The Click comparison completed 8/8 calls but matched no known bug and produced four false positives on primary review. |
 | Latest context change | Local class ancestor definitions and used module import bindings may join the selected source blocks within the same line budget. | Focused fixture covers ancestry order, relevant imports, and the shared budget; PR #8 passed the full offline suite and CI. |
 | Method-owner context | A method target can include its enclosing class declaration as a separate bounded block. | Pinned offline comparisons preserve target lines and existing imports; PR #10 passed local and CI gates. |
 | Finding presentation | Text output calls citation-checked findings `QUOTE-VERIFIED`; the JSON `accepted` key remains stable. | Exact source quotation matching does not establish a true bug; manual review remains required. |
 | Explicit context | `context` and `diagnose` can add user-selected symbols inside the same source budget. | Opt-in selection can expose omitted local code; it does not infer a relationship or prove a model diagnosis. |
-| Distribution | The `0.1.0` wheel installs `repo-doctor` in a clean virtual environment; the public repository can serve as a pip source after integration. | Wheel contents and installed `scan`, `context`, `impact`, and `validate` were checked outside the source tree. The evaluation-only `tools` package is intentionally absent from the wheel. |
+| Distribution | The public `0.2.0` tag and attached wheel install `repo-doctor` in a clean virtual environment. | Installed demo creation, task report, request preview, explicit before/after verification, and final report were checked outside the source tree. The evaluation-only `tools` package remains outside the wheel. |
 
 The original post-V3 plan's T0–T6 implementation and T7 offline preparation
 were completed. T7's first ten-case online run stopped after one
@@ -126,6 +137,14 @@ quality. The completed Click comparison remains too small and correlated to
 estimate general model quality. Model token usage is recorded where available;
 actual billing is not inferred.
 
+## Current next gate
+
+Keep the v0.2 workflow stable. For M1, register a fresh unseen before/after
+cohort and measure true issue matches, false alarms on repaired samples,
+invalid responses, and cost per useful issue. Decide any default prompt change
+only from that new source-reviewed evidence; the controlled v0.2 cloud smoke
+shows the path works but is not a general accuracy estimate.
+
 ## Verification scope
 
 - The context test module passed 12 tests at `0ad91c8`. The full offline suite
@@ -191,7 +210,7 @@ actual billing is not inferred.
   installed during these diagnosis experiments. The API key and raw provider
   response bodies were not saved in the evaluation artifacts.
 
-## Next gates
+## Earlier stability gates
 
 The stability sequence completed these P0 and P1 gates:
 
