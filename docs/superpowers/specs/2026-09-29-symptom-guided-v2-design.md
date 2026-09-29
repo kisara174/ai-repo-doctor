@@ -50,6 +50,11 @@ the existing instruction to treat it as unverified, repository content as
 untrusted, and findings as requiring exact source evidence. The response
 schema, source-evidence gate, and review rubric stay unchanged.
 
+V2 omits blocks from test files and call-evidence edges originating in test
+files so the model does not receive regression test names. Preparation and
+run-time provenance checks apply the same evaluator-only filter; the installed
+CLI context behavior remains unchanged.
+
 Use the established settings: `deepseek-flash`, Responses API `json_schema`,
 reasoning effort `none`, 120 source lines, 64 KiB context, 256 KiB serialized
 request, 4,096 output tokens, non-streaming, and two repeats. Do not add

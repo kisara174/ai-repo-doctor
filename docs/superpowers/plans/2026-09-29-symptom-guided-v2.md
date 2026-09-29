@@ -38,6 +38,7 @@ implementation, online dispatch, manual review, and acceptance.
 | Path | Responsibility |
 | --- | --- |
 | `tools/diagnosis_data.py` | Add V2 ID and exact 16-case/four-repair/four-repository validation while leaving V1 validation intact. |
+| `tools/diagnosis_runner.py` | Rebuild the same V2-only test-evidence-filtered context during run preflight. |
 | `tools/diagnosis_score.py` | Reuse prompt-arm/per-repair scoring for V2 and compute the registered V2 signal. |
 | `tests/test_diagnosis_data.py` | Test valid V2 structure, rejected reused repositories, and malformed pair/arm counts. |
 | `tests/test_diagnosis_score.py` | Test four-repair summaries, exact registered-signal pass, and a failing signal case. |
@@ -87,15 +88,17 @@ changing those components.
    commits in the design table.
 2. For each target symbol, verify unique static symbol resolution, inspect
    only the targeted code and upstream regression assertion, choose a minimal
-   1-based source span, and compute its exact SHA-256. Do not run target code,
-   tests, or imports.
+   1-based source span, and compute its exact SHA-256. Keep regression test
+   names out of the request by excluding test-file blocks and test-origin call
+   evidence. Do not run target code, tests, or imports.
 3. Add the 16 cases in fixed order. Include issue/PR or discussion links,
    precise behavior contracts, and the same symptom on both symptom-pair
    members. Do not include any issue, test, fix, or label in symptom text.
 4. Run manifest-only validation, then offline preparation with 120 lines and
    the 256 KiB request cap. Confirm all contexts fit 64 KiB, each blind and
-   symptom pair shares the exact context hash, and only symptom text changes
-   the request hash within each snapshot.
+   symptom pair shares the exact context hash, and paired requests differ only
+   by the pre-registered symptom treatment: the unverified-symptom instruction
+   and symptom field.
 5. Inspect the prepared user payloads for accidental labels, test names,
    issue/PR IDs, commits, absolute paths, or ground truth. Preserve the
    resulting plan and record manifest/plan hashes.

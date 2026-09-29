@@ -388,6 +388,31 @@ def _source_fingerprint(checkout: Path, case: dict) -> str:
     return actual
 
 
+def _build_evaluation_context(
+    index: RepoIndex,
+    symbol: str,
+    max_lines: int,
+    *,
+    dataset_id: str,
+    include_symbols: tuple[str, ...] = (),
+) -> dict:
+    """Build the evaluator context, excluding V2 regression-test evidence."""
+    context = build_context(
+        index, symbol, max_lines, include_symbols=include_symbols
+    )
+    if dataset_id == _SYMPTOM_DATASET_V2_ID:
+        test_files = {file.path for file in index.files if file.is_test}
+        context["blocks"] = [
+            block for block in context["blocks"]
+            if block["relation"] != "related_test" and block["file"] not in test_files
+        ]
+        context["call_evidence"] = [
+            edge for edge in context["call_evidence"]
+            if edge["file"] not in test_files
+        ]
+    return context
+
+
 def _canonical_hash(value: object) -> str:
     encoded = json.dumps(
         value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
@@ -458,8 +483,12 @@ def prepare_cases(
                     raise EvaluationDataError(f"{case['id']}: Ambiguous symbol: {extra}")
                 if extra not in index.symbols:
                     raise EvaluationDataError(f"{case['id']}: Unknown symbol: {extra}")
-            detailed_context = build_context(
-                index, case["symbol"], max_lines, include_symbols=tuple(extras)
+            detailed_context = _build_evaluation_context(
+                index,
+                case["symbol"],
+                max_lines,
+                dataset_id=manifest["dataset_id"],
+                include_symbols=tuple(extras),
             )
             source_lines, source_bytes = validate_context_budget(detailed_context)
             _, context_prompt = build_diagnosis_prompts(detailed_context)

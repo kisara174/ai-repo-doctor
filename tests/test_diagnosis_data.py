@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from repo_doctor.context import build_context
 from repo_doctor.diagnosis import build_diagnosis_prompts
 from repo_doctor.deepseek import _serialize_schema_request_body
 from repo_doctor.index import build_index
@@ -131,6 +132,38 @@ class DiagnosisDataTests(unittest.TestCase):
         self.assertEqual(prepared["plan"]["cases"][0]["request_sha256"], expected_request_hash)
         self.assertNotIn("thinking_mode", prepared["plan"])
         open_request.assert_not_called()
+
+    def test_v2_evaluation_context_omits_test_evidence_without_changing_v1(self):
+        test_file = self.repo / "tests" / "test_sensitive_case.py"
+        test_file.parent.mkdir()
+        test_file.write_text(
+            "from app import broken\n\n"
+            "def test_regression_name_must_not_be_sent():\n"
+            "    broken()\n",
+            encoding="utf-8",
+        )
+        index = build_index(self.repo)
+        full_context = build_context(index, "app.py::broken", max_lines=120)
+        self.assertTrue(any(
+            block["relation"] == "related_test" for block in full_context["blocks"]
+        ))
+
+        from tools.diagnosis_data import _build_evaluation_context
+
+        legacy_context = _build_evaluation_context(
+            index, "app.py::broken", 120, dataset_id="diagnosis-v1"
+        )
+        v2_context = _build_evaluation_context(
+            index, "app.py::broken", 120,
+            dataset_id="diagnosis-symptom-guided-v2",
+        )
+        _, legacy_prompt = build_diagnosis_prompts(legacy_context)
+        _, v2_prompt = build_diagnosis_prompts(v2_context)
+
+        self.assertIn("test_regression_name_must_not_be_sent", legacy_prompt)
+        self.assertNotIn("test_regression_name_must_not_be_sent", v2_prompt)
+        self.assertNotIn("tests/test_sensitive_case.py", v2_prompt)
+        self.assertIn("return 1 / 0", v2_prompt)
 
     def test_prepare_includes_only_manifest_selected_supplement_and_records_it(self):
         manifest = copy.deepcopy(self.manifest)
