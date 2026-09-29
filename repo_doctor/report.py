@@ -150,6 +150,22 @@ def render_report(case: dict) -> str:
                 location = f"{edge['source']}:{edge['line']}"
                 lines.append(f"- {_code(location)} → {_code(edge['target'])}")
             lines.append("")
+    lines.extend(["## 显式复现记录", ""])
+    if not case.get("reproductions"):
+        lines.extend(["尚无显式复现记录。", ""])
+    for run in case.get("reproductions", []):
+        lines.append(
+            f"- {_code(run['id'])} · {_inline(run['at'])} · {_inline(run['status'])} · "
+            f"exit={run['exit_code']} · 命令 {_code(json.dumps(run['argv'], ensure_ascii=False))} · "
+            f"Python 源码 {_code(run['source_fingerprint'])}"
+        )
+        if run["source_fingerprint"] != run["source_fingerprint_after"]:
+            lines.append("  - 执行期间 Python 源码发生变化；不能用于诊断。")
+        if run.get("output"):
+            lines.extend(["", _quote(run["output"]), ""])
+        if run.get("output_truncated"):
+            lines.append("  - 输出已截断至 16 KiB。")
+        lines.append("")
     lines.extend(["## 请求预览", ""])
     if not case.get("previews"):
         lines.extend(["尚无已保存的请求预览。", ""])

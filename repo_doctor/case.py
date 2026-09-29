@@ -134,6 +134,7 @@ def create_case(index: RepoIndex, directory: Path) -> dict:
             "architecture": build_architecture_summary(index),
         },
         "target": None,
+        "reproductions": [],
         "previews": [],
         "diagnoses": [],
         "issues": static_issues,
@@ -212,6 +213,7 @@ def load_case(directory: Path) -> dict:
         or not isinstance(case.get("issues"), list)
         or not isinstance(case.get("diagnoses"), list)
         or not isinstance(case.get("previews"), list)
+        or not isinstance(case.get("reproductions", []), list)
     ):
         raise ValueError("invalid case.json structure")
     try:
@@ -227,6 +229,29 @@ def require_issue(case: dict, issue_id: str) -> dict:
         if issue.get("id") == issue_id:
             return issue
     raise ValueError(f"Unknown issue: {issue_id}")
+
+
+def record_reproduction(case: dict, result: dict) -> dict:
+    runs = case.setdefault("reproductions", [])
+    record = {"id": f"R-{len(runs) + 1:03d}", **result}
+    runs.append(record)
+    return record
+
+
+def require_reproduction(case: dict, reproduction_id: str, current_fingerprint: str) -> dict:
+    runs = case.get("reproductions", [])
+    record = next((item for item in runs if item.get("id") == reproduction_id), None)
+    if record is None:
+        raise ValueError(f"Unknown reproduction: {reproduction_id}")
+    if record.get("status") != "failed":
+        raise ValueError("reproduction must be a failed command")
+    if record.get("source_fingerprint") != record.get("source_fingerprint_after"):
+        raise ValueError("reproduction changed Python source during execution")
+    if record.get("source_fingerprint") != current_fingerprint:
+        raise ValueError("Python source changed since reproduction; rerun reproduce")
+    if next((item for item in reversed(runs) if item.get("argv") == record.get("argv")), None) is not record:
+        raise ValueError("a newer run of this command supersedes the reproduction")
+    return record
 
 
 def update_issue(case: dict, issue_id: str, status: str, note: str, *, related_test: bool = False) -> dict:
