@@ -59,7 +59,8 @@ nonempty JSON list of unique qualified repository symbols, excluding the
 target. Validate its shape and resolve every entry against the pinned clean
 checkout. Pass the tuple to `build_context` during both offline preparation
 and run preflight. Record the list in that case's prepared plan only when
-present; old manifest and plan bytes remain unchanged. Bind every context and
+present; old manifest files and default case records remain unchanged, apart
+from the prepared plan's analyzer-commit metadata. Bind every context and
 serialized request to existing hashes and budgets. Rebuild from pinned source
 before any provider call; tampered extras, context, plan, or checkout must
 fail before output creation or transport. Do not change the product prompt,
