@@ -3,8 +3,8 @@
 Updated 2026-09-29. This file is the current project checkpoint; dated reports
 below preserve the earlier experiments.
 
-**Active branch/worktree:** `codex/click-explicit-holdout-v0.9` at
-`/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor`.
+**Latest integrated evaluation:** `codex/repo-doctor-v1` at `70047c3`
+([PR #16](https://github.com/kisara174/ai-repo-doctor/pull/16)).
 The stability branch was merged in
 [PR #8](https://github.com/kisara174/ai-repo-doctor/pull/8) at `5d72890`,
 and the separate Flask holdout was merged in
@@ -21,6 +21,8 @@ The paired explicit-context evaluation was merged in
 [PR #14](https://github.com/kisara174/ai-repo-doctor/pull/14) at `9e1f996`.
 The provider-readiness documentation was merged in
 [PR #15](https://github.com/kisara174/ai-repo-doctor/pull/15) at `56535f0`.
+The Click explicit-context comparison was merged in
+[PR #16](https://github.com/kisara174/ai-repo-doctor/pull/16) at `70047c3`.
 The experimental prompt was reverted before PR #9 merged. PR #14 added
 manifest-declared explicit source selection to offline evaluation preparation
 and run preflight, and recorded a partial paired attempt. The
@@ -183,6 +185,8 @@ actual billing is not inferred.
   passed 333 tests after the report, along with `compileall` and diff checks.
   The provider run completed 8/8 calls and all four findings received primary
   source review. No Click target code or tests were run.
+- PR #16 head `5028353428b0d3f0d37471bc002a3eb4a335b13e` passed Python
+  3.11, 3.12, and 3.13 in push and pull-request CI before merging.
 - Pinned target repository code, tests, and dependencies were not executed or
   installed during these diagnosis experiments. The API key and raw provider
   response bodies were not saved in the evaluation artifacts.
