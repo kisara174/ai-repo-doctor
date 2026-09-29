@@ -193,6 +193,57 @@ class DiagnosisRunnerTests(unittest.TestCase):
         record = json.loads((output_dir / summary["record_files"][0]).read_text())
         self.assertEqual(record["request_sha256"], bundle["plan"]["cases"][0]["request_sha256"])
 
+    def test_symptom_prompt_is_rebuilt_from_manifest(self):
+        manifest = self.fixture.make_symptom_guided_manifest()
+        for case in manifest["cases"]:
+            case["checkout_id"] = "fixture"
+            case["commit"] = self.fixture.commit
+        manifest_sha256 = hashlib.sha256(
+            json.dumps(manifest, ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        bundle = prepare_cases(
+            manifest,
+            self.fixture.repos_root,
+            "test-model",
+            120,
+            manifest_sha256=manifest_sha256,
+            response_format="json-schema",
+        )
+        client = Mock(return_value=DeepSeekResult("test-model", {"findings": []}))
+        output_dir = self.output_root / "symptom-rebuilt"
+
+        with patch(
+            "tools.diagnosis_runner._analyzer_snapshot",
+            return_value=(ANALYZER_COMMIT, False),
+        ):
+            summary = run_cases(
+                bundle["plan"],
+                bundle["contexts"],
+                self.fixture.repos_root,
+                repeats=1,
+                max_calls=8,
+                api_key=API_KEY,
+                client=client,
+                output_dir=output_dir,
+                manifest=manifest,
+                manifest_sha256=manifest_sha256,
+            )
+
+        self.assertEqual(summary["state"], "complete")
+        self.assertEqual(summary["completed_calls"], 8)
+        self.assertEqual(client.call_count, 8)
+        prompts = [json.loads(call.args[1]) for call in client.call_args_list]
+        symptom_prompts = [payload for payload in prompts if "reported_symptom" in payload]
+        blind_prompts = [payload for payload in prompts if "reported_symptom" not in payload]
+        self.assertEqual(len(symptom_prompts), 4)
+        self.assertEqual(len(blind_prompts), 4)
+        for record_file, planned_case in zip(
+            summary["record_files"], bundle["plan"]["cases"], strict=True
+        ):
+            record = json.loads((output_dir / record_file).read_text())
+            self.assertEqual(record["context_sha256"], planned_case["context_sha256"])
+            self.assertEqual(record["request_sha256"], planned_case["request_sha256"])
+
     def test_run_rebuilds_explicit_context_from_pinned_checkout(self):
         manifest = copy.deepcopy(self.manifest)
         manifest["cases"][0]["include_symbols"] = ["app.py::supplement"]

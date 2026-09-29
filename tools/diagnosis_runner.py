@@ -22,7 +22,6 @@ from repo_doctor.deepseek import (
     _serialize_schema_request_body,
     _thinking_parameter,
 )
-from repo_doctor.context import build_context
 from repo_doctor.diagnosis import (
     build_diagnosis_prompts,
     validate_context_budget,
@@ -32,11 +31,13 @@ from repo_doctor.index import build_index
 from .analyzer_provenance import AnalyzerProvenanceError, analyzer_snapshot
 from .diagnosis_data import (
     EvaluationDataError,
+    _build_evaluation_context,
     _canonical_hash,
     _source_fingerprint,
     _verified_checkout,
     validate_manifest,
 )
+from .diagnosis_prompt import build_evaluation_prompts
 
 
 def _analyzer_snapshot() -> tuple[str, bool]:
@@ -217,13 +218,19 @@ def _validate_plan_and_contexts(
         if symbol in index.ambiguous_symbols or symbol not in index.symbols:
             raise EvaluationDataError(f"{case_id}: target symbol is unknown or ambiguous")
         try:
-            rebuilt_context = build_context(
-                index, symbol, max_lines,
+            rebuilt_context = _build_evaluation_context(
+                index,
+                symbol,
+                max_lines,
+                dataset_id=manifest["dataset_id"],
                 include_symbols=tuple(manifest_case.get("include_symbols", [])),
             )
             validate_context_budget(rebuilt_context)
-            system_prompt, user_prompt = build_diagnosis_prompts(rebuilt_context)
-            expected_context = json.loads(user_prompt)
+            _, context_prompt = build_diagnosis_prompts(rebuilt_context)
+            expected_context = json.loads(context_prompt)
+            system_prompt, user_prompt = build_evaluation_prompts(
+                expected_context, manifest_case.get("symptom")
+            )
         except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
             raise EvaluationDataError(f"{case_id}: cannot rebuild prepared context") from exc
         if context != expected_context:

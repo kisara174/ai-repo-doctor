@@ -424,6 +424,337 @@ def _usage_details(records: list[dict]) -> tuple[dict[str, int], dict[str, int],
     return observed_totals, observed_records, missing_records
 
 
+def _repeat_variation(arm_cases: list[dict], arm_repeats: list[dict]) -> dict:
+    outcomes = {
+        "bug_detection_by_case": ("bug", "detected_bug_case_ids", "successful_bug_case_ids"),
+        "fixed_false_alarm_by_case": (
+            "fixed", "fixed_false_alarm_case_ids", "successful_fixed_case_ids"
+        ),
+    }
+    result = {}
+    for output_key, (label, outcome_field, successful_field) in outcomes.items():
+        case_results = []
+        for case in arm_cases:
+            if case["label"] != label:
+                continue
+            case_outcomes = []
+            for repeat in arm_repeats:
+                successful = case["id"] in repeat[successful_field]
+                observed = case["id"] in repeat[outcome_field] if successful else None
+                case_outcomes.append(observed)
+            agreement = (
+                len(set(case_outcomes)) == 1
+                if len(case_outcomes) >= 2
+                and all(value is not None for value in case_outcomes)
+                else None
+            )
+            case_results.append({
+                "case_id": case["id"],
+                "outcomes_by_repeat": case_outcomes,
+                "agreement": agreement,
+            })
+        result[output_key] = case_results
+    return result
+
+
+def _score_prompt_arms(
+    manifest_cases: list[dict],
+    records: list[dict],
+    reviewed: dict,
+    repeats: int,
+) -> dict[str, dict]:
+    by_arm = {}
+    for arm_name, symptom_guided in (("blind", False), ("symptom-guided", True)):
+        arm_cases = [
+            case for case in manifest_cases
+            if ("symptom" in case) == symptom_guided
+        ]
+        arm_case_ids = {case["id"] for case in arm_cases}
+        arm_repeats = []
+        for repeat_index in range(1, repeats + 1):
+            repeat_records = [
+                record for record in records
+                if record["case_id"] in arm_case_ids
+                and record["repeat_index"] == repeat_index
+            ]
+            repeat_rows = [
+                (key, row) for key, row in reviewed.items()
+                if key[0] in arm_case_ids and key[1] == repeat_index
+            ]
+            case_by_id = {case["id"]: case for case in arm_cases}
+            requested_bug_cases = [
+                case for case in arm_cases if case["label"] == "bug"
+            ]
+            requested_fixed_cases = [
+                case for case in arm_cases if case["label"] == "fixed"
+            ]
+            successful_bug_case_ids = [
+                record["case_id"] for record in repeat_records
+                if record["status"] == "success"
+                and case_by_id[record["case_id"]]["label"] == "bug"
+            ]
+            successful_fixed_case_ids = [
+                record["case_id"] for record in repeat_records
+                if record["status"] == "success"
+                and case_by_id[record["case_id"]]["label"] == "fixed"
+            ]
+            detected_case_ids = {
+                key[0] for key, row in repeat_rows
+                if key[2] == "accepted" and row["verdict"] == "tp"
+            }
+            detected_bug_case_ids = [
+                case["id"] for case in requested_bug_cases
+                if case["id"] in successful_bug_case_ids
+                and case["id"] in detected_case_ids
+            ]
+            fixed_false_alarm_case_ids_set = {
+                key[0] for key, row in repeat_rows
+                if key[2] == "accepted"
+                and row["verdict"] == "fp"
+                and case_by_id[key[0]]["label"] == "fixed"
+            }
+            fixed_false_alarm_case_ids = [
+                case["id"] for case in requested_fixed_cases
+                if case["id"] in successful_fixed_case_ids
+                and case["id"] in fixed_false_alarm_case_ids_set
+            ]
+
+            counts = dict(_COUNT_ZEROES)
+            counts["all_requested_bug_cases"] = len(requested_bug_cases)
+            counts["successful_bug_cases"] = len(successful_bug_case_ids)
+            counts["successful_fixed_and_control_cases"] = len(successful_fixed_case_ids)
+            counts["failed_calls"] = sum(
+                record["status"] != "success" for record in repeat_records
+            )
+            counts["detected_known_bug_cases"] = len(detected_bug_case_ids)
+            counts["successful_control_cases_with_accepted_fp"] = len(
+                fixed_false_alarm_case_ids
+            )
+            for record in repeat_records:
+                if record["status"] == "success":
+                    counts["accepted_count"] += len(record["accepted"])
+                    counts["rejected_count"] += len(record["rejected"])
+            for key, row in repeat_rows:
+                verdict = row["verdict"]
+                if verdict == "uncertain":
+                    counts["uncertain"] += 1
+                elif verdict == "duplicate":
+                    counts["duplicate"] += 1
+                elif verdict == "tp":
+                    if key[2] == "accepted":
+                        counts["accepted_tp"] += 1
+                    else:
+                        counts["rejected_true_positive"] += 1
+                elif verdict == "fp" and key[2] == "accepted":
+                    counts["accepted_fp"] += 1
+
+            scored = calculate_repeat_metrics(counts)
+            issue_ids = list(dict.fromkeys(case["issue_id"] for case in arm_cases))
+            repairs = {}
+            for issue_id in issue_ids:
+                repair_cases = [
+                    case for case in arm_cases if case["issue_id"] == issue_id
+                ]
+                repair_case_ids = {case["id"] for case in repair_cases}
+                bug_case_ids = [
+                    case["id"] for case in repair_cases if case["label"] == "bug"
+                ]
+                fixed_case_ids = [
+                    case["id"] for case in repair_cases if case["label"] == "fixed"
+                ]
+                repair_rows = [
+                    (key, row) for key, row in repeat_rows if key[0] in repair_case_ids
+                ]
+                repair_records = [
+                    record for record in repeat_records
+                    if record["case_id"] in repair_case_ids
+                ]
+                repair_detected = [
+                    case_id for case_id in bug_case_ids
+                    if case_id in successful_bug_case_ids and case_id in detected_case_ids
+                ]
+                repair_false_alarms = [
+                    case_id for case_id in fixed_case_ids
+                    if case_id in successful_fixed_case_ids
+                    and case_id in fixed_false_alarm_case_ids_set
+                ]
+                repair_findings = sum(
+                    len(record["accepted"]) + len(record["rejected"])
+                    for record in repair_records
+                    if record["status"] == "success"
+                )
+                repairs[issue_id] = {
+                    "bug_case_ids": bug_case_ids,
+                    "successful_bug_case_ids": [
+                        case_id for case_id in bug_case_ids
+                        if case_id in successful_bug_case_ids
+                    ],
+                    "detected_bug_case_ids": repair_detected,
+                    "bug_detection_count": len(repair_detected),
+                    "fixed_case_ids": fixed_case_ids,
+                    "successful_fixed_case_ids": [
+                        case_id for case_id in fixed_case_ids
+                        if case_id in successful_fixed_case_ids
+                    ],
+                    "fixed_false_alarm_case_ids": repair_false_alarms,
+                    "fixed_false_alarm_count": len(repair_false_alarms),
+                    "accepted_true_positive_findings": sum(
+                        row["verdict"] == "tp" and key[2] == "accepted"
+                        for key, row in repair_rows
+                    ),
+                    "rejected_true_positive_findings": sum(
+                        row["verdict"] == "tp" and key[2] == "rejected"
+                        for key, row in repair_rows
+                    ),
+                    "fixed_accepted_false_alarm_findings": sum(
+                        row["verdict"] == "fp"
+                        and key[2] == "accepted"
+                        and case_by_id[key[0]]["label"] == "fixed"
+                        for key, row in repair_rows
+                    ),
+                    "uncertain_findings": sum(
+                        row["verdict"] == "uncertain" for _, row in repair_rows
+                    ),
+                    "grounded_findings": sum(
+                        len(record["accepted"])
+                        for record in repair_records
+                        if record["status"] == "success"
+                    ),
+                    "finding_count": repair_findings,
+                }
+
+            observed_totals, observed_records, missing_usage_records = _usage_details(
+                repeat_records
+            )
+            elapsed_values = [
+                record["elapsed_seconds"] for record in repeat_records
+            ]
+            successful_calls = len(repeat_records) - counts["failed_calls"]
+            arm_repeats.append({
+                "repeat_index": repeat_index,
+                "calls": {
+                    "planned": len(arm_cases),
+                    "completed": len(repeat_records),
+                    "successful": successful_calls,
+                    "failed": counts["failed_calls"],
+                    "not_attempted": len(arm_cases) - len(repeat_records),
+                },
+                "counts": scored["counts"],
+                "metrics": scored["metrics"],
+                "metric_inputs": _metric_inputs(counts),
+                "successful_bug_case_ids": successful_bug_case_ids,
+                "detected_bug_case_ids": detected_bug_case_ids,
+                "successful_fixed_case_ids": successful_fixed_case_ids,
+                "fixed_false_alarm_case_ids": fixed_false_alarm_case_ids,
+                "failed_case_ids": [
+                    record["case_id"] for record in repeat_records
+                    if record["status"] != "success"
+                ],
+                "repairs": repairs,
+                "missing_usage_records": missing_usage_records,
+                "observed_token_totals": observed_totals,
+                "observed_token_records": observed_records,
+                "latency_median_seconds": median(elapsed_values) if elapsed_values else None,
+            })
+        by_arm[arm_name] = {
+            "by_repeat": arm_repeats,
+            "repeat_variation": _repeat_variation(arm_cases, arm_repeats),
+        }
+    return by_arm
+
+
+def _registered_symptom_v2_signal(
+    run: dict,
+    records: list[dict],
+    manifest_cases: list[dict],
+    by_prompt_arm: dict,
+) -> dict:
+    """Evaluate the frozen V2 success criteria from reviewed prompt-arm data."""
+    symptom_arm = by_prompt_arm["symptom-guided"]["by_repeat"]
+    blind_arm = by_prompt_arm["blind"]["by_repeat"]
+    expected_issue_ids = list(dict.fromkeys(
+        case["issue_id"] for case in manifest_cases
+        if "symptom" in case and case["label"] == "bug"
+    ))
+    detected_issue_ids = [
+        issue_id for issue_id in expected_issue_ids
+        if any(
+            repeat["repairs"][issue_id]["bug_detection_count"] > 0
+            for repeat in symptom_arm
+        )
+    ]
+    symptom_bug_detections = sum(
+        len(repeat["detected_bug_case_ids"]) for repeat in symptom_arm
+    )
+    blind_bug_detections = sum(
+        len(repeat["detected_bug_case_ids"]) for repeat in blind_arm
+    )
+    symptom_fixed_false_alarms = sum(
+        repair["fixed_accepted_false_alarm_findings"]
+        for repeat in symptom_arm
+        for repair in repeat["repairs"].values()
+    )
+    blind_fixed_false_alarms = sum(
+        repair["fixed_accepted_false_alarm_findings"]
+        for repeat in blind_arm
+        for repair in repeat["repairs"].values()
+    )
+    total = len(records)
+    complete_successful_run = (
+        run["repeats"] == 2
+        and run["planned_calls"] == 32
+        and run["attempted_calls"] == 32
+        and run["completed_calls"] == 32
+        and run["state"] == "complete"
+        and total == 32
+        and all(record["status"] == "success" for record in records)
+    )
+    checks = {
+        "complete_successful_two_repeat_run": {
+            "passed": complete_successful_run,
+            "observed": {
+                "repeats": run["repeats"],
+                "planned_calls": run["planned_calls"],
+                "attempted_calls": run["attempted_calls"],
+                "completed_records": total,
+                "successful_records": sum(
+                    record["status"] == "success" for record in records
+                ),
+                "run_state": run["state"],
+            },
+            "required": "2 repeats and 32 of 32 successful parseable calls",
+        },
+        "all_symptom_repairs_detected": {
+            "passed": detected_issue_ids == expected_issue_ids,
+            "detected_issue_ids": detected_issue_ids,
+            "expected_issue_ids": expected_issue_ids,
+            "missing_issue_ids": [
+                issue_id for issue_id in expected_issue_ids
+                if issue_id not in detected_issue_ids
+            ],
+        },
+        "zero_symptom_fixed_false_alarms": {
+            "passed": symptom_fixed_false_alarms == 0,
+            "symptom_fixed_false_alarm_findings": symptom_fixed_false_alarms,
+        },
+        "symptom_bug_detections_exceed_blind": {
+            "passed": symptom_bug_detections >= blind_bug_detections + 1,
+            "symptom_detections": symptom_bug_detections,
+            "blind_detections": blind_bug_detections,
+            "required_minimum_difference": 1,
+        },
+        "symptom_false_alarms_not_above_blind": {
+            "passed": symptom_fixed_false_alarms <= blind_fixed_false_alarms,
+            "symptom_fixed_false_alarm_findings": symptom_fixed_false_alarms,
+            "blind_fixed_false_alarm_findings": blind_fixed_false_alarms,
+        },
+    }
+    return {
+        "passed": all(check["passed"] for check in checks.values()),
+        "checks": checks,
+    }
+
+
 def score_records(manifest: dict, records: list[dict], review: dict) -> dict:
     """Score manually reviewed records without I/O, networking, or source execution."""
     if not isinstance(records, list):
@@ -607,6 +938,17 @@ def score_records(manifest: dict, records: list[dict], review: dict) -> dict:
         report["thinking_mode"] = run["thinking_mode"]
     if "response_format" in run:
         report["response_format"] = run["response_format"]
+    if run["dataset_id"] in (
+        "diagnosis-symptom-guided-v1",
+        "diagnosis-symptom-guided-v2",
+    ):
+        report["by_prompt_arm"] = _score_prompt_arms(
+            manifest_cases, records, reviewed, repeats
+        )
+    if run["dataset_id"] == "diagnosis-symptom-guided-v2":
+        report["registered_signal"] = _registered_symptom_v2_signal(
+            run, records, manifest_cases, report["by_prompt_arm"]
+        )
     return report
 
 
@@ -704,6 +1046,131 @@ def render_report(report: dict) -> str:
                 f"{values[0]} | {values[1]} | {values[2]} |"
             )
         lines.append("")
+
+    if "registered_signal" in report:
+        signal = report["registered_signal"]
+        lines.extend([
+            "## Registered V2 signal",
+            "",
+            f"Overall: {'PASS' if signal['passed'] else 'FAIL'}",
+            "",
+            "| Check | Result | Observed |",
+            "| --- | --- | --- |",
+        ])
+        for name, check in signal["checks"].items():
+            if name == "complete_successful_two_repeat_run":
+                observed = check["observed"]
+                detail = (
+                    f"{observed['successful_records']}/{observed['completed_records']} "
+                    f"successful records; {observed['repeats']} repeats; "
+                    f"state `{_markdown(observed['run_state'])}`"
+                )
+            elif name == "all_symptom_repairs_detected":
+                detail = (
+                    f"{len(check['detected_issue_ids'])}/{len(check['expected_issue_ids'])} "
+                    "repairs detected; missing: "
+                    f"`{_markdown(', '.join(check['missing_issue_ids']) or 'none')}`"
+                )
+            elif name == "symptom_bug_detections_exceed_blind":
+                detail = (
+                    f"symptom {check['symptom_detections']}, blind "
+                    f"{check['blind_detections']}; minimum difference "
+                    f"{check['required_minimum_difference']}"
+                )
+            elif name == "zero_symptom_fixed_false_alarms":
+                detail = (
+                    f"{check['symptom_fixed_false_alarm_findings']} accepted false alarms"
+                )
+            else:
+                detail = (
+                    f"symptom {check['symptom_fixed_false_alarm_findings']}, "
+                    f"blind {check['blind_fixed_false_alarm_findings']} accepted false alarms"
+                )
+            lines.append(
+                f"| {_markdown(name)} | {'PASS' if check['passed'] else 'FAIL'} | {detail} |"
+            )
+        lines.append("")
+
+    if "by_prompt_arm" in report:
+        lines.extend([
+            "## Prompt-arm comparison",
+            "",
+            "Exact source-context grounding is a provenance measure; it does not establish behavioral correctness.",
+            "",
+        ])
+        for arm_name, title in (
+            ("blind", "Blind prompt"),
+            ("symptom-guided", "Symptom-guided prompt"),
+        ):
+            lines.extend([f"### {title}", ""])
+            arm_summary = report["by_prompt_arm"][arm_name]
+            for arm_repeat in arm_summary["by_repeat"]:
+                counts = arm_repeat["counts"]
+                metrics = arm_repeat["metrics"]
+                inputs = arm_repeat["metric_inputs"]
+                calls = arm_repeat["calls"]
+                lines.extend([
+                    f"#### Repeat {arm_repeat['repeat_index']}",
+                    "",
+                    f"Calls: {calls['completed']}/{calls['planned']} completed; "
+                    f"{calls['successful']} successful, {calls['failed']} failed, "
+                    f"{calls['not_attempted']} not attempted.",
+                    f"Bug detections: {counts['detected_known_bug_cases']}/"
+                    f"{counts['all_requested_bug_cases']} ({_markdown(', '.join(arm_repeat['detected_bug_case_ids']) or 'none')}).",
+                    f"Fixed accepted false alarms: {len(arm_repeat['fixed_false_alarm_case_ids'])} "
+                    f"({_markdown(', '.join(arm_repeat['fixed_false_alarm_case_ids']) or 'none')}).",
+                    f"Precision: {_format_ratio(metrics['precision'])} "
+                    f"({inputs['precision']['numerator']} / {inputs['precision']['denominator']}); "
+                    f"exact source-context grounding: {_format_ratio(metrics['grounding_rate'])} "
+                    f"({inputs['grounding_rate']['numerator']} / {inputs['grounding_rate']['denominator']}); "
+                    f"uncertain findings: {counts['uncertain']}.",
+                    f"Observed tokens: {_markdown(arm_repeat['observed_token_totals'])}; "
+                    f"missing usage: {arm_repeat['missing_usage_records']} records; "
+                    f"median latency: {_format_ratio(arm_repeat['latency_median_seconds'])} seconds.",
+                    "",
+                    "| Issue ID | Bug detections | TP findings accepted / rejected | Fixed false alarms | Uncertain | Grounded / findings |",
+                    "| --- | ---: | ---: | ---: | ---: | ---: |",
+                ])
+                for issue_id, repair in arm_repeat["repairs"].items():
+                    detected_ids = ", ".join(repair["detected_bug_case_ids"]) or "none"
+                    false_alarm_ids = ", ".join(repair["fixed_false_alarm_case_ids"]) or "none"
+                    lines.append(
+                        f"| {_markdown(issue_id)} | "
+                        f"{repair['bug_detection_count']}/{len(repair['bug_case_ids'])} "
+                        f"({_markdown(detected_ids)}) | "
+                        f"{repair['accepted_true_positive_findings']} / "
+                        f"{repair['rejected_true_positive_findings']} | "
+                        f"{repair['fixed_false_alarm_count']} ({_markdown(false_alarm_ids)}) | "
+                        f"{repair['uncertain_findings']} | "
+                        f"{repair['grounded_findings']} / {repair['finding_count']} |"
+                    )
+                lines.append("")
+            lines.extend([
+                "#### Repeat variation by case",
+                "",
+                "`yes`/`no` show whether a case was detected or falsely flagged on each repeat; `n/a` means a repeat did not complete that case.",
+                "",
+                "| Outcome | Case | Repeat results | Agreement |",
+                "| --- | --- | --- | ---: |",
+            ])
+            for outcome_label, field in (
+                ("Bug detection", "bug_detection_by_case"),
+                ("Fixed false alarm", "fixed_false_alarm_by_case"),
+            ):
+                for case_result in arm_summary["repeat_variation"][field]:
+                    outcome_text = ", ".join(
+                        "n/a" if value is None else "yes" if value else "no"
+                        for value in case_result["outcomes_by_repeat"]
+                    )
+                    agreement = case_result["agreement"]
+                    agreement_text = (
+                        "n/a" if agreement is None else "yes" if agreement else "no"
+                    )
+                    lines.append(
+                        f"| {outcome_label} | {_markdown(case_result['case_id'])} | "
+                        f"{outcome_text} | {agreement_text} |"
+                    )
+            lines.append("")
 
     totals = report["totals"]
     lines.extend([

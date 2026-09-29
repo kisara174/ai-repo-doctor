@@ -11,6 +11,10 @@ from dataclasses import asdict
 from pathlib import Path
 
 from .context import build_context, build_impact
+from .case import (
+    create_case, load_case, record_diagnosis, record_diagnosis_failure, record_preview,
+    require_issue, save_case, set_target, source_fingerprint, update_issue,
+)
 from .deepseek import (
     MAX_REQUEST_BYTES,
     DeepSeekError,
@@ -20,6 +24,7 @@ from .deepseek import (
     complete_json_schema,
     list_models,
 )
+from .demo import create_demo
 from .diagnosis import (
     DEFAULT_MODEL,
     MAX_CONTEXT_LINES,
@@ -31,6 +36,9 @@ from .evidence import validate_findings
 from .index import build_index
 from .model import RepoIndex, Symbol
 from .source import read_source
+from .symbols import search_symbols
+from .report import render_report, repair_state
+from .verify import MAX_TIMEOUT_SECONDS, run_verification
 
 
 def _symbol_data(symbol: Symbol) -> dict:
@@ -230,6 +238,13 @@ def _print_diagnosis(payload: dict) -> None:
     print(f"Quote-verified: {len(payload['accepted'])}  Rejected: {len(payload['rejected'])}")
     for entry in payload["accepted"]:
         print(f"  QUOTE-VERIFIED [{entry['index']}] {entry['finding']['title']}")
+        finding = entry["finding"]
+        for evidence in finding["evidence"]:
+            print(f"    Evidence: {evidence['file']}:{evidence['start_line']}-{evidence['end_line']}")
+            print(f"      {evidence['quote']}")
+        print(f"    Reasoning: {finding['reasoning']}")
+        print(f"    Impact: {finding['impact']}")
+        print(f"    Suggested fix: {finding['suggested_fix']}")
     for entry in payload["rejected"]:
         finding = entry["finding"]
         title = finding.get("title", "(untitled)") if isinstance(finding, dict) else "(invalid finding)"
@@ -324,6 +339,43 @@ def _print_doctor(payload: dict) -> None:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="repo-doctor", description="Evidence-first analysis of a local Python repository")
     subcommands = parser.add_subparsers(dest="command", required=True)
+    demo = subcommands.add_parser("demo", help="Create a controlled Python repository to try the full workflow")
+    demo_commands = demo.add_subparsers(dest="demo_action", required=True)
+    demo_create = demo_commands.add_parser("create", help="Write an intentionally broken Python sample")
+    demo_create.add_argument("--out", type=Path, required=True)
+    report = subcommands.add_parser("report", help="Create or reopen a persistent investigation case")
+    report_commands = report.add_subparsers(dest="report_action", required=True)
+    report_create = report_commands.add_parser("create", help="Scan a repository into a new case directory")
+    report_create.add_argument("path", type=Path)
+    report_create.add_argument("--out", type=Path, required=True)
+    report_create.add_argument("--symbol", help="Optional initial symbol for static impact analysis")
+    report_create.add_argument("--json", action="store_true")
+    report_show = report_commands.add_parser("show", help="Render an existing case from case.json")
+    report_show.add_argument("case", type=Path)
+    report_show.add_argument("--json", action="store_true")
+    issue = subcommands.add_parser("issue", help="Read or update one issue in a case")
+    issue.add_argument("case", type=Path)
+    issue.add_argument("issue_id")
+    issue.add_argument("--status", choices=("confirmed", "rejected", "resolved"))
+    issue.add_argument("--note")
+    issue.add_argument("--related-test", action="store_true", help="Confirm the regression command relates to this issue")
+    issue.add_argument("--json", action="store_true")
+    verify = subcommands.add_parser(
+        "verify", help="Run an explicit regression command for one issue",
+        description="Runs the supplied argv in the case repository with a limited environment, timeout, and output cap. This is not an OS sandbox.",
+        epilog="Put the exact regression command after --; for example: verify CASE A-001 --phase before -- python -m unittest.",
+    )
+    verify.add_argument("case", type=Path)
+    verify.add_argument("issue_id")
+    verify.add_argument("--phase", choices=("before", "after"), required=True)
+    verify.add_argument("--timeout", type=int, default=120,
+                        help=f"Timeout in seconds (1..{MAX_TIMEOUT_SECONDS})")
+    verify.add_argument("--json", action="store_true")
+    symbols = subcommands.add_parser("symbols", help="Search symbol IDs and names in a Python repository")
+    symbols.add_argument("path", type=Path)
+    symbols.add_argument("--query", required=True)
+    symbols.add_argument("--limit", type=int, default=20)
+    symbols.add_argument("--json", action="store_true")
     doctor = subcommands.add_parser("doctor", help="Check local repository readiness and optional DeepSeek access")
     doctor.add_argument("path", type=Path, nargs="?", default=Path("."))
     doctor.add_argument("--deepseek", action="store_true", help="Check DeepSeek models over the network without sending source")
@@ -386,15 +438,119 @@ def _parser() -> argparse.ArgumentParser:
         help="Reject upload unless the request body matches a preview SHA-256",
     )
     diagnose.add_argument("--json", action="store_true")
+    diagnose.add_argument("--case", type=Path, help="Append the result to an existing investigation case")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = _parser().parse_args(argv)
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    verify_argv = None
+    if raw_argv and raw_argv[0] == "verify" and "--" in raw_argv:
+        separator = raw_argv.index("--")
+        verify_argv = raw_argv[separator + 1:]
+        raw_argv = raw_argv[:separator]
+    args = _parser().parse_args(raw_argv)
     try:
+        if args.command == "demo":
+            create_demo(args.out)
+            print(f"Demo repository created: {args.out}")
+            print("app.py contains one intentional syntax error; test_regression.py checks the repaired function.")
+            return 0
+        if args.command == "report" and args.report_action == "show":
+            case = load_case(args.case)
+            if args.json:
+                _print_json(case)
+            else:
+                print(render_report(case), end="")
+            return 0
+        if args.command == "issue":
+            case = load_case(args.case)
+            if args.status:
+                issue = update_issue(case, args.issue_id, args.status, args.note or "",
+                                     related_test=args.related_test)
+                save_case(args.case, case)
+            else:
+                if args.note or args.related_test:
+                    raise ValueError("--note and --related-test require --status")
+                issue = require_issue(case, args.issue_id)
+            if args.json:
+                _print_json(issue)
+            else:
+                print(f"{issue['id']} · {issue['title']}")
+                print(f"Source: {issue['origin']} ({issue['evidence_status']}); Human: {issue['human_status']}")
+                print(f"Repair: {repair_state(issue)}")
+                for evidence in issue["evidence"]:
+                    print(f"Evidence: {evidence['file']}:{evidence['start_line']}-{evidence['end_line']}")
+                    if evidence.get("quote"):
+                        print(evidence["quote"])
+                    if evidence.get("message"):
+                        print(evidence["message"])
+                print(f"Reasoning: {issue['reasoning']}")
+                print(f"Impact: {issue['impact']}")
+                print(f"Suggested fix: {issue['suggested_fix']}")
+            return 0
+        if args.command == "verify":
+            argv = verify_argv
+            if not argv:
+                raise ValueError("verify requires a command after --")
+            case = load_case(args.case)
+            issue = require_issue(case, args.issue_id)
+            root = Path(case["repository"]["root"])
+            index_before = build_index(root)
+            before_fingerprint = source_fingerprint(index_before)
+            print(f"Running explicit regression command in {root}: {argv!r}", file=sys.stderr)
+            result = run_verification(root, argv, timeout=args.timeout)
+            index_after = build_index(root)
+            result["phase"] = args.phase
+            result["source_fingerprint"] = before_fingerprint
+            result["source_fingerprint_after"] = source_fingerprint(index_after)
+            issue["verification"].append(result)
+            save_case(args.case, case)
+            if args.json:
+                _print_json(result)
+            else:
+                print(f"{args.issue_id} {args.phase}: {result['status']} (exit {result['exit_code']}, {result['duration_seconds']}s)")
+                if result["output"]:
+                    print(result["output"])
+                if result["output_truncated"]:
+                    print("[output truncated to 16 KiB]")
+                print(f"Report: {args.case / 'report.md'}")
+            return 0 if result["status"] == "passed" else 1
         if args.command == "diagnose" and not 1 <= args.max_lines <= MAX_CONTEXT_LINES:
             raise ValueError(f"--max-lines must be from 1 through {MAX_CONTEXT_LINES}")
         index = build_index(args.path)
+        if args.command == "report":
+            if args.symbol:
+                build_impact(index, args.symbol)
+            case = create_case(index, args.out)
+            if args.symbol:
+                set_target(case, index, args.symbol)
+                save_case(args.out, case)
+            if args.json:
+                _print_json(case)
+            else:
+                print(f"Case created: {args.out}")
+                print(f"Report: {args.out / 'report.md'}")
+                print(f"Issues: {len(case['issues'])}; use report show to reopen.")
+            return 0
+        if args.command == "symbols":
+            matches = search_symbols(index, args.query, args.limit)
+            query = args.query.casefold().strip()
+            candidates = bool(matches) and not any(
+                query in value.casefold()
+                for item in matches for value in (item["id"], item["name"], item["qualname"])
+            )
+            payload = {"schema_version": 1, "query": args.query, "candidates": candidates,
+                       "matches": matches}
+            if args.json:
+                _print_json(payload)
+            else:
+                print("Candidates (choose an ID explicitly):" if candidates else "Matching symbol IDs:")
+                for item in matches:
+                    print(f"  {item['id']} ({item['kind']}, line {item['start_line']})")
+                if not matches:
+                    print("  No matches or close candidates.")
+            return 0
         if args.command == "doctor":
             model = args.model or os.environ.get("DEEPSEEK_MODEL") or DEFAULT_MODEL
             model = model.strip() or DEFAULT_MODEL
@@ -437,6 +593,11 @@ def main(argv: list[str] | None = None) -> int:
                 )
             _verify_selected_source(index, context)
             request_sha256 = hashlib.sha256(request_body).hexdigest()
+            case = None
+            if args.case is not None:
+                case = load_case(args.case)
+                if case["repository"]["root"] != str(index.root):
+                    raise ValueError("repository does not match case")
             if args.expect_request_sha256 is not None:
                 if not re.fullmatch(r"[0-9a-f]{64}", args.expect_request_sha256):
                     raise ValueError("--expect-request-sha256 requires 64 lowercase hex characters")
@@ -448,15 +609,40 @@ def main(argv: list[str] | None = None) -> int:
                     raise ValueError("DEEPSEEK_API_KEY is required for diagnose")
             _print_upload_summary(context, line_count, byte_count, request_body, preview=args.preview)
             if args.preview:
+                if case is not None:
+                    record_preview(case, index, context, request_sha256, args.response_format,
+                                   model, line_count, byte_count)
+                    save_case(args.case, case)
                 if hasattr(sys.stdout, "buffer"):
                     sys.stdout.buffer.write(request_body)
                 else:
                     sys.stdout.write(request_body.decode("utf-8"))
                 return 0
             client = complete_json_schema if args.response_format == "json-schema" else complete_json
-            result = client(system_prompt, user_prompt, api_key=api_key, model=model)
-            _verify_selected_source(index, context)
-            report = validate_diagnosis_payload(index, result.payload, context)
+            try:
+                result = client(system_prompt, user_prompt, api_key=api_key, model=model)
+                _verify_selected_source(index, context)
+                report = validate_diagnosis_payload(index, result.payload, context)
+            except DeepSeekError as exc:
+                if case is not None:
+                    invalid_json = exc.error_detail in {"invalid_envelope_json", "invalid_content_json"}
+                    status = (
+                        "invalid_json" if invalid_json else
+                        "invalid_response" if exc.code == "invalid_response" else
+                        "connection_failure" if exc.code in {"connection", "timeout"} else
+                        "provider_failure"
+                    )
+                    record_diagnosis_failure(case, index, context, request_sha256,
+                                             args.response_format, model, status, exc.diagnostic_category)
+                    save_case(args.case, case)
+                raise
+            except ValueError as exc:
+                if case is not None:
+                    status = "source_changed" if "source changed" in str(exc).lower() else "invalid_response"
+                    record_diagnosis_failure(case, index, context, request_sha256,
+                                             args.response_format, model, status, status)
+                    save_case(args.case, case)
+                raise
             payload = {
                 "schema_version": report["schema_version"],
                 "provider": "deepseek",
@@ -464,6 +650,10 @@ def main(argv: list[str] | None = None) -> int:
                 "accepted": report["accepted"],
                 "rejected": report["rejected"],
             }
+            if case is not None:
+                record_diagnosis(case, index, context, request_sha256,
+                                 args.response_format, result.model, report)
+                save_case(args.case, case)
             printer = _print_diagnosis
         if args.json:
             _print_json(payload)
@@ -477,6 +667,6 @@ def main(argv: list[str] | None = None) -> int:
                 and (not args.deepseek or payload["deepseek"]["status"] == "ready")
             ) else 1
         return 1 if args.command in {"validate", "diagnose"} and payload["rejected"] else 0
-    except (DeepSeekError, ValueError, OSError, json.JSONDecodeError) as exc:
+    except (DeepSeekError, ValueError, OSError, UnicodeError, json.JSONDecodeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

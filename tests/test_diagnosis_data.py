@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from repo_doctor.context import build_context
 from repo_doctor.diagnosis import build_diagnosis_prompts
 from repo_doctor.deepseek import _serialize_schema_request_body
 from repo_doctor.index import build_index
@@ -131,6 +132,38 @@ class DiagnosisDataTests(unittest.TestCase):
         self.assertEqual(prepared["plan"]["cases"][0]["request_sha256"], expected_request_hash)
         self.assertNotIn("thinking_mode", prepared["plan"])
         open_request.assert_not_called()
+
+    def test_v2_evaluation_context_omits_test_evidence_without_changing_v1(self):
+        test_file = self.repo / "tests" / "test_sensitive_case.py"
+        test_file.parent.mkdir()
+        test_file.write_text(
+            "from app import broken\n\n"
+            "def test_regression_name_must_not_be_sent():\n"
+            "    broken()\n",
+            encoding="utf-8",
+        )
+        index = build_index(self.repo)
+        full_context = build_context(index, "app.py::broken", max_lines=120)
+        self.assertTrue(any(
+            block["relation"] == "related_test" for block in full_context["blocks"]
+        ))
+
+        from tools.diagnosis_data import _build_evaluation_context
+
+        legacy_context = _build_evaluation_context(
+            index, "app.py::broken", 120, dataset_id="diagnosis-v1"
+        )
+        v2_context = _build_evaluation_context(
+            index, "app.py::broken", 120,
+            dataset_id="diagnosis-symptom-guided-v2",
+        )
+        _, legacy_prompt = build_diagnosis_prompts(legacy_context)
+        _, v2_prompt = build_diagnosis_prompts(v2_context)
+
+        self.assertIn("test_regression_name_must_not_be_sent", legacy_prompt)
+        self.assertNotIn("test_regression_name_must_not_be_sent", v2_prompt)
+        self.assertNotIn("tests/test_sensitive_case.py", v2_prompt)
+        self.assertIn("return 1 / 0", v2_prompt)
 
     def test_prepare_includes_only_manifest_selected_supplement_and_records_it(self):
         manifest = copy.deepcopy(self.manifest)
@@ -351,6 +384,323 @@ class DiagnosisDataTests(unittest.TestCase):
         })
         manifest["cases"] = [bug, fixed]
         validate_manifest(manifest)
+
+    def make_symptom_guided_manifest(self):
+        pytest_symptom = (
+            "When I ask pytest to collect a specific test file together with its "
+            "containing directory, it collects only the file's test and misses "
+            "other tests in that directory. Which code in the supplied context "
+            "could explain this behavior?"
+        )
+        rich_symptom = (
+            "In the terminal, `⬇️` and `⬆️` visually occupy two columns, but Rich "
+            "lays out following text as though each occupies one; lines wrap or "
+            "align incorrectly. Which code in the supplied context could explain "
+            "this behavior?"
+        )
+        base = self.make_manifest()["cases"][0]
+
+        def make_case(case_id, label, pair_id, repair, symptom=None):
+            row = copy.deepcopy(base)
+            row.update({
+                "id": case_id,
+                "pair_id": pair_id,
+                "repository_url": "https://github.com/pytest-dev/pytest"
+                if repair == "pytest-12083"
+                else "https://github.com/Textualize/rich",
+                "checkout_id": repair,
+                "label": label,
+                "issue_id": "12083" if repair == "pytest-12083" else "3897",
+            })
+            if symptom is not None:
+                row["symptom"] = symptom
+            return row
+
+        return {
+            "schema_version": 1,
+            "dataset_id": "diagnosis-symptom-guided-v1",
+            "cases": [
+                make_case(
+                    "pytest-blind-bug", "bug", "pytest-12083-blind", "pytest-12083"
+                ),
+                make_case(
+                    "pytest-blind-fixed", "fixed", "pytest-12083-blind", "pytest-12083"
+                ),
+                make_case(
+                    "pytest-symptom-bug", "bug", "pytest-12083-symptom", "pytest-12083",
+                    symptom=pytest_symptom,
+                ),
+                make_case(
+                    "pytest-symptom-fixed", "fixed", "pytest-12083-symptom", "pytest-12083",
+                    symptom=pytest_symptom,
+                ),
+                make_case("rich-blind-bug", "bug", "rich-3897-blind", "rich-3897"),
+                make_case("rich-blind-fixed", "fixed", "rich-3897-blind", "rich-3897"),
+                make_case(
+                    "rich-symptom-bug", "bug", "rich-3897-symptom", "rich-3897",
+                    symptom=rich_symptom,
+                ),
+                make_case(
+                    "rich-symptom-fixed", "fixed", "rich-3897-symptom", "rich-3897",
+                    symptom=rich_symptom,
+                ),
+            ],
+        }
+
+    def make_symptom_guided_v2_manifest(self):
+        previous = self.make_symptom_guided_manifest()
+        previous_cases = previous["cases"]
+        repairs = [
+            (
+                "pydantic",
+                "https://github.com/pydantic/pydantic",
+                "pydantic/pydantic#13520",
+                "A generic model's defaults and type variables change behavior after an integration inspects annotations.",
+            ),
+            (
+                "jinja",
+                "https://github.com/pallets/jinja",
+                "pallets/jinja#1921",
+                "A very large scientific-notation string passed through the int filter raises OverflowError instead of returning the fallback.",
+            ),
+            (
+                "black",
+                "https://github.com/psf/black",
+                "psf/black#4640",
+                "Formatting a lambda with a standalone comment in a tuple default raises LookupError instead of returning formatted output.",
+            ),
+            (
+                "typer",
+                "https://github.com/fastapi/typer",
+                "fastapi/typer discussion#1068",
+                "With Rich installed, fish-shell completion descriptions contain escaped spaces and are malformed.",
+            ),
+        ]
+        cases = []
+        for repair, repository_url, issue_id, symptom in repairs:
+            for previous_case, arm, label in zip(
+                previous_cases[:4],
+                ("blind", "blind", "symptom", "symptom"),
+                ("bug", "fixed", "bug", "fixed"),
+            ):
+                case = copy.deepcopy(previous_case)
+                case.update({
+                    "id": f"{repair}-{arm}-{label}",
+                    "pair_id": f"{repair}-{arm}",
+                    "repository_url": repository_url,
+                    "checkout_id": repair,
+                    "issue_id": issue_id,
+                })
+                if arm == "symptom":
+                    case["symptom"] = symptom
+                cases.append(case)
+        return {
+            "schema_version": 1,
+            "dataset_id": "diagnosis-symptom-guided-v2",
+            "cases": cases,
+        }
+
+    def test_symptom_guided_v2_dataset_contract(self):
+        validate_manifest(self.make_symptom_guided_v2_manifest())
+
+    def test_symptom_guided_v2_rejects_wrong_shape_and_repository_reuse(self):
+        mutations = [
+            (
+                "missing case",
+                lambda manifest: manifest["cases"].pop(),
+                "exactly 16 cases",
+            ),
+            (
+                "extra case",
+                lambda manifest: manifest["cases"].append(
+                    copy.deepcopy(manifest["cases"][0])
+                ),
+                "exactly 16 cases",
+            ),
+            (
+                "reuse one candidate repository",
+                lambda manifest: [
+                    case.update(repository_url="https://github.com/pydantic/pydantic")
+                    for case in manifest["cases"]
+                    if case["id"].startswith("jinja-")
+                ],
+                "exactly 4 distinct repositories",
+            ),
+            (
+                "reuse a repository from an earlier cohort",
+                lambda manifest: [
+                    case.update(repository_url="https://github.com/pallets/click")
+                    for case in manifest["cases"]
+                    if case["id"].startswith("pydantic-")
+                ],
+                "repository was already used by an earlier diagnosis dataset",
+            ),
+            (
+                "remove one repair's symptom arm",
+                lambda manifest: [
+                    case.pop("symptom", None)
+                    for case in manifest["cases"]
+                    if case["id"].startswith("jinja-symptom-")
+                ],
+                "one blind and one symptom-guided pair",
+            ),
+            (
+                "mismatch symptom pair members",
+                lambda manifest: next(
+                    case for case in manifest["cases"]
+                    if case["id"] == "typer-symptom-fixed"
+                ).update(symptom="A different symptom"),
+                "both members must have the same symptom",
+            ),
+        ]
+        for label, mutate, expected in mutations:
+            with self.subTest(label=label):
+                manifest = self.make_symptom_guided_v2_manifest()
+                mutate(manifest)
+                with self.assertRaisesRegex(EvaluationDataError, expected):
+                    validate_manifest(manifest)
+
+    def test_symptom_guided_dataset_contract(self):
+        validate_manifest(self.make_symptom_guided_manifest())
+
+    def test_symptom_guided_dataset_rejects_malformed_shape_and_symptoms(self):
+        def remove_symptom(manifest, case_ids):
+            for case in manifest["cases"]:
+                if case["id"] in case_ids:
+                    case.pop("symptom", None)
+
+        def set_pair_symptom(manifest, value):
+            for case in manifest["cases"]:
+                if case["id"] in {"pytest-symptom-bug", "pytest-symptom-fixed"}:
+                    case["symptom"] = value
+
+        def add_legacy_symptom(manifest):
+            manifest["dataset_id"] = "diagnosis-v1"
+            manifest["cases"][0]["symptom"] = "symptom"
+
+        valid = self.make_symptom_guided_manifest()
+        cases = [
+            ("missing case", lambda m: m["cases"].pop(), "exactly 8"),
+            (
+                "extra case",
+                lambda m: m["cases"].append(copy.deepcopy(m["cases"][0])),
+                "exactly 8",
+            ),
+            (
+                "repeated pair",
+                lambda m: m["cases"][4].update(pair_id="pytest-12083-blind"),
+                "pair .* exactly one bug and one fixed",
+            ),
+            (
+                "pair with two bugs",
+                lambda m: m["cases"][1].update(label="bug"),
+                "pair .* exactly one bug and one fixed",
+            ),
+            (
+                "repair missing an arm",
+                lambda m: remove_symptom(m, {"pytest-symptom-bug", "pytest-symptom-fixed"}),
+                "one blind and one symptom-guided pair",
+            ),
+            (
+                "two repair groups share one issue ID",
+                lambda m: [
+                    case.update(issue_id="12083")
+                    for case in m["cases"]
+                    if case["id"].startswith("rich-")
+                ],
+                "exactly 2 repairs",
+            ),
+            (
+                "one pair member missing symptom",
+                lambda m: m["cases"][3].pop("symptom"),
+                "both members must have the same symptom",
+            ),
+            (
+                "pair with mismatched symptoms",
+                lambda m: m["cases"][3].update(symptom="Different symptom"),
+                "both members must have the same symptom",
+            ),
+            (
+                "symptom on a legacy dataset",
+                add_legacy_symptom,
+                "only supported in diagnosis-symptom-guided-v1",
+            ),
+            (
+                "whitespace-only symptom",
+                lambda m: set_pair_symptom(m, "  "),
+                "symptom must be trimmed nonempty text",
+            ),
+            (
+                "multiline symptom",
+                lambda m: set_pair_symptom(m, "line one\nline two"),
+                "symptom must be single-line text",
+            ),
+            (
+                "control character in symptom",
+                lambda m: set_pair_symptom(m, "bad\x01text"),
+                "symptom must not contain control characters",
+            ),
+            (
+                "oversized symptom",
+                lambda m: set_pair_symptom(m, "x" * 2001),
+                "symptom must contain at most 2,000 characters",
+            ),
+        ]
+        for label, mutate, expected in cases:
+            with self.subTest(label=label):
+                manifest = copy.deepcopy(valid)
+                mutate(manifest)
+                with self.assertRaisesRegex(EvaluationDataError, expected):
+                    validate_manifest(manifest)
+
+    def test_prepare_symptom_arm_keeps_context_and_changes_request_hash(self):
+        manifest = self.make_symptom_guided_manifest()
+        for case in manifest["cases"]:
+            case["checkout_id"] = "fixture"
+            case["commit"] = self.commit
+
+        prepared = prepare_cases(
+            manifest, self.repos_root, "test-model", 120, response_format="json-schema"
+        )
+        plan_cases = {case["id"]: case for case in prepared["plan"]["cases"]}
+        for repair in ("pytest-12083", "rich-3897"):
+            blind = next(
+                case for case in manifest["cases"]
+                if case["pair_id"] == f"{repair}-blind" and case["label"] == "bug"
+            )
+            symptom = next(
+                case for case in manifest["cases"]
+                if case["pair_id"] == f"{repair}-symptom" and case["label"] == "bug"
+            )
+            self.assertEqual(
+                plan_cases[blind["id"]]["context_sha256"],
+                plan_cases[symptom["id"]]["context_sha256"],
+            )
+            self.assertNotEqual(
+                plan_cases[blind["id"]]["request_sha256"],
+                plan_cases[symptom["id"]]["request_sha256"],
+            )
+            self.assertEqual(
+                prepared["contexts"][blind["id"]], prepared["contexts"][symptom["id"]]
+            )
+            self.assertNotIn(
+                "reported_symptom",
+                json.dumps(prepared["contexts"][symptom["id"]], ensure_ascii=False),
+            )
+
+        legacy = prepare_cases(
+            self.manifest, self.repos_root, "test-model", 120,
+            response_format="json-schema",
+        )
+        baseline_prompts = build_diagnosis_prompts(legacy["contexts"]["bug-01"])
+        baseline_hash = hashlib.sha256(
+            _serialize_schema_request_body(
+                baseline_prompts[0], baseline_prompts[1], "test-model"
+            )
+        ).hexdigest()
+        self.assertEqual(
+            legacy["plan"]["cases"][0]["request_sha256"], baseline_hash
+        )
 
     def test_manifest_reports_malformed_url_as_a_validation_error(self):
         manifest = self.make_manifest()

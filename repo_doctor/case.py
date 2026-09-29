@@ -1,0 +1,324 @@
+"""Persistent, source-backed investigation cases."""
+
+import hashlib
+import json
+import os
+import subprocess
+import tempfile
+from dataclasses import asdict
+from datetime import datetime, timezone
+from pathlib import Path
+
+from .context import build_impact
+from .model import RepoIndex
+from .source import read_source
+
+
+SCHEMA_VERSION = 1
+TOOL_VERSION = "0.2.0"
+
+
+def timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def source_fingerprint(index: RepoIndex) -> str:
+    """Hash the scanned Python paths and source, including local worktree edits."""
+    digest = hashlib.sha256()
+    for item in sorted(index.files, key=lambda record: record.path):
+        digest.update(item.path.encode("utf-8"))
+        digest.update(b"\0")
+        try:
+            content = read_source(index.root, item.path, index.root_identity)
+        except (OSError, ValueError, UnicodeError, SyntaxError):
+            content = "<unreadable>"
+        digest.update(content.encode("utf-8"))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _revision(root: Path) -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    value = result.stdout.strip()
+    return value if result.returncode == 0 and len(value) == 40 else None
+
+
+def _static_issues(index: RepoIndex) -> list[dict]:
+    issues = []
+    for error in sorted(index.parse_errors, key=lambda item: (item.file, item.line)):
+        issues.append({
+            "id": f"S-{len(issues) + 1:03d}",
+            "origin": "static",
+            "title": f"Python parse error in {error.file}:{error.line}",
+            "category": "parse_error",
+            "evidence_status": "static_fact",
+            "evidence": [{"file": error.file, "start_line": error.line, "end_line": error.line,
+                          "message": error.message}],
+            "reasoning": "The local Python parser could not parse this file; analysis of it is incomplete.",
+            "impact": "Symbols and relationships in this file may be missing from the scan.",
+            "suggested_fix": "Inspect the syntax and rerun a new scan after editing.",
+            "human_status": "unreviewed",
+            "human_history": [],
+            "verification": [],
+        })
+    for component in sorted(index.import_cycles):
+        edges = [
+            {"file": edge.source, "start_line": edge.line, "end_line": edge.line,
+             "message": f"imports {edge.target}"}
+            for edge in index.import_edges
+            if edge.source in component and edge.target in component
+        ]
+        issues.append({
+            "id": f"S-{len(issues) + 1:03d}",
+            "origin": "static",
+            "title": "Local import cycle: " + " ↔ ".join(component),
+            "category": "import_cycle",
+            "evidence_status": "static_fact",
+            "evidence": edges,
+            "reasoning": "The local import graph contains this cycle; this is an observation, not proof of a defect.",
+            "impact": "Review initialization order if runtime imports behave unexpectedly.",
+            "suggested_fix": "Review the participating imports before deciding whether a change is needed.",
+            "human_status": "unreviewed",
+            "human_history": [],
+            "verification": [],
+        })
+    return issues
+
+
+def create_case(index: RepoIndex, directory: Path) -> dict:
+    if not index.files:
+        raise ValueError("No Python files found; Git ignore rules may exclude the selected path")
+    directory = Path(directory)
+    if directory.is_symlink():
+        raise ValueError("case directory is a symlink")
+    if directory.exists():
+        if not directory.is_dir() or any(directory.iterdir()):
+            raise ValueError("case directory already exists or is not empty")
+    else:
+        directory.mkdir(mode=0o700, parents=True)
+    os.chmod(directory, 0o700)
+    symbols = list(index.symbols.values())
+    case = {
+        "schema_version": SCHEMA_VERSION,
+        "tool_version": TOOL_VERSION,
+        "created_at": timestamp(),
+        "updated_at": timestamp(),
+        "repository": {
+            "root": str(index.root),
+            "revision": _revision(index.root),
+            "source_fingerprint": source_fingerprint(index),
+            "scan_mode": index.scan_mode,
+        },
+        "scan": {
+            "stats": {
+                "python_files": len(index.files),
+                "python_lines": sum(item.lines for item in index.files),
+                "classes": sum(item.kind == "class" for item in symbols),
+                "functions": sum(item.kind == "function" for item in symbols),
+                "methods": sum(item.kind == "method" for item in symbols),
+                "resolved_calls": len(index.call_edges),
+                "unresolved_calls": len(index.calls) - len(index.call_edges),
+            },
+            "parse_errors": [asdict(item) for item in index.parse_errors],
+            "import_cycles": index.import_cycles,
+        },
+        "target": None,
+        "previews": [],
+        "diagnoses": [],
+        "issues": _static_issues(index),
+    }
+    save_case(directory, case)
+    return case
+
+
+def set_target(case: dict, index: RepoIndex, symbol: str) -> None:
+    if str(index.root) != case["repository"]["root"]:
+        raise ValueError("repository does not match case")
+    case["target"] = {
+        "symbol": symbol,
+        "impact": build_impact(index, symbol),
+        "source_fingerprint": source_fingerprint(index),
+        "selected_at": timestamp(),
+    }
+
+
+def _checked_directory(directory: Path) -> Path:
+    directory = Path(directory)
+    if directory.is_symlink() or not directory.is_dir():
+        raise ValueError("case directory is missing or is a symlink")
+    for name in ("case.json", "report.md"):
+        if (directory / name).is_symlink():
+            raise ValueError(f"{name} is a symlink")
+    return directory
+
+
+def _atomic_write(path: Path, content: str) -> None:
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def save_case(directory: Path, case: dict) -> None:
+    from .report import render_report
+
+    directory = _checked_directory(directory)
+    if case.get("schema_version") != SCHEMA_VERSION:
+        raise ValueError("unsupported case schema")
+    case["updated_at"] = timestamp()
+    _atomic_write(directory / "report.md", render_report(case))
+    _atomic_write(directory / "case.json", json.dumps(case, ensure_ascii=False, indent=2) + "\n")
+
+
+def load_case(directory: Path) -> dict:
+    directory = _checked_directory(directory)
+    path = directory / "case.json"
+    if path.stat().st_size > 8 * 1024 * 1024:
+        raise ValueError("case.json exceeds 8 MiB")
+    case = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(case, dict) or case.get("schema_version") != SCHEMA_VERSION:
+        raise ValueError("unsupported case schema")
+    repo = case.get("repository")
+    scan = case.get("scan")
+    if (
+        not isinstance(repo, dict)
+        or not isinstance(repo.get("root"), str)
+        or not Path(repo["root"]).is_absolute()
+        or not isinstance(repo.get("source_fingerprint"), str)
+        or not isinstance(scan, dict)
+        or not isinstance(scan.get("stats"), dict)
+        or not isinstance(scan.get("parse_errors"), list)
+        or not isinstance(scan.get("import_cycles"), list)
+        or not isinstance(case.get("issues"), list)
+        or not isinstance(case.get("diagnoses"), list)
+        or not isinstance(case.get("previews"), list)
+    ):
+        raise ValueError("invalid case.json structure")
+    try:
+        from .report import render_report
+        render_report(case)
+    except (KeyError, TypeError, IndexError, AttributeError) as exc:
+        raise ValueError("invalid case.json structure") from exc
+    return case
+
+
+def require_issue(case: dict, issue_id: str) -> dict:
+    for issue in case["issues"]:
+        if issue.get("id") == issue_id:
+            return issue
+    raise ValueError(f"Unknown issue: {issue_id}")
+
+
+def update_issue(case: dict, issue_id: str, status: str, note: str, *, related_test: bool = False) -> dict:
+    if not note.strip():
+        raise ValueError("--note is required when changing issue status")
+    issue = require_issue(case, issue_id)
+    if status not in {"confirmed", "rejected", "resolved"}:
+        raise ValueError("invalid issue status")
+    issue["human_status"] = status
+    issue["human_history"].append({
+        "at": timestamp(), "status": status, "note": note.strip(), "related_test": related_test,
+    })
+    return issue
+
+
+def record_diagnosis(
+    case: dict, index: RepoIndex, context: dict, request_sha256: str,
+    response_format: str, model: str, report: dict,
+) -> dict:
+    set_target(case, index, context["symbol"])
+    next_id = 1 + max(
+        (int(issue["id"][2:]) for issue in case["issues"] if issue["id"].startswith("A-")),
+        default=0,
+    )
+    accepted_ids = []
+    for entry in report["accepted"]:
+        finding = entry["finding"]
+        issue_id = f"A-{next_id:03d}"
+        next_id += 1
+        case["issues"].append({
+            "id": issue_id,
+            "origin": "ai",
+            "title": finding["title"],
+            "category": finding["category"],
+            "confidence": finding["confidence"],
+            "evidence_status": "quote_verified",
+            "evidence": finding["evidence"],
+            "reasoning": finding["reasoning"],
+            "impact": finding["impact"],
+            "suggested_fix": finding["suggested_fix"],
+            "finding": finding,
+            "human_status": "unreviewed",
+            "human_history": [],
+            "verification": [],
+        })
+        accepted_ids.append(issue_id)
+    rejected = [
+        {
+            "title": entry["finding"].get("title", "(untitled)")
+            if isinstance(entry["finding"], dict) else "(invalid finding)",
+            "reasons": entry["reasons"],
+        }
+        for entry in report["rejected"]
+    ]
+    status = "partial" if accepted_ids and rejected else (
+        "accepted" if accepted_ids else "rejected" if rejected else "empty"
+    )
+    attempt = {
+        "at": timestamp(),
+        "status": status,
+        "target_symbol": context["symbol"],
+        "context_sha256": hashlib.sha256(json.dumps(context, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest(),
+        "request_sha256": request_sha256,
+        "response_format": response_format,
+        "model": model,
+        "accepted_issue_ids": accepted_ids,
+        "rejected": rejected,
+    }
+    case["diagnoses"].append(attempt)
+    return attempt
+
+
+def record_preview(
+    case: dict, index: RepoIndex, context: dict, request_sha256: str,
+    response_format: str, model: str, line_count: int, byte_count: int,
+) -> None:
+    set_target(case, index, context["symbol"])
+    case["previews"].append({
+        "at": timestamp(), "target_symbol": context["symbol"],
+        "context_sha256": hashlib.sha256(json.dumps(context, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest(),
+        "request_sha256": request_sha256, "response_format": response_format,
+        "model": model, "source_lines": line_count, "source_bytes": byte_count,
+    })
+
+
+def record_diagnosis_failure(
+    case: dict, index: RepoIndex, context: dict, request_sha256: str,
+    response_format: str, model: str, status: str, category: str,
+) -> None:
+    set_target(case, index, context["symbol"])
+    case["diagnoses"].append({
+        "at": timestamp(),
+        "status": status,
+        "target_symbol": context["symbol"],
+        "context_sha256": hashlib.sha256(json.dumps(context, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest(),
+        "request_sha256": request_sha256,
+        "response_format": response_format,
+        "model": model,
+        "accepted_issue_ids": [],
+        "rejected": [],
+        "error_category": category,
+    })
