@@ -65,6 +65,29 @@ def render_report(case: dict) -> str:
         f"- 解析失败：{len(scan['parse_errors'])}；局部导入环：{len(scan['import_cycles'])}",
         "- 省略范围：动态调用、运行时行为与未扫描文件无法由静态图谱证明。", "",
     ]
+    if "architecture" in scan:
+        architecture = scan["architecture"]
+        lines.extend([
+            "## 静态架构摘要", "",
+            f"- 生产代码模块：{_inline(architecture['production_modules'])}；已解析的本地导入边：{_inline(architecture['local_import_edges'])}；跨文件调用边：{_inline(architecture['cross_file_call_edges'])}",
+            "- 下列模块按依赖它的不同生产文件数排序；只统计可静态解析的本地边，不表示运行时调用频率或代码质量。测试文件、外部包、动态导入与未解析调用不在此图中。", "",
+        ])
+        if not architecture["focus_modules"]:
+            lines.extend(["没有模块达到两个不同生产文件的已解析依赖门槛。", ""])
+        for module in architecture["focus_modules"]:
+            lines.append(
+                f"- {_code(module['file'])}：{_inline(module['dependent_file_count'])} 个不同的依赖文件"
+                f"（导入者 {_inline(module['importer_count'])}；跨文件调用者 {_inline(module['caller_file_count'])}）"
+            )
+            for edge in module["evidence"]:
+                location = _code(f"{edge['file']}:{edge['line']}")
+                if edge["kind"] == "import":
+                    lines.append(f"  - 本地导入 {location} → {_code(edge['target'])}")
+                else:
+                    lines.append(f"  - 已解析调用 {location}：{_code(edge['caller'])} → {_code(edge['callee'])}")
+            if module["evidence_omitted"]:
+                lines.append(f"  - 另有 {_inline(module['evidence_omitted'])} 条边未在摘要中展开。")
+            lines.append("")
     if "review_leads" in scan:
         lines.extend([
             "## 建议先检查", "",
@@ -99,9 +122,34 @@ def render_report(case: dict) -> str:
         lines.extend(["## 调查目标与静态影响", "", f"- 符号：{_code(target['symbol'])}",
                       f"- 源码指纹：{_code(target['source_fingerprint'])}",
                       f"- 反向已解析影响：{len(impact['affected_symbols'])} 个符号", ""])
-        for item in impact["affected_symbols"]:
-            lines.append(f"- {_code(item['symbol'])}：{_code(' → '.join(item['path']))}")
-        lines.append("")
+        for distance, heading in ((1, "直接影响"), (2, "间接影响")):
+            if distance == 1:
+                group = [item for item in impact["affected_symbols"] if item["distance"] == 1]
+            else:
+                group = [item for item in impact["affected_symbols"] if item["distance"] > 1]
+            lines.extend([f"## {heading}", ""])
+            if not group:
+                lines.extend(["没有已解析的反向调用路径。", ""])
+            for item in group:
+                lines.append(f"- {_code(item['symbol'])}：{_code(' → '.join(item['path']))}")
+                for edge in item.get("call_path_evidence", []):
+                    location = f"{edge['file']}:{edge['line']}"
+                    lines.append(
+                        f"  - 调用边 {_code(location)}："
+                        f"{_code(edge['caller'])} → {_code(edge['callee'])}"
+                    )
+                    for hop in edge.get("via_reexports", []):
+                        hop_location = f"{hop['file']}:{hop['line']}"
+                        lines.append(
+                            f"    - 重导出 {_code(hop_location)}：{_code(hop['name'])}"
+                        )
+            lines.append("")
+        if impact.get("import_evidence"):
+            lines.extend(["### 目标模块的直接导入边", ""])
+            for edge in impact["import_evidence"]:
+                location = f"{edge['source']}:{edge['line']}"
+                lines.append(f"- {_code(location)} → {_code(edge['target'])}")
+            lines.append("")
     lines.extend(["## 请求预览", ""])
     if not case.get("previews"):
         lines.extend(["尚无已保存的请求预览。", ""])

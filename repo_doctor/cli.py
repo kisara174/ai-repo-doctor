@@ -166,11 +166,17 @@ def _print_impact(payload: dict) -> None:
     print(f"Static impact for {payload['symbol']} (depth {payload['depth']})")
     for item in payload["affected_symbols"]:
         print(f"  {item['distance']} hop: {item['symbol']}")
+        for edge in item.get("call_path_evidence", []):
+            print(f"    {edge['caller']} -> {edge['callee']} at {edge['file']}:{edge['line']}")
+            for hop in edge.get("via_reexports", []):
+                print(f"      via re-export {hop['name']} at {hop['file']}:{hop['line']}")
     if not payload["affected_symbols"]:
         print("  No resolved callers found.")
     print("Module importers:")
     for path in payload["module_importers"]:
         print(f"  {path}")
+    for edge in payload.get("import_evidence", []):
+        print(f"    {edge['source']}:{edge['line']} -> {edge['target']}")
     if not payload["module_importers"]:
         print("  None found.")
     print("Semantic relationships:")

@@ -302,8 +302,12 @@ def build_impact(index: RepoIndex, symbol_id: str, depth: int = 2) -> dict:
     if depth < 1:
         raise ValueError("depth must be at least 1")
     incoming: dict[str, set[str]] = defaultdict(set)
+    first_call = {}
     for edge in index.call_edges:
         incoming[edge.callee].add(edge.caller)
+        pair = (edge.caller, edge.callee)
+        if pair not in first_call or edge.line < first_call[pair].line:
+            first_call[pair] = edge
     visited = {symbol_id}
     queue = deque([(symbol_id, 0, [symbol_id])])
     affected = []
@@ -316,7 +320,18 @@ def build_impact(index: RepoIndex, symbol_id: str, depth: int = 2) -> dict:
                 continue
             visited.add(caller)
             caller_path = [*path, caller]
-            affected.append({"symbol": caller, "distance": distance + 1, "path": caller_path})
+            call_path_evidence = []
+            for callee_id, caller_id in zip(caller_path, caller_path[1:]):
+                edge = first_call[(caller_id, callee_id)]
+                call_path_evidence.append({
+                    "caller": caller_id,
+                    "callee": callee_id,
+                    "file": index.symbols[caller_id].file,
+                    "line": edge.line,
+                    "via_reexports": [asdict(hop) for hop in edge.via_reexports],
+                })
+            affected.append({"symbol": caller, "distance": distance + 1,
+                             "path": caller_path, "call_path_evidence": call_path_evidence})
             queue.append((caller, distance + 1, caller_path))
     affected.sort(key=lambda item: (item["distance"], item["symbol"]))
     imports = [

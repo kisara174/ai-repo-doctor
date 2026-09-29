@@ -196,11 +196,17 @@ class CliTests(unittest.TestCase):
 
             context_result = self.run_cli("context", root, "a.py::target", "--json")
             impact_result = self.run_cli("impact", root, "a.py::target", "--json")
+            impact_text = self.run_cli("impact", root, "a.py::target")
 
         self.assertEqual(context_result.returncode, 0, context_result.stderr)
         self.assertEqual(impact_result.returncode, 0, impact_result.stderr)
         self.assertEqual(json.loads(context_result.stdout)["schema_version"], 2)
-        self.assertEqual(json.loads(impact_result.stdout)["schema_version"], 2)
+        impact = json.loads(impact_result.stdout)
+        self.assertEqual(impact["schema_version"], 2)
+        self.assertEqual(impact["affected_symbols"][0]["call_path_evidence"][0]["file"], "b.py")
+        self.assertEqual(impact["affected_symbols"][0]["call_path_evidence"][0]["line"], 4)
+        self.assertEqual(impact_text.returncode, 0, impact_text.stderr)
+        self.assertIn("b.py:4", impact_text.stdout)
 
     def test_validate_rejection_uses_nonzero_exit_and_explains_failure(self):
         with tempfile.TemporaryDirectory() as directory:

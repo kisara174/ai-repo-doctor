@@ -7,6 +7,7 @@ from pathlib import Path
 
 from repo_doctor.case import create_case, load_case, save_case, set_target
 from repo_doctor.index import build_index
+from repo_doctor.report import render_report
 
 
 class ProductCaseTests(unittest.TestCase):
@@ -45,6 +46,23 @@ class ProductCaseTests(unittest.TestCase):
                  ("import", "service_two.py", 1), ("call", "service_two.py", 4)],
             )
             self.assertNotIn("test_core.py", str(architecture))
+
+            set_target(first, build_index(repo), "core.py::save")
+            save_case(base / "first", first)
+            report = (base / "first" / "report.md").read_text(encoding="utf-8")
+            self.assertIn("## 静态架构摘要", report)
+            self.assertIn("`core.py`", report)
+            self.assertIn("`service_one.py:1`", report)
+            self.assertIn("`service_one.py:4`", report)
+            self.assertIn("`service_two.py:1`", report)
+            self.assertIn("## 直接影响", report)
+            self.assertIn("## 间接影响", report)
+            self.assertIn("`api.py:4`", report)
+
+            old_case = json.loads((base / "second" / "case.json").read_text(encoding="utf-8"))
+            del old_case["scan"]["architecture"]
+            (base / "second" / "case.json").write_text(json.dumps(old_case), encoding="utf-8")
+            self.assertIn("# AI Repo Doctor 调查报告", render_report(load_case(base / "second")))
 
             solo = base / "solo"
             solo.mkdir()
