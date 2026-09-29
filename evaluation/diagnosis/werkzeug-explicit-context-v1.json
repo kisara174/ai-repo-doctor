@@ -1,0 +1,234 @@
+{
+  "schema_version": 1,
+  "dataset_id": "diagnosis-werkzeug-explicit-context-v1",
+  "cases": [
+    {
+      "id": "werkzeug-empty-special-bug-default",
+      "pair_id": "werkzeug-empty-special-default",
+      "repository_url": "https://github.com/pallets/werkzeug",
+      "checkout_id": "werkzeug-0c5cad57c237",
+      "commit": "0c5cad57c2370c4b916b3651adb4d82eb9fbf5ec",
+      "symbol": "werkzeug/datastructures.py::Headers.__iter__",
+      "label": "bug",
+      "issue_id": "pallets/werkzeug@625362a42926",
+      "source": {
+        "file": "werkzeug/datastructures.py",
+        "start_line": 1139,
+        "end_line": 1141,
+        "sha256": "ae82648bb2996c49eb0897bd5b566d4f2cd688dc1a0b76908d9c10e38926902e"
+      },
+      "ground_truth": "Known Werkzeug repair 625362a42926. Trigger: an EnvironHeaders instance is built from a WSGI environ where CONTENT_TYPE or CONTENT_LENGTH is the empty string. Its inherited iteration path yields the special header with an empty value. Accept a finding only if it links EnvironHeaders.__iter__ to exposing those empty special values. Do not treat the string value '0' as empty; the upstream regression check preserves Content-Length: 0.",
+      "references": [
+        "https://github.com/pallets/werkzeug/commit/625362a429263f8d713a9ed06c18f247042d7d0f",
+        "https://github.com/pallets/werkzeug/blob/0c5cad57c2370c4b916b3651adb4d82eb9fbf5ec/werkzeug/datastructures.py#L1139-L1141",
+        "https://github.com/pallets/werkzeug/blob/625362a429263f8d713a9ed06c18f247042d7d0f/tests/test_datastructures.py#L775-L791"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T01:29:51Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "werkzeug-empty-special-bug-explicit",
+      "pair_id": "werkzeug-empty-special-explicit",
+      "repository_url": "https://github.com/pallets/werkzeug",
+      "checkout_id": "werkzeug-0c5cad57c237",
+      "commit": "0c5cad57c2370c4b916b3651adb4d82eb9fbf5ec",
+      "symbol": "werkzeug/datastructures.py::Headers.__iter__",
+      "label": "bug",
+      "issue_id": "pallets/werkzeug@625362a42926",
+      "source": {
+        "file": "werkzeug/datastructures.py",
+        "start_line": 1139,
+        "end_line": 1141,
+        "sha256": "ae82648bb2996c49eb0897bd5b566d4f2cd688dc1a0b76908d9c10e38926902e"
+      },
+      "ground_truth": "Known Werkzeug repair 625362a42926. Trigger: an EnvironHeaders instance is built from a WSGI environ where CONTENT_TYPE or CONTENT_LENGTH is the empty string. Its inherited iteration path yields the special header with an empty value. Accept a finding only if it links EnvironHeaders.__iter__ to exposing those empty special values. Do not treat the string value '0' as empty; the upstream regression check preserves Content-Length: 0.",
+      "references": [
+        "https://github.com/pallets/werkzeug/commit/625362a429263f8d713a9ed06c18f247042d7d0f",
+        "https://github.com/pallets/werkzeug/blob/0c5cad57c2370c4b916b3651adb4d82eb9fbf5ec/werkzeug/datastructures.py#L1139-L1141",
+        "https://github.com/pallets/werkzeug/blob/625362a429263f8d713a9ed06c18f247042d7d0f/tests/test_datastructures.py#L775-L791"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T01:29:51Z",
+        "status": "approved"
+      },
+      "include_symbols": [
+        "werkzeug/datastructures.py::EnvironHeaders.__iter__"
+      ]
+    },
+    {
+      "id": "werkzeug-empty-special-fixed-default",
+      "pair_id": "werkzeug-empty-special-default",
+      "repository_url": "https://github.com/pallets/werkzeug",
+      "checkout_id": "werkzeug-625362a42926",
+      "commit": "625362a429263f8d713a9ed06c18f247042d7d0f",
+      "symbol": "werkzeug/datastructures.py::Headers.__iter__",
+      "label": "fixed",
+      "issue_id": "pallets/werkzeug@625362a42926",
+      "source": {
+        "file": "werkzeug/datastructures.py",
+        "start_line": 1139,
+        "end_line": 1141,
+        "sha256": "ae82648bb2996c49eb0897bd5b566d4f2cd688dc1a0b76908d9c10e38926902e"
+      },
+      "ground_truth": "Fixed snapshot for Werkzeug repair 625362a42926. EnvironHeaders.__iter__ skips empty CONTENT_TYPE and CONTENT_LENGTH values while preserving nonempty values, including the string '0'. Accept only a demonstrated violation of this narrow iteration contract; this case does not certify the class as defect-free.",
+      "references": [
+        "https://github.com/pallets/werkzeug/commit/625362a429263f8d713a9ed06c18f247042d7d0f",
+        "https://github.com/pallets/werkzeug/blob/625362a429263f8d713a9ed06c18f247042d7d0f/werkzeug/datastructures.py#L1359-L1367",
+        "https://github.com/pallets/werkzeug/blob/625362a429263f8d713a9ed06c18f247042d7d0f/tests/test_datastructures.py#L775-L791"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T01:29:51Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "werkzeug-empty-special-fixed-explicit",
+      "pair_id": "werkzeug-empty-special-explicit",
+      "repository_url": "https://github.com/pallets/werkzeug",
+      "checkout_id": "werkzeug-625362a42926",
+      "commit": "625362a429263f8d713a9ed06c18f247042d7d0f",
+      "symbol": "werkzeug/datastructures.py::Headers.__iter__",
+      "label": "fixed",
+      "issue_id": "pallets/werkzeug@625362a42926",
+      "source": {
+        "file": "werkzeug/datastructures.py",
+        "start_line": 1139,
+        "end_line": 1141,
+        "sha256": "ae82648bb2996c49eb0897bd5b566d4f2cd688dc1a0b76908d9c10e38926902e"
+      },
+      "ground_truth": "Fixed snapshot for Werkzeug repair 625362a42926. EnvironHeaders.__iter__ skips empty CONTENT_TYPE and CONTENT_LENGTH values while preserving nonempty values, including the string '0'. Accept only a demonstrated violation of this narrow iteration contract; this case does not certify the class as defect-free.",
+      "references": [
+        "https://github.com/pallets/werkzeug/commit/625362a429263f8d713a9ed06c18f247042d7d0f",
+        "https://github.com/pallets/werkzeug/blob/625362a429263f8d713a9ed06c18f247042d7d0f/werkzeug/datastructures.py#L1359-L1367",
+        "https://github.com/pallets/werkzeug/blob/625362a429263f8d713a9ed06c18f247042d7d0f/tests/test_datastructures.py#L775-L791"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T01:29:51Z",
+        "status": "approved"
+      },
+      "include_symbols": [
+        "werkzeug/datastructures.py::EnvironHeaders.__iter__"
+      ]
+    },
+    {
+      "id": "werkzeug-nonstring-key-bug-default",
+      "pair_id": "werkzeug-nonstring-key-default",
+      "repository_url": "https://github.com/pallets/werkzeug",
+      "checkout_id": "werkzeug-3790dc177329",
+      "commit": "3790dc177329a5214bd318be6e1dfd43d680eb64",
+      "symbol": "werkzeug/datastructures.py::Headers.get",
+      "label": "bug",
+      "issue_id": "pallets/werkzeug#1005",
+      "source": {
+        "file": "werkzeug/datastructures.py",
+        "start_line": 979,
+        "end_line": 1016,
+        "sha256": "4f51fb2cc0526f8929cf7b0ad31d3a6a4306a99f1aa28239d61bbe62cc78ad6f"
+      },
+      "ground_truth": "Known Werkzeug PR #1005. Trigger: call EnvironHeaders.get(42, default='fallback'). Headers.get delegates to self.__getitem__ and catches KeyError, but the old EnvironHeaders.__getitem__ calls key.upper() first and raises AttributeError. Accept a finding only if it identifies the dynamic subclass lookup and missing non-string guard that prevents get from returning its default. Do not count unrelated header parsing concerns.",
+      "references": [
+        "https://github.com/pallets/werkzeug/pull/1005",
+        "https://github.com/pallets/werkzeug/blob/3790dc177329a5214bd318be6e1dfd43d680eb64/werkzeug/datastructures.py#L979-L1016",
+        "https://github.com/pallets/werkzeug/blob/3790dc177329a5214bd318be6e1dfd43d680eb64/werkzeug/datastructures.py#L1346-L1352"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T01:29:51Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "werkzeug-nonstring-key-bug-explicit",
+      "pair_id": "werkzeug-nonstring-key-explicit",
+      "repository_url": "https://github.com/pallets/werkzeug",
+      "checkout_id": "werkzeug-3790dc177329",
+      "commit": "3790dc177329a5214bd318be6e1dfd43d680eb64",
+      "symbol": "werkzeug/datastructures.py::Headers.get",
+      "label": "bug",
+      "issue_id": "pallets/werkzeug#1005",
+      "source": {
+        "file": "werkzeug/datastructures.py",
+        "start_line": 979,
+        "end_line": 1016,
+        "sha256": "4f51fb2cc0526f8929cf7b0ad31d3a6a4306a99f1aa28239d61bbe62cc78ad6f"
+      },
+      "ground_truth": "Known Werkzeug PR #1005. Trigger: call EnvironHeaders.get(42, default='fallback'). Headers.get delegates to self.__getitem__ and catches KeyError, but the old EnvironHeaders.__getitem__ calls key.upper() first and raises AttributeError. Accept a finding only if it identifies the dynamic subclass lookup and missing non-string guard that prevents get from returning its default. Do not count unrelated header parsing concerns.",
+      "references": [
+        "https://github.com/pallets/werkzeug/pull/1005",
+        "https://github.com/pallets/werkzeug/blob/3790dc177329a5214bd318be6e1dfd43d680eb64/werkzeug/datastructures.py#L979-L1016",
+        "https://github.com/pallets/werkzeug/blob/3790dc177329a5214bd318be6e1dfd43d680eb64/werkzeug/datastructures.py#L1346-L1352"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T01:29:51Z",
+        "status": "approved"
+      },
+      "include_symbols": [
+        "werkzeug/datastructures.py::EnvironHeaders.__getitem__"
+      ]
+    },
+    {
+      "id": "werkzeug-nonstring-key-fixed-default",
+      "pair_id": "werkzeug-nonstring-key-default",
+      "repository_url": "https://github.com/pallets/werkzeug",
+      "checkout_id": "werkzeug-57521600ce04",
+      "commit": "57521600ce04fdf4d977c36f89fc51191aa8a3c9",
+      "symbol": "werkzeug/datastructures.py::Headers.get",
+      "label": "fixed",
+      "issue_id": "pallets/werkzeug#1005",
+      "source": {
+        "file": "werkzeug/datastructures.py",
+        "start_line": 979,
+        "end_line": 1016,
+        "sha256": "4f51fb2cc0526f8929cf7b0ad31d3a6a4306a99f1aa28239d61bbe62cc78ad6f"
+      },
+      "ground_truth": "Fixed snapshot for Werkzeug PR #1005. EnvironHeaders.__getitem__ rejects a non-string key with KeyError before calling string methods, allowing the inherited Headers.get to return its supplied default. Accept only a demonstrated violation of this narrow get contract; this case does not certify the class as defect-free.",
+      "references": [
+        "https://github.com/pallets/werkzeug/pull/1005",
+        "https://github.com/pallets/werkzeug/commit/57521600ce04fdf4d977c36f89fc51191aa8a3c9",
+        "https://github.com/pallets/werkzeug/blob/57521600ce04fdf4d977c36f89fc51191aa8a3c9/werkzeug/datastructures.py#L1346-L1354"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T01:29:51Z",
+        "status": "approved"
+      }
+    },
+    {
+      "id": "werkzeug-nonstring-key-fixed-explicit",
+      "pair_id": "werkzeug-nonstring-key-explicit",
+      "repository_url": "https://github.com/pallets/werkzeug",
+      "checkout_id": "werkzeug-57521600ce04",
+      "commit": "57521600ce04fdf4d977c36f89fc51191aa8a3c9",
+      "symbol": "werkzeug/datastructures.py::Headers.get",
+      "label": "fixed",
+      "issue_id": "pallets/werkzeug#1005",
+      "source": {
+        "file": "werkzeug/datastructures.py",
+        "start_line": 979,
+        "end_line": 1016,
+        "sha256": "4f51fb2cc0526f8929cf7b0ad31d3a6a4306a99f1aa28239d61bbe62cc78ad6f"
+      },
+      "ground_truth": "Fixed snapshot for Werkzeug PR #1005. EnvironHeaders.__getitem__ rejects a non-string key with KeyError before calling string methods, allowing the inherited Headers.get to return its supplied default. Accept only a demonstrated violation of this narrow get contract; this case does not certify the class as defect-free.",
+      "references": [
+        "https://github.com/pallets/werkzeug/pull/1005",
+        "https://github.com/pallets/werkzeug/commit/57521600ce04fdf4d977c36f89fc51191aa8a3c9",
+        "https://github.com/pallets/werkzeug/blob/57521600ce04fdf4d977c36f89fc51191aa8a3c9/werkzeug/datastructures.py#L1346-L1354"
+      ],
+      "annotation": {
+        "reviewer": "Codex primary agent",
+        "reviewed_at": "2026-09-29T01:29:51Z",
+        "status": "approved"
+      },
+      "include_symbols": [
+        "werkzeug/datastructures.py::EnvironHeaders.__getitem__"
+      ]
+    }
+  ]
+}

@@ -188,3 +188,41 @@ fixed snapshots. The [run report](../../docs/evaluations/2026-09-29-werkzeug-hol
 records case judgments, hashes, usage, and limits. This cohort is now visible
 to the implementer and must not be reused as unseen evidence for a tuned
 prompt or context change.
+
+## Werkzeug explicit-context comparison v1
+
+`werkzeug-explicit-context-v1.json` freezes two new bug/fixed pairs and an
+explicit-context arm for each snapshot. The targets are
+`Headers.__iter__` (empty WSGI special-header values, repair commit
+`625362a`) and `Headers.get` (non-string keys in `EnvironHeaders`, PR #1005).
+Each bug/fixed pair is represented once with the default context and once
+with a named `EnvironHeaders` method selected explicitly. The arm cases use
+the same commits and target source fingerprints. The default rows omit
+`include_symbols`; explicit rows carry exactly one symbol. The 12,785-byte
+manifest SHA-256 is
+`a199434e0531b25ea6527df34696d5c66b0784dd16db2a15cfea26d0d9a2791f`.
+
+Commit `625362a` has no associated GitHub issue or pull request, so its short
+fix commit is stored in `issue_id` only as the pair-group label. The PR #1005
+discussion describes the `EnvironHeaders.__getitem__` type failure and the
+supplied-default contract. These historical cases are purposive and may be
+present in model training data; they are not a representative quality sample.
+
+To recreate four detached source checkouts without running target code:
+
+```sh
+EXPLICIT_ROOT=/tmp/ai-repo-doctor-werkzeug-explicit
+mkdir -p "$EXPLICIT_ROOT/.bare"
+git clone --bare https://github.com/pallets/werkzeug.git "$EXPLICIT_ROOT/.bare/werkzeug.git"
+git --git-dir="$EXPLICIT_ROOT/.bare/werkzeug.git" worktree add --detach "$EXPLICIT_ROOT/werkzeug-0c5cad57c237" 0c5cad57c2370c4b916b3651adb4d82eb9fbf5ec
+git --git-dir="$EXPLICIT_ROOT/.bare/werkzeug.git" worktree add --detach "$EXPLICIT_ROOT/werkzeug-625362a42926" 625362a429263f8d713a9ed06c18f247042d7d0f
+git --git-dir="$EXPLICIT_ROOT/.bare/werkzeug.git" worktree add --detach "$EXPLICIT_ROOT/werkzeug-3790dc177329" 3790dc177329a5214bd318be6e1dfd43d680eb64
+git --git-dir="$EXPLICIT_ROOT/.bare/werkzeug.git" worktree add --detach "$EXPLICIT_ROOT/werkzeug-57521600ce04" 57521600ce04fdf4d977c36f89fc51191aa8a3c9
+```
+
+Pass `"$EXPLICIT_ROOT"` as `--repos-root`. The [preregistered design](../../docs/superpowers/specs/2026-09-29-paired-explicit-context-design.md)
+sets `deepseek-flash`, Responses `json_schema`, no thinking field, 120 lines,
+one call per case, and no retries. Its usefulness signal is narrow: at least
+one bug detected only with the explicit context, no additional fixed-case
+false alarm, and all eight parseable calls. Even a positive result would not
+justify a general accuracy claim or changing the product default.
