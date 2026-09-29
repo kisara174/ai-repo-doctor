@@ -51,7 +51,7 @@ weaken the cohort contract to keep it.
 
 | Project and repair | Bug snapshot | Fixed snapshot | Context symbols | Upstream regression evidence | Symptom sent to the model |
 | --- | --- | --- | --- | --- | --- |
-| pytest [issue #12083](https://github.com/pytest-dev/pytest/issues/12083), [PR #13704](https://github.com/pytest-dev/pytest/pull/13704) | First parent of PR merge `7cfe8aa2758c154c9355ca61e3de32a50ec78663` | PR merge `d036b12bb6fa09f9a8a3b690cc7336113c93fa44` | Target: `src/_pytest/main.py::Session.perform_collect`; fixed snapshot supplement: `src/_pytest/main.py::normalize_collection_arguments` | `testing/test_collection.py::TestOverlappingCollectionArguments.test_specific_file_then_parent_dir` | “When I run `pytest tests/test_one.py tests/ --collect-only`, only the directly named file's test is collected; other tests under `tests/` are missing. Which code in the supplied context could explain this behavior?” |
+| pytest [issue #12083](https://github.com/pytest-dev/pytest/issues/12083), [PR #13704](https://github.com/pytest-dev/pytest/pull/13704) | First parent of PR merge `7cfe8aa2758c154c9355ca61e3de32a50ec78663` | PR merge `d036b12bb6fa09f9a8a3b690cc7336113c93fa44` | Target: `src/_pytest/main.py::Session.perform_collect`; fixed snapshot supplement: `src/_pytest/main.py::normalize_collection_arguments` | `testing/test_collection.py::TestOverlappingCollectionArguments.test_specific_file_then_parent_dir` | “When I ask pytest to collect a specific test file together with its containing directory, it collects only the file's test and misses other tests in that directory. Which code in the supplied context could explain this behavior?” |
 | Rich [issue #3897](https://github.com/Textualize/rich/issues/3897), [PR #3930](https://github.com/Textualize/rich/pull/3930) | First parent of PR merge `53757bc234cf18977cade41a5b64f3abaccb0b85` | PR merge `f000c3149166cc2091b801b63b0a55e806c5d49b` | Target: `rich/cells.py::cell_len`; bug snapshot supplement: `rich/cells.py::cached_cell_len`; fixed snapshot context includes `rich/cells.py::_cell_len` | `tests/test_cells.py::test_split_graphemes`, including the `⬇️` case with expected width 2 | “In the terminal, `⬇️` and `⬆️` visually occupy two columns, but Rich lays out following text as though each occupies one; lines wrap or align incorrectly. Which code in the supplied context could explain this behavior?” |
 
 The symptom text describes observable behavior and does not include issue
@@ -192,10 +192,12 @@ or claiming broad diagnostic accuracy.
 ## Data handling and error behavior
 
 The requests contain only the approved symptom text, bounded public source
-context, and existing diagnostic instructions. They exclude repository-local
-paths, Git metadata, environment data, API keys, issue metadata, labels, and
-ground truth. Do not store the key or raw provider response bodies. Keep
-experiment plans, parsed records, review rows, and reports in ignored
+context, and existing diagnostic instructions. The source context naturally
+includes repository-relative source filenames for evidence grounding; requests
+exclude absolute checkout paths, Git metadata, environment data, API keys,
+issue metadata, labels, and ground truth. Do not store the key or raw provider
+response bodies. Keep experiment plans, parsed records, review rows, and
+reports in ignored
 `.local/diagnosis/` paths; only the manifest, design, and final redacted
 evaluation report are tracked.
 
