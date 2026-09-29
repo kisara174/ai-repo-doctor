@@ -150,7 +150,25 @@ python3 -m repo_doctor impact /path/to/python-repo 'app/services/user.py::UserSe
 
 ## 诊断评估
 
-离线评估基础设施、固定十例样本，以及独立的六例 Flask 和六例 Werkzeug 样本已完成。原始 Chat 十例在线运行曾因首个请求报错而停止；后续 JSON Schema 十例运行已完整结束，经主代理复核命中 4 个已知缺陷中的 1 个。Flask 基线未命中 3 个已知缺陷，3 个修复后样本均出现误报；预先登记的提示词对照因首例无效 JSON 而未完成，正式提示词已恢复。Werkzeug 六例运行完整，命中 3 个已知缺陷中的 1 个，2 个修复后样本出现明确误报。详见[当前进度](docs/execution-status.md)、[十例基线](docs/evaluations/2026-09-28-schema-ten-case-baseline.md)、[Flask 对照报告](docs/evaluations/2026-09-28-flask-holdout.md)和[Werkzeug 基线](docs/evaluations/2026-09-29-werkzeug-holdout.md)。这些都是定向小样本及主代理复核，云端诊断仍属实验性能力，不能据此推断总体准确率。
+离线评估基础设施、固定十例样本，以及独立的 Flask、Werkzeug 和
+Click 对照样本已完成。原始 Chat 十例在线运行曾因首个请求报错而停止；
+后续 JSON Schema 十例运行已完整结束，经主代理复核命中 4 个已知缺陷
+中的 1 个。
+
+Flask 基线未命中 3 个已知缺陷，3 个修复后样本均出现误报；预先登记的
+提示词对照因首例无效 JSON 而未完成，正式提示词已恢复。Werkzeug 六例
+运行完整，命中 3 个已知缺陷中的 1 个，2 个修复后样本出现明确误报。
+最新的 Click 显式上下文对照完成 8/8 次调用，但两个已知缺陷在两组
+上下文中都未命中；四条引文通过校验的发现经主代理复核均为误报，
+其中两条来自修复后样本。
+
+详见[当前进度](docs/execution-status.md)、
+[十例基线](docs/evaluations/2026-09-28-schema-ten-case-baseline.md)、
+[Flask 对照报告](docs/evaluations/2026-09-28-flask-holdout.md)、
+[Werkzeug 基线](docs/evaluations/2026-09-29-werkzeug-holdout.md)和
+[Click 对照报告](docs/evaluations/2026-09-29-click-explicit-context.md)。
+这些都是定向小样本及主代理复核，云端诊断仍属实验性能力，不能据此
+推断总体准确率。
 
 评估命令 `tools.evaluate_diagnosis` 需要在本项目源码目录中执行；当前发行包仅包含 `repo_doctor`，不包含 `tools`。
 

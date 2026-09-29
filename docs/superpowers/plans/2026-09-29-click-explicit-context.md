@@ -167,7 +167,7 @@ at most eight calls occur, and any failure stops further dispatch.
 - [x] Run the focused data tests, one full `python3 -m unittest discover -s
   tests -q`, `python3 -m compileall -q repo_doctor tools tests`, and
   `git diff --check`. Review the diff.
-- [ ] Commit, push, open a PR against `codex/repo-doctor-v1`, attach it to
+- [x] Commit, push, open a PR against `codex/repo-doctor-v1`, attach it to
   this task, check Python 3.11–3.13 CI on the exact head, and integrate under
   standing user authorization if clean.
 
