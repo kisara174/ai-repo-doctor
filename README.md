@@ -4,11 +4,11 @@
 
 ## 安装与快速开始
 
-需要 Python 3.11+；安装 Git 后扫描会遵循目标仓库的 ignore 规则。公开 `v0.2.0` 可安装版本如下。默认分支中的 M1 检查入口、架构摘要与默认诊断请求调整尚未发布到该标签。
+需要 Python 3.11+；安装 Git 后扫描会遵循目标仓库的 ignore 规则。安装 `v0.3.0`：
 
 ```bash
 python3 -m venv .venv
-.venv/bin/python -m pip install 'git+https://github.com/kisara174/ai-repo-doctor.git@v0.2.0'
+.venv/bin/python -m pip install 'git+https://github.com/kisara174/ai-repo-doctor.git@v0.3.0'
 .venv/bin/repo-doctor --help
 ```
 
@@ -16,7 +16,7 @@ python3 -m venv .venv
 
 ```bash
 python3 -m pip wheel --no-deps --wheel-dir dist .
-.venv/bin/python -m pip install dist/ai_repo_doctor-0.2.0-py3-none-any.whl
+.venv/bin/python -m pip install dist/ai_repo_doctor-0.3.0-py3-none-any.whl
 ```
 
 ### 五分钟走完一条离线闭环
@@ -57,7 +57,7 @@ $RD impact /path/to/python-repo 'app.py::target'
 `report create` 写入权限受限的 `case.json` 与 `report.md`；`report show` 不需重新扫描，就能读取已有任务。`case.json` 是原始记录，Markdown 是可阅读视图。已存在的非空任务目录不会被覆盖。报告可能含源码引文与回归输出，请按本地敏感文件保存。发行包提供 `repo-doctor` 和 `repo_doctor`，但不包含源码仓库中的 `tools.evaluate_diagnosis` 评估脚本。
 若选定路径下没有可扫描的 Python 文件，`report create` 会返回错误；该路径可能受上级 Git 仓库的 ignore 规则影响。
 
-当前开发分支的新任务报告含“建议先检查”：先列影响扫描完整性的语法解析失败，再列有证据行的局部导入环，最后列至多五个被至少三个不同生产代码符号、且分布在至少两个其他文件中直接调用的函数或方法。每项都有检查理由、下一步和文件行号；跨文件调用目标是改动影响入口，不是缺陷判断。旧版任务文件仍可打开；这一顺序不是缺陷严重度或模型分数。
+`v0.3.0` 新建的任务报告含“建议先检查”：先列影响扫描完整性的语法解析失败，再列有证据行的局部导入环，最后列至多五个被至少三个不同生产代码符号、且分布在至少两个其他文件中直接调用的函数或方法。每项都有检查理由、下一步和文件行号；跨文件调用目标是改动影响入口，不是缺陷判断。旧版任务文件仍可打开；这一顺序不是缺陷严重度或模型分数。
 
 新建任务还会给出“静态架构摘要”：最多列五个被至少两个其他生产代码文件依赖的本地模块，展示不同依赖文件数、导入者数、跨文件调用者数与具体导入/调用边。排序只用于浏览已解析的依赖，不是代码质量分数；测试文件、外部包、动态导入和未解析调用不参与。指定 `--symbol` 后，报告把反向调用分为直接和间接影响，并列出每一跳的调用行、目标模块的直接导入行。旧任务照旧可打开，但需新建任务才能保存这些新增的扫描摘要。
 
@@ -165,7 +165,7 @@ python3 -m repo_doctor diagnose /path/to/python-repo 'app/services/user.py::User
 
 文本输出完整显示 finding 标题、相对文件与行号、引文、推理、影响和建议，并将通过本地源码及已发送上下文校验的 finding 标为 `QUOTE-VERIFIED`；JSON 输出仍使用 `accepted` 字段以保持兼容。`--case` 将它们作为稳定 ID 的 issue 保存，后续诊断不会覆盖此前人工判断。空发现、引文拒绝、无效 JSON 和连接失败也留在诊断历史。引文匹配不证明推理正确。请人工复核结论，并使用显式 `verify` 记录所选择的回归检查。
 
-当前开发分支的默认 `chat-json` 路径显式关闭 thinking，以在 4,096 token 输出上限内给 JSON 留出空间；公开 `v0.2.0` 仍使用原请求。新分支的预览请求 SHA-256 与旧版本不同，请重新预览后再发送。这不能保证所有请求都可解析，也不代表诊断质量达标。`--response-format json-schema` 是显式选择的实验性路径：它在相同的本地上下文与证据校验规则下调用 DeepSeek Responses API，请求结构化输出并关闭 thinking。两种路径都不会自动重试。[最初的单样本格式对照](docs/evaluations/2026-09-28-structured-output.md)之后，结构化路径完成了一轮[十样本诊断基线](docs/evaluations/2026-09-28-schema-ten-case-baseline.md)：十次请求均可解析，但经主代理复核只命中四个已知缺陷中的一个，且有较多误报和待确认发现。该定向小样本也不足以证明未来成功率。
+`v0.3.0` 的默认 `chat-json` 路径显式关闭 thinking，以在 4,096 token 输出上限内给 JSON 留出空间。它的预览请求 SHA-256 与 `v0.2.0` 不同，升级后请重新预览再发送。这不能保证所有请求都可解析，也不代表诊断质量达标：[M1 六样本盲测](docs/evaluations/2026-09-29-m1-holdout-v2.md)出现一次无效 JSON、未命中三个已知缺陷，并有一次修复后误报。`--response-format json-schema` 是显式选择的实验性路径：它在相同的本地上下文与证据校验规则下调用 DeepSeek Responses API，请求结构化输出并关闭 thinking。两种路径都不会自动重试。[最初的单样本格式对照](docs/evaluations/2026-09-28-structured-output.md)之后，结构化路径完成了一轮[十样本诊断基线](docs/evaluations/2026-09-28-schema-ten-case-baseline.md)：十次请求均可解析，但经主代理复核只命中四个已知缺陷中的一个，且有较多误报和待确认发现。该定向小样本也不足以证明未来成功率。
 
 ## 影响分析
 
