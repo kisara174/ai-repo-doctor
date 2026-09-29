@@ -456,6 +456,15 @@ class DiagnosisDataTests(unittest.TestCase):
                 "one blind and one symptom-guided pair",
             ),
             (
+                "two repair groups share one issue ID",
+                lambda m: [
+                    case.update(issue_id="12083")
+                    for case in m["cases"]
+                    if case["id"].startswith("rich-")
+                ],
+                "exactly 2 repairs",
+            ),
+            (
                 "one pair member missing symptom",
                 lambda m: m["cases"][3].pop("symptom"),
                 "both members must have the same symptom",

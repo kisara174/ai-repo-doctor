@@ -287,6 +287,126 @@ class DiagnosisScoreTests(unittest.TestCase):
             "denominator": 5,
         })
 
+    def test_symptom_dataset_reports_arm_and_repair_metrics(self):
+        manifest = self.inputs.fixture.make_symptom_guided_manifest()
+        records = []
+        for repeat_index in (1, 2):
+            for case in manifest["cases"]:
+                finding = None
+                verdict = None
+                matched_issue_id = None
+                if case["id"] in {"pytest-symptom-bug", "rich-blind-bug"}:
+                    finding = {"title": "Source explains the registered symptom"}
+                    verdict = "tp"
+                    matched_issue_id = case["issue_id"]
+                elif case["id"] == "pytest-symptom-fixed":
+                    finding = {"title": "False alarm on fixed source"}
+                    verdict = "fp"
+                record = {
+                    "case_id": case["id"],
+                    "repeat_index": repeat_index,
+                    "request_sha256": _sha(f"request:{case['id']}:{repeat_index}"),
+                    "context_sha256": _sha(f"context:{case['id']}"),
+                    "analyzer_commit": "c" * 40,
+                    "target_commit": case["commit"],
+                    "requested_model": "test-model",
+                    "response_model": "test-model",
+                    "started_at": "2026-09-24T00:00:00Z",
+                    "elapsed_seconds": float(repeat_index),
+                    "status": "success",
+                    "usage": {
+                        "prompt_tokens": 10,
+                        "completion_tokens": 2,
+                        "total_tokens": 12,
+                    },
+                    "accepted": [] if finding is None else [{"index": 0, "finding": finding}],
+                    "rejected": [],
+                    "error": None,
+                }
+                records.append(record)
+
+        manifest_bytes = json.dumps(
+            manifest, ensure_ascii=False, sort_keys=True, indent=2
+        ).encode("utf-8") + b"\n"
+        run = {
+            "schema_version": 1,
+            "dataset_id": manifest["dataset_id"],
+            "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+            "plan_sha256": "b" * 64,
+            "analyzer_commit": "c" * 40,
+            "requested_model": "test-model",
+            "repeats": 2,
+            "max_calls": 16,
+            "planned_calls": 16,
+            "attempted_calls": 16,
+            "completed_calls": 16,
+            "state": "complete",
+            "record_files": [
+                f"records/{record['case_id']}-r{record['repeat_index']}.json"
+                for record in records
+            ],
+        }
+        review = make_review_template(records)
+        review["run"] = run
+        case_by_id = {case["id"]: case for case in manifest["cases"]}
+        for row in review["rows"]:
+            case = case_by_id[row["case_id"]]
+            if row["case_id"] == "pytest-symptom-fixed":
+                row.update(
+                    verdict="fp",
+                    matched_issue_id=None,
+                    rationale="This finding attributes the symptom to fixed code.",
+                )
+            else:
+                row.update(
+                    verdict="tp",
+                    matched_issue_id=case["issue_id"],
+                    rationale="This finding matches the frozen bug and source evidence.",
+                )
+            row["reviewer"] = "primary reviewer"
+
+        report = score_records(manifest, records, review)
+        blind_summary = report["by_prompt_arm"]["blind"]
+        symptom_summary = report["by_prompt_arm"]["symptom-guided"]
+        blind, symptom = (
+            blind_summary["by_repeat"][0],
+            symptom_summary["by_repeat"][0],
+        )
+
+        self.assertEqual(len(blind_summary["by_repeat"]), 2)
+        self.assertEqual(len(symptom_summary["by_repeat"]), 2)
+        self.assertEqual(blind["counts"]["all_requested_bug_cases"], 2)
+        self.assertEqual(blind["detected_bug_case_ids"], ["rich-blind-bug"])
+        self.assertEqual(symptom["detected_bug_case_ids"], ["pytest-symptom-bug"])
+        self.assertEqual(symptom["fixed_false_alarm_case_ids"], ["pytest-symptom-fixed"])
+        self.assertEqual(blind["repairs"]["3897"]["bug_detection_count"], 1)
+        self.assertEqual(symptom["repairs"]["3897"]["bug_detection_count"], 0)
+        self.assertEqual(symptom["repairs"]["12083"]["fixed_false_alarm_count"], 1)
+        self.assertEqual(symptom["calls"], {
+            "planned": 4,
+            "completed": 4,
+            "successful": 4,
+            "failed": 0,
+            "not_attempted": 0,
+        })
+        self.assertEqual(
+            symptom_summary["repeat_variation"]["bug_detection_by_case"][0],
+            {
+                "case_id": "pytest-symptom-bug",
+                "outcomes_by_repeat": [True, True],
+                "agreement": True,
+            },
+        )
+        self.assertNotIn("by_prompt_arm", score_records(
+            self.inputs.manifest, self.inputs.records, self.inputs.review
+        ))
+        rendered = render_report(report)
+        self.assertIn("## Prompt-arm comparison", rendered)
+        self.assertIn("### Blind prompt", rendered)
+        self.assertIn("### Symptom-guided prompt", rendered)
+        self.assertIn("pytest-symptom-fixed", rendered)
+        self.assertIn("#### Repeat variation by case", rendered)
+
     def test_false_alarm_rate_counts_fixed_and_control_negative_cases(self):
         records = [
             self.inputs.make_record(

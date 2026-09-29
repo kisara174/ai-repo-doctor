@@ -119,7 +119,7 @@ def _validate_symptom_guided_dataset(
     repairs: dict[tuple[str, str], list[dict]] = {}
     for case in cases:
         repairs.setdefault((case["repository_url"], case["issue_id"]), []).append(case)
-    if len(repairs) != 2:
+    if len(repairs) != 2 or len({issue_id for _, issue_id in repairs}) != 2:
         raise EvaluationDataError(f"{_SYMPTOM_DATASET_ID} must contain exactly 2 repairs")
 
     for (_, issue_id), repair_cases in repairs.items():
