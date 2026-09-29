@@ -13,7 +13,7 @@
 ## Global constraints
 
 - No automatic target command execution. Only `reproduce CASE -- argv` and existing `verify` execute code; both use the existing runner's 1–300 second timeout, 16-KiB output cap, minimal environment, and `shell=False`.
-- `--reproduction ID` requires `--case`, a failed latest run for its exact argv, unchanged scanned Python source during that run, and the current source fingerprint equal to the recorded one.
+- `--reproduction ID` requires `--case`, a failed latest run for its exact argv, untruncated captured output, unchanged scanned Python source during that run, and the current source fingerprint equal to the recorded one.
 - A reproduction-backed live request requires the matching `--expect-request-sha256`; both preview and live use the same serialized body and 256-KiB wire cap. Recheck the full Python source fingerprint after the provider response.
 - Preserve case schema v1 compatibility and the existing blind fixture request hash `2d1d7ca4b298c17d511d01dc6e70e8bad41d7120cbec1844540959862bf3fd12`.
 - AI findings remain unreviewed hypotheses. No model precision claim or external target repository execution follows from this work.
@@ -46,7 +46,7 @@
 - [ ] Write tests for the pre-change blind request SHA above; a selected failure adds `reproduction` metadata/output to the user payload, changes the request hash, and includes an untrusted-observation instruction. Test both `chat-json` and `json-schema` preview/live byte parity with a fake transport.
 - [ ] Run the new targeted tests and observe expected failure before changing production code.
 - [ ] Add the optional prompt payload. In CLI, validate `--case`, failed/latest/source-current run, and required live preview hash before Key/network; recheck full Python fingerprint after the provider response. Preserve the default serializer calls unchanged.
-- [ ] Add negative tests proving pass, stale Python source, source mutation during the provider call, missing hash, and wrong preview hash all block upload or discard findings. Check that blind diagnosis ignores saved reproductions.
+- [ ] Add negative tests proving pass, stale Python source, in-run source mutation, truncated output, source mutation during the provider call, and missing preview hash all block upload or discard findings. Check that blind diagnosis ignores saved reproductions. Existing preview-hash tests cover the wrong-hash branch.
 - [ ] Run `python3 -m unittest tests.test_reproduction tests.test_diagnose_preview tests.test_diagnosis_prompt -v` and `git diff --check`; commit the opt-in request path.
 
 ## Task 3: Close the report and repair path
@@ -61,7 +61,7 @@
 
 ## Task 4: Verify the installed workflow and deliver
 
-- [ ] Update README and product/status docs with exact `reproduce`, preview, live, and after commands. State that command output may contain secrets and must be inspected before upload; Python fingerprint does not cover non-Python files. Keep the model-quality boundary explicit.
+- [ ] Bump package and case tool versions to `0.4.0`; update README and product/status docs with exact `reproduce`, preview, live, and after commands. State that command output may contain secrets and must be inspected before upload; Python fingerprint does not cover non-Python files. Keep the model-quality boundary explicit.
 - [ ] Run the full offline suite once: `python3 -m unittest discover -s tests -q`; run `python3 -m compileall -q repo_doctor tools` and `git diff --check`. Repair concrete failures and rerun affected checks.
 - [ ] Build a wheel from the exact committed head, install it into a clean virtual environment outside source, and exercise the controlled demo through `report create → reproduce failure → diagnose --preview → source fix → stale reproduction refusal`. The mocked transport tests cover live wire parity without spending an unregistered provider call.
-- [ ] Inspect the full branch diff and status, push, create and attach a PR, wait for all Python 3.11–3.13 CI jobs on its head, then merge. Verify default-branch commit and report any remaining diagnostic-quality limit.
+- [ ] Inspect the full branch diff and status, push, create and attach a PR, wait for all Python 3.11–3.13 CI jobs on its head, then merge. Verify the merge-commit CI, build the exact merge commit's wheel in a clean environment, then tag and publish `v0.4.0` with an explicit model-quality warning. Verify the public asset hash and report any remaining diagnostic-quality limit.

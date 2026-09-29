@@ -17,7 +17,7 @@ from .source import read_source
 
 
 SCHEMA_VERSION = 1
-TOOL_VERSION = "0.3.0"
+TOOL_VERSION = "0.4.0"
 
 
 def timestamp() -> str:
@@ -245,6 +245,8 @@ def require_reproduction(case: dict, reproduction_id: str, current_fingerprint: 
         raise ValueError(f"Unknown reproduction: {reproduction_id}")
     if record.get("status") != "failed":
         raise ValueError("reproduction must be a failed command")
+    if record.get("output_truncated"):
+        raise ValueError("reproduction output was truncated; rerun a narrower command")
     if record.get("source_fingerprint") != record.get("source_fingerprint_after"):
         raise ValueError("reproduction changed Python source during execution")
     if record.get("source_fingerprint") != current_fingerprint:

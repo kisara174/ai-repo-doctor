@@ -45,9 +45,12 @@ it can supersede an older failure. Existing case files without this array
 remain readable.
 
 `diagnose --reproduction ID` requires `--case`. The selected run must be the
-latest for its exact argv, have status `failed`, have unchanged Python source
-during execution, and match the current Python source fingerprint. A timeout,
-command error, pass, stale run, or missing ID stops before any provider call.
+latest for its exact argv, have status `failed`, have complete captured output,
+have unchanged Python source during execution, and match the current Python
+source fingerprint. A timeout, command error, pass, truncated output, stale
+run, or missing ID stops before any provider call. A user can rerun a narrower
+command when output was truncated; the existing runner retains only its first
+16 KiB, so the actual failure might otherwise be missing.
 The diagnosis path performs the same fingerprint check after a provider
 response before accepting findings. Changes outside scanned Python files are
 not detected; the report states this limit.
@@ -81,12 +84,13 @@ provenance, not a claim that the failing command proves a particular issue.
   source fix, the same explicit regression command and human confirmation
   produce the existing repair-evidence state.
 - A later passing run of the same argv, source edit, in-run source mutation,
-  timeout, and missing preview hash all prevent upload.
+  truncated output, timeout, and missing preview hash all prevent upload.
 - The pre-change blind request fixture keeps SHA-256
   `2d1d7ca4b298c17d511d01dc6e70e8bad41d7120cbec1844540959862bf3fd12`.
 - Focused tests, full project suite, clean wheel install, controlled CLI demo,
-  and supported-Python CI pass. No external target repository code is run for
-  this feature's acceptance.
+  and supported-Python CI pass. Publish the tested merge commit as `v0.4.0`
+  with a matching installable wheel and quality warning. No external target
+  repository code is run for this feature's acceptance.
 
 This proves the workflow and safety gates, not model precision or recall. A
 fresh paired bug/fixed evaluation would be needed before claiming diagnostic

@@ -281,6 +281,24 @@ class ReproductionTests(unittest.TestCase):
             self.assertEqual(output, "")
             self.assertIn("during execution", error)
 
+    def test_truncated_failure_output_requires_narrower_reproduction(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            repo, case_dir = base / "repo", base / "case"
+            repo.mkdir()
+            (repo / "app.py").write_text("def target():\n    return 1\n", encoding="utf-8")
+            self.assertEqual(self.run_main("report", "create", repo, "--out", case_dir)[0], 0)
+            script = "print('log' * 10000); raise RuntimeError('actual failure at end')"
+            self.assertEqual(self.run_main("reproduce", case_dir, "--", sys.executable, "-c", script)[0], 1)
+            case = json.loads((case_dir / "case.json").read_text(encoding="utf-8"))
+            self.assertTrue(case["reproductions"][0]["output_truncated"])
+
+            status, output, error = self.run_main("diagnose", repo, "app.py::target", "--case", case_dir,
+                                                  "--reproduction", "R-001", "--preview")
+            self.assertEqual(status, 2)
+            self.assertEqual(output, "")
+            self.assertIn("output was truncated", error)
+
 
 if __name__ == "__main__":
     unittest.main()
