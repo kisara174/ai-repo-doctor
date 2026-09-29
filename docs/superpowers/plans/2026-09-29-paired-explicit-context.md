@@ -50,11 +50,11 @@ runner and manual review workflow.
 ## Task 1: Bind case-selected symbols to evaluation preparation and preflight
 
 - [x] In `tests/test_diagnosis_data.py`, extend the committed fixture source
-  with a distinct `helper` function, update fixture target line numbers and
+  with a distinct `supplement` function, update fixture target line numbers and
   source hash if needed, and add a focused test whose manifest case has
-  `"include_symbols": ["app.py::helper"]`. Assert the prepared context
-  contains that helper with `relation == "user_selected"`, and its plan case
-  records the list. The same case without the field must omit both helper and
+  `"include_symbols": ["app.py::supplement"]`. Assert the prepared context
+  contains that symbol with `relation == "user_selected"`, and its plan case
+  records the list. The same case without the field must omit both supplement and
   plan field. Run only this test and observe failure for the new behavior.
 - [x] Add manifest validation tests rejecting an empty list, duplicate name,
   target name, malformed name, unknown name, and ambiguous name. The existing
