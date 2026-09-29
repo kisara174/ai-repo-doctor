@@ -33,15 +33,16 @@ budgeting, and indexing. The target repository was not executed. The wheel
 still carries project version `0.2.0`; this branch is not the public tag.
 All Python 3.11–3.13 push and pull-request CI jobs for PR #20 passed.
 
-The current `codex/m1-architecture` branch is adding a static architecture
-summary and source-line evidence for each direct or indirect impact hop. It
-uses resolved local production-code import/call edges, excludes detected test
-files from module ranking, and leaves the AI quality gate unchanged.
-The branch passed 373 offline tests, `compileall`, and diff checks. PyPI TLS
+PR [#21](https://github.com/kisara174/ai-repo-doctor/pull/21) merged the M1
+static architecture summary into the default branch at `5a327cb`.
+It uses resolved local production-code import/call edges, excludes detected
+test files from module ranking, and shows source-line evidence for each direct
+or indirect impact hop. The branch passed 373 offline tests, `compileall`,
+diff checks, and Python 3.11–3.13 pull-request CI. PyPI TLS
 errors interrupted the ordinary isolated wheel build twice, so a bundled
 Python 3.12 runtime with setuptools 84 built the wheel offline without
 installing or changing project dependencies. The wheel installed in a clean
-Python 3.14 virtual environment outside the source tree. Installed CLI
+Python 3.14 virtual environment outside the source tree. The installed CLI
 `report create --symbol` and `report show` produced byte-identical saved and
 reopened reports for this repository: 30 production modules, five focus
 modules, and 6 direct plus 17 indirect static paths for `read_source`, each
@@ -173,16 +174,16 @@ actual billing is not inferred.
 
 ## Current next gate
 
-Keep the v0.2 workflow stable. The first M1 before/after cohort is registered,
-but its online result is partial after a truncated first response. Preserve
-that failed gate; a new, separately registered evaluation under the revised
-transport is needed before judging true issue matches, repaired-snapshot
-false alarms, invalid responses, and cost per useful issue. Decide any default
-prompt change only from source-reviewed evidence. The controlled CLI smoke
-shows one request path works but is not a general accuracy estimate. The M1
-static review and architecture items are implemented on the development
-branches; the remaining M1 gate is a new diagnosis-quality evaluation under
-the revised transport.
+Keep the v0.2 human-reviewed workflow stable. The separately registered
+[M1 v2 evaluation](evaluations/2026-09-29-m1-holdout-v2.md) sent six pinned
+requests with thinking explicitly disabled: five responses were parseable,
+one was invalid JSON, source review found **0/3** known repairs, and one
+parseable fixed snapshot had an accepted false alarm. The usefulness gate
+failed, so the blind model path has no unattended-use quality claim. The
+next product-quality task is a user-supplied symptom or reproduction entry
+that keeps source quotation, human review, and a paired repaired-snapshot
+false-alarm gate. Earlier symptom-guided experiments improved hit counts but
+also had false alarms; no prompt change is promoted from those results alone.
 
 ## Verification scope
 
