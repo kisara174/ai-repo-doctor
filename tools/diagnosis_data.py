@@ -28,6 +28,7 @@ from repo_doctor.index import build_index
 from repo_doctor.model import RepoIndex
 from repo_doctor.source import read_source
 from .analyzer_provenance import AnalyzerProvenanceError, require_clean_analyzer
+from .diagnosis_prompt import build_evaluation_prompts
 
 
 _SYMPTOM_DATASET_ID = "diagnosis-symptom-guided-v1"
@@ -416,8 +417,11 @@ def prepare_cases(
                 index, case["symbol"], max_lines, include_symbols=tuple(extras)
             )
             source_lines, source_bytes = validate_context_budget(detailed_context)
-            system_prompt, user_prompt = build_diagnosis_prompts(detailed_context)
-            context = json.loads(user_prompt)
+            _, context_prompt = build_diagnosis_prompts(detailed_context)
+            context = json.loads(context_prompt)
+            system_prompt, user_prompt = build_evaluation_prompts(
+                context, case.get("symptom")
+            )
         except EvaluationDataError:
             raise
         except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:

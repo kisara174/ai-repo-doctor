@@ -498,6 +498,55 @@ class DiagnosisDataTests(unittest.TestCase):
                 with self.assertRaisesRegex(EvaluationDataError, expected):
                     validate_manifest(manifest)
 
+    def test_prepare_symptom_arm_keeps_context_and_changes_request_hash(self):
+        manifest = self.make_symptom_guided_manifest()
+        for case in manifest["cases"]:
+            case["checkout_id"] = "fixture"
+            case["commit"] = self.commit
+
+        prepared = prepare_cases(
+            manifest, self.repos_root, "test-model", 120, response_format="json-schema"
+        )
+        plan_cases = {case["id"]: case for case in prepared["plan"]["cases"]}
+        for repair in ("pytest-12083", "rich-3897"):
+            blind = next(
+                case for case in manifest["cases"]
+                if case["pair_id"] == f"{repair}-blind" and case["label"] == "bug"
+            )
+            symptom = next(
+                case for case in manifest["cases"]
+                if case["pair_id"] == f"{repair}-symptom" and case["label"] == "bug"
+            )
+            self.assertEqual(
+                plan_cases[blind["id"]]["context_sha256"],
+                plan_cases[symptom["id"]]["context_sha256"],
+            )
+            self.assertNotEqual(
+                plan_cases[blind["id"]]["request_sha256"],
+                plan_cases[symptom["id"]]["request_sha256"],
+            )
+            self.assertEqual(
+                prepared["contexts"][blind["id"]], prepared["contexts"][symptom["id"]]
+            )
+            self.assertNotIn(
+                "reported_symptom",
+                json.dumps(prepared["contexts"][symptom["id"]], ensure_ascii=False),
+            )
+
+        legacy = prepare_cases(
+            self.manifest, self.repos_root, "test-model", 120,
+            response_format="json-schema",
+        )
+        baseline_prompts = build_diagnosis_prompts(legacy["contexts"]["bug-01"])
+        baseline_hash = hashlib.sha256(
+            _serialize_schema_request_body(
+                baseline_prompts[0], baseline_prompts[1], "test-model"
+            )
+        ).hexdigest()
+        self.assertEqual(
+            legacy["plan"]["cases"][0]["request_sha256"], baseline_hash
+        )
+
     def test_manifest_reports_malformed_url_as_a_validation_error(self):
         manifest = self.make_manifest()
         manifest["cases"][0]["repository_url"] = "https://["
