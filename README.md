@@ -4,11 +4,11 @@
 
 ## 安装与快速开始
 
-需要 Python 3.11+；安装 Git 后扫描会遵循目标仓库的 ignore 规则。安装 `v0.4.0`：
+需要 Python 3.11+；安装 Git 后扫描会遵循目标仓库的 ignore 规则。安装 `v0.4.1`：
 
 ```bash
 python3 -m venv .venv
-.venv/bin/python -m pip install 'git+https://github.com/kisara174/ai-repo-doctor.git@v0.4.0'
+.venv/bin/python -m pip install 'git+https://github.com/kisara174/ai-repo-doctor.git@v0.4.1'
 .venv/bin/repo-doctor --help
 ```
 
@@ -16,7 +16,7 @@ python3 -m venv .venv
 
 ```bash
 python3 -m pip wheel --no-deps --wheel-dir dist .
-.venv/bin/python -m pip install dist/ai_repo_doctor-0.4.0-py3-none-any.whl
+.venv/bin/python -m pip install dist/ai_repo_doctor-0.4.1-py3-none-any.whl
 ```
 
 ### 五分钟走完一条离线闭环
@@ -63,7 +63,9 @@ $RD impact /path/to/python-repo 'app.py::target'
 
 `scan`、`symbols`、`report`、`context`、`impact`、`validate`、`demo` 和默认 `doctor` 都离线运行；只有显式 `diagnose` 或 `doctor --deepseek` 会联网。只有显式 `reproduce` 或 `verify` 会执行用户给出的目标仓库命令。两者使用参数数组执行，不经隐式 shell；工作目录是任务中的仓库路径。它们仅传递必要环境变量并移除 `DEEPSEEK_API_KEY`，默认 120 秒超时（可在 1–300 秒范围内调整），保存最多 16 KiB 输出。它们**不提供操作系统级隔离**，应只对愿意自行运行测试的仓库使用。
 
-任务状态分三层：静态事实或引文是否得到来源校验；人工状态 `unreviewed`、`confirmed`、`rejected`、`resolved`；回归命令的 `before`/`after` 记录。只有同一命令在修改前失败、Python 源码指纹变化、修改后通过、两次执行期间源码都未变，并且用户用 `--related-test` 确认关联时，报告才写“有修复证据”。否则显示“仍需复核”或“复查未通过”。这仍不等于整仓无缺陷。
+超时同时限制进程退出与输出等待；到期后会结束原进程组并停止读取输出。命令主动创建新会话的后台进程需要自行管理，它们不在原进程组的清理范围内。
+
+任务状态分三层：静态事实或引文是否得到来源校验；人工状态 `unreviewed`、`confirmed`、`rejected`、`resolved`；回归命令的 `before`/`after` 记录。只有同一命令在修改前失败、Python 源码指纹变化、最新一轮修改后检查通过、两次执行期间源码都未变，并且用户用 `--related-test` 确认关联时，报告才写“有修复证据”。开始新的 `before` 检查后，报告显示“仍需复核”，直到这一轮的 `after` 检查也满足上述条件。未满足时显示“仍需复核”或“复查未通过”。这仍不等于整仓无缺陷。
 
 | 记录 | 含义 |
 | --- | --- |

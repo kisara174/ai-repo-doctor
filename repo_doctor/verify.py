@@ -1,10 +1,10 @@
 """Run only a user-supplied regression argv in the selected repository."""
 
 import os
+import selectors
 import signal
 import subprocess
 import tempfile
-import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -45,45 +45,57 @@ def run_verification(root: Path, argv: list[str], *, timeout: int = 120) -> dict
             "argv": list(argv), "output": "Could not start the command.", "output_truncated": False,
         }
 
-    def drain() -> None:
-        nonlocal truncated
-        assert process.stdout is not None
-        while True:
-            try:
-                chunk = process.stdout.read(4096)
-            except OSError:
-                break
-            if not chunk:
-                break
-            remaining = MAX_OUTPUT_BYTES - len(output)
-            if remaining > 0:
-                output.extend(chunk[:remaining])
-            if len(chunk) > remaining:
-                truncated = True
-
-    reader = threading.Thread(target=drain, daemon=True)
-    reader.start()
     timed_out = False
+
     def kill_group() -> None:
+        # Reap an exited leader before signalling its remaining descendants.
+        # macOS reports EPERM for a group containing only an unreaped zombie.
+        process.poll()
         try:
             os.killpg(process.pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
 
+    assert process.stdout is not None
+    deadline = start + timeout
     try:
-        exit_code = process.wait(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        timed_out = True
-        kill_group()
-        exit_code = process.wait()
-    reader.join(timeout=max(0, timeout - (time.monotonic() - start)))
-    if reader.is_alive():
-        timed_out = True
-        kill_group()
-        reader.join(timeout=2)
-    if process.stdout is not None:
+        # Pipe EOF can be delayed by a descendant even after the parent exits.
+        # Read only ready bytes and apply one deadline to output and process exit.
+        with selectors.DefaultSelector() as selector:
+            os.set_blocking(process.stdout.fileno(), False)
+            selector.register(process.stdout, selectors.EVENT_READ)
+            while selector.get_map():
+                time_left = deadline - time.monotonic()
+                if time_left <= 0:
+                    timed_out = True
+                    break
+                for key, _ in selector.select(time_left):
+                    try:
+                        chunk = os.read(key.fd, 4096)
+                    except BlockingIOError:
+                        continue
+                    if not chunk:
+                        selector.unregister(key.fileobj)
+                        break
+                    remaining = MAX_OUTPUT_BYTES - len(output)
+                    if remaining > 0:
+                        output.extend(chunk[:remaining])
+                    if len(chunk) > remaining:
+                        truncated = True
+        if not timed_out:
+            try:
+                exit_code = process.wait(timeout=max(0, deadline - time.monotonic()))
+            except subprocess.TimeoutExpired:
+                timed_out = True
+        if timed_out:
+            kill_group()
+            exit_code = process.wait()
+    finally:
+        if process.poll() is None:
+            kill_group()
+            process.wait()
         process.stdout.close()
-    cache_dir.cleanup()
+        cache_dir.cleanup()
     decoded = bytes(output).decode("utf-8", errors="replace")
     encoded = decoded.encode("utf-8")
     if len(encoded) > MAX_OUTPUT_BYTES:

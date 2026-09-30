@@ -25,12 +25,10 @@ def _code(value: object) -> str:
 
 def repair_state(issue: dict) -> str:
     history = issue.get("verification", [])
-    after_position = next((position for position in range(len(history) - 1, -1, -1)
-                           if history[position]["phase"] == "after"), None)
-    after = history[after_position] if after_position is not None else None
+    after = history[-1] if history and history[-1]["phase"] == "after" else None
     before = None
     if after is not None:
-        before = next((item for item in reversed(history[:after_position])
+        before = next((item for item in reversed(history[:-1])
                        if item["phase"] == "before" and item["argv"] == after["argv"]), None)
     human = issue.get("human_history", [])
     related = bool(human and human[-1]["status"] == "resolved" and human[-1].get("related_test"))
