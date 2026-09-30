@@ -1,18 +1,30 @@
 # Execution Status
 
 Updated 2026-09-30. The current public product is
-[v0.4.0](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.4.0),
-merged in [PR #26](https://github.com/kisara174/ai-repo-doctor/pull/26) at
-`4f176c3edf10c3819ff4a503641421f4abcaa056`. It retains the v0.3.0
-static review, architecture and impact summaries and the v0.2.0 persistent
-case, source-grounded issue, human review, and repair record. The exact merge
-commit passed Python 3.11–3.13 CI; 383 local offline tests passed before merge.
-Its wheel installed in a clean Python 3.14.5 environment and completed an
-offline reproduction/preview/stale-record check. The public release asset was
+[v0.4.1](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.4.1),
+merged in [PR #28](https://github.com/kisara174/ai-repo-doctor/pull/28) at
+`d7dd1df056c2d84b1c91e3a0323e7c37e5658223`. It retains the persistent
+case, static structure summaries, optional reproduction-backed diagnosis,
+source-grounded issues, human review, and repair records. The exact merge
+commit passed Python 3.11–3.13 CI; 385 local offline tests passed before merge.
+Its wheel installed in a clean Python 3.14 environment and completed two
+repair cycles, reproduction preview, timeout rejection, and report reopening.
+The public release asset was
 downloaded and matched the merge-commit build SHA-256
-`3b3509c7301dfa00f09dae87a4d9ddb03120f80609aa9cc20f6e10a8e112b51b`.
+`5a0db34ae37a92cfc866f91a68401980e03de8d205d63bad37c06a74ce421146`.
 The [product guide](PRODUCT_GUIDE.md) tracks the completed workflow and
 remaining diagnosis-quality gap. Older dated reports below preserve history.
+
+The stability audit reproduced two material defects. A detached child holding
+stdout made a 1-second command wait 6 seconds; ready-byte output reads now use
+the same deadline as process exit, so the installed CLI returned and saved a
+timeout in 1.103 seconds. A new failing `before` check after an earlier repair
+still displayed old repair evidence; only the latest `after` check can now
+produce that state. Both regression tests failed before their fixes. The
+installed CLI correctly withdrew the old conclusion on a new `before`, then
+closed the second cycle after its matching passing `after`. No provider call
+was needed for these command/report fixes. Detached sessions remain outside
+process-group cleanup; this runner is not an OS sandbox.
 
 v0.4.0 adds an opt-in, case-level `reproduce` command
 before AI issues exist. Only a latest failed command with complete captured
@@ -120,7 +132,7 @@ checkout has separate untracked V3 documents and was left untouched.
 | Method-owner context | A method target can include its enclosing class declaration as a separate bounded block. | Pinned offline comparisons preserve target lines and existing imports; PR #10 passed local and CI gates. |
 | Finding presentation | Text output calls citation-checked findings `QUOTE-VERIFIED`; the JSON `accepted` key remains stable. | Exact source quotation matching does not establish a true bug; manual review remains required. |
 | Explicit context | `context` and `diagnose` can add user-selected symbols inside the same source budget. | Opt-in selection can expose omitted local code; it does not infer a relationship or prove a model diagnosis. |
-| Distribution | The public `0.4.0` tag and attached wheel install `repo-doctor` in a clean virtual environment. | The merge-commit wheel passed an offline reproduction/preview/stale-record check outside the source tree. The evaluation-only `tools` package remains outside the wheel. |
+| Distribution | The public `0.4.1` tag and attached wheel install `repo-doctor` in a clean virtual environment. | The merge-commit wheel completed two repair cycles, reproduction preview, bounded timeout recording, and report reopening outside the source tree. The evaluation-only `tools` package remains outside the wheel. |
 
 The original post-V3 plan's T0–T6 implementation and T7 offline preparation
 were completed. T7's first ten-case online run stopped after one
@@ -191,7 +203,7 @@ actual billing is not inferred.
 
 ## Current next gate
 
-Keep the v0.4.0 human-reviewed workflow stable. The separately registered
+Keep the v0.4.1 human-reviewed workflow stable. The separately registered
 [M1 v2 evaluation](evaluations/2026-09-29-m1-holdout-v2.md) sent six pinned
 requests with thinking explicitly disabled: five responses were parseable,
 one was invalid JSON, source review found **0/3** known repairs, and one
