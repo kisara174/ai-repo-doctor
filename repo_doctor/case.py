@@ -17,7 +17,7 @@ from .source import read_source
 
 
 SCHEMA_VERSION = 1
-TOOL_VERSION = "0.4.0"
+TOOL_VERSION = "0.4.1"
 
 
 def timestamp() -> str:

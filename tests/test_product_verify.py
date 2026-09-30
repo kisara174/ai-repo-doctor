@@ -1,8 +1,11 @@
 import io
 import json
 import os
+import signal
+import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -81,12 +84,16 @@ class ProductVerifyTests(unittest.TestCase):
     def test_timeout_is_recorded(self):
         with tempfile.TemporaryDirectory() as directory:
             _, case_dir = self.make_case_with_issue(Path(directory))
-            status, _, error = self.run_main("verify", case_dir, "A-001", "--phase", "before",
-                                             "--timeout", "1", "--", sys.executable,
-                                             "-c", "import time; time.sleep(5)")
-            self.assertEqual(status, 1, error)
-            case = json.loads((case_dir / "case.json").read_text(encoding="utf-8"))
-            self.assertEqual(case["issues"][0]["verification"][0]["status"], "timeout")
+            for script in (
+                "import time; time.sleep(5)",
+                "import os, time; os.close(1); os.close(2); time.sleep(5)",
+            ):
+                with self.subTest(script=script):
+                    status, _, error = self.run_main("verify", case_dir, "A-001", "--phase", "before",
+                                                     "--timeout", "1", "--", sys.executable, "-c", script)
+                    self.assertEqual(status, 1, error)
+                    case = json.loads((case_dir / "case.json").read_text(encoding="utf-8"))
+                    self.assertEqual(case["issues"][0]["verification"][-1]["status"], "timeout")
 
     def test_non_source_change_cannot_be_claimed_as_fix(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -151,6 +158,64 @@ class ProductVerifyTests(unittest.TestCase):
             self.assertEqual(status, 1, error)
             case = json.loads((case_dir / "case.json").read_text(encoding="utf-8"))
             self.assertEqual(case["issues"][0]["verification"][0]["status"], "timeout")
+
+    @unittest.skipUnless(os.name == "posix", "detached process sessions require POSIX")
+    def test_detached_child_holding_output_does_not_block_timeout_return(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo, case_dir = self.make_case_with_issue(Path(directory))
+            script = (
+                "import subprocess, sys; from pathlib import Path; "
+                "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'], "
+                "start_new_session=True); Path('child.pid').write_text(str(child.pid)); "
+                "print('parent done', flush=True)"
+            )
+            started = time.monotonic()
+            try:
+                try:
+                    result = subprocess.run(
+                        [sys.executable, "-m", "repo_doctor", "verify", str(case_dir),
+                         "A-001", "--phase", "before", "--timeout", "1", "--",
+                         sys.executable, "-c", script],
+                        cwd=Path(__file__).resolve().parents[1],
+                        capture_output=True, text=True, timeout=4,
+                    )
+                except subprocess.TimeoutExpired:
+                    self.fail("verification kept waiting for a detached child's output after timeout")
+                self.assertLess(time.monotonic() - started, 3)
+                self.assertEqual(result.returncode, 1, result.stderr)
+                case = json.loads((case_dir / "case.json").read_text(encoding="utf-8"))
+                record = case["issues"][0]["verification"][0]
+                self.assertEqual(record["status"], "timeout")
+                self.assertIn("parent done", record["output"])
+            finally:
+                pid_path = repo / "child.pid"
+                if pid_path.exists():
+                    try:
+                        os.kill(int(pid_path.read_text()), signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+
+    def test_new_before_run_requires_an_after_run_for_new_cycle(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo, case_dir = self.make_case_with_issue(Path(directory))
+            command = [sys.executable, "-c", "import app; assert app.value() == 2"]
+            self.assertEqual(self.run_main("verify", case_dir, "A-001", "--phase", "before", "--", *command)[0], 1)
+            (repo / "app.py").write_text("def value():\n    return 2\n", encoding="utf-8")
+            self.assertEqual(self.run_main("verify", case_dir, "A-001", "--phase", "after", "--", *command)[0], 0)
+            self.assertEqual(self.run_main("issue", case_dir, "A-001", "--status", "resolved",
+                                           "--note", "This check covers the issue", "--related-test")[0], 0)
+            self.assertIn("有修复证据", self.run_main("report", "show", case_dir)[1])
+
+            (repo / "app.py").write_text("def value():\n    return 1\n", encoding="utf-8")
+            self.assertEqual(self.run_main("verify", case_dir, "A-001", "--phase", "before", "--", *command)[0], 1)
+            reopened = self.run_main("report", "show", case_dir)
+            self.assertEqual(reopened[0], 0, reopened[2])
+            self.assertIn("仍需复核", reopened[1])
+            self.assertNotIn("有修复证据", reopened[1])
+
+            (repo / "app.py").write_text("def value():\n    return 2\n", encoding="utf-8")
+            self.assertEqual(self.run_main("verify", case_dir, "A-001", "--phase", "after", "--", *command)[0], 0)
+            self.assertIn("有修复证据", self.run_main("report", "show", case_dir)[1])
 
 
 if __name__ == "__main__":
