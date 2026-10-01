@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-repo-doctor"
-version = "0.4.1"
+version = "0.5.0"
 description = "Evidence-first Python repository analysis"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -15,3 +15,6 @@ repo-doctor = "repo_doctor.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["repo_doctor*"]
+
+[tool.setuptools.package-data]
+repo_doctor = ["resources/skill/*.md", "resources/map/*"]

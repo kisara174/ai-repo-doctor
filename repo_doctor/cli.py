@@ -11,10 +11,14 @@ from dataclasses import asdict
 from pathlib import Path
 
 from .context import build_context, build_impact
+from .agent_tools import (
+    build_overview, build_snapshot, read_json, validate_agent_findings,
+    validate_snapshot, write_new_json,
+)
 from .case import (
     create_case, load_case, record_diagnosis, record_diagnosis_failure, record_preview,
     record_reproduction, require_issue, require_reproduction, save_case, set_target,
-    source_fingerprint, update_issue,
+    source_fingerprint, update_issue, record_import,
 )
 from .deepseek import (
     MAX_REQUEST_BYTES,
@@ -38,6 +42,8 @@ from .index import build_index
 from .model import RepoIndex, Symbol
 from .source import read_source
 from .symbols import search_symbols
+from .skills import export_skill
+from .repo_map import write_map
 from .report import render_report, repair_state
 from .verify import MAX_TIMEOUT_SECONDS, run_verification
 
@@ -346,6 +352,10 @@ def _print_doctor(payload: dict) -> None:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="repo-doctor", description="Evidence-first analysis of a local Python repository")
     subcommands = parser.add_subparsers(dest="command", required=True)
+    skill = subcommands.add_parser('skill', help='Export the bundled Codex skill')
+    skill_commands = skill.add_subparsers(dest='skill_action', required=True)
+    skill_export = skill_commands.add_parser('export')
+    skill_export.add_argument('--out', type=Path, required=True)
     demo = subcommands.add_parser("demo", help="Create a controlled Python repository to try the full workflow")
     demo_commands = demo.add_subparsers(dest="demo_action", required=True)
     demo_create = demo_commands.add_parser("create", help="Write an intentionally broken Python sample")
@@ -365,6 +375,7 @@ def _parser() -> argparse.ArgumentParser:
     issue.add_argument("issue_id")
     issue.add_argument("--status", choices=("confirmed", "rejected", "resolved"))
     issue.add_argument("--note")
+    issue.add_argument('--actor', choices=('human', 'codex'), default='human')
     issue.add_argument("--related-test", action="store_true", help="Confirm the regression command relates to this issue")
     issue.add_argument("--json", action="store_true")
     verify = subcommands.add_parser(
@@ -400,6 +411,24 @@ def _parser() -> argparse.ArgumentParser:
     scan = subcommands.add_parser("scan", help="Build and report a Python repository index")
     scan.add_argument("path", type=Path)
     scan.add_argument("--json", action="store_true", help="Print the complete machine-readable result")
+    overview = subcommands.add_parser('overview', help='Bounded offline overview for agents')
+    overview.add_argument('path', type=Path)
+    overview.add_argument('--json', action='store_true')
+    repo_map = subcommands.add_parser('map', help='Generate an offline repository structure map')
+    repo_map.add_argument('path', type=Path)
+    repo_map.add_argument('--out', type=Path, required=True)
+    repo_map.add_argument('--symbol')
+    repo_map.add_argument('--depth', type=int, choices=(1, 2), default=1)
+    repo_map.add_argument('--json', action='store_true')
+    findings = subcommands.add_parser('findings', help='Import offline Codex findings with source checks')
+    finding_commands = findings.add_subparsers(dest='findings_action', required=True)
+    finding_import = finding_commands.add_parser('import')
+    finding_import.add_argument('case', type=Path)
+    finding_import.add_argument('--from', dest='input_file', type=Path, required=True)
+    finding_import.add_argument('--context', dest='snapshot', type=Path, required=True)
+    finding_import.add_argument('--producer', choices=('codex',), required=True)
+    finding_import.add_argument('--reproduction', metavar='R-ID')
+    finding_import.add_argument('--json', action='store_true')
     context = subcommands.add_parser("context", help="Retrieve source context for one symbol")
     context.add_argument("path", type=Path)
     context.add_argument("symbol")
@@ -409,6 +438,7 @@ def _parser() -> argparse.ArgumentParser:
         help="Add a selected repository symbol within the same source-line budget; repeatable",
     )
     context.add_argument("--json", action="store_true")
+    context.add_argument('--snapshot-out', type=Path, help='Save a new source-bound context snapshot offline')
     impact = subcommands.add_parser("impact", help="Follow reverse static dependencies for one symbol")
     impact.add_argument("path", type=Path)
     impact.add_argument("symbol")
@@ -469,6 +499,10 @@ def main(argv: list[str] | None = None) -> int:
         raw_argv = raw_argv[:separator]
     args = _parser().parse_args(raw_argv)
     try:
+        if args.command == 'skill':
+            export_skill(args.out)
+            print(f'Skill exported: {args.out}')
+            return 0
         if args.command == "demo":
             create_demo(args.out)
             print(f"Demo repository created: {args.out}")
@@ -485,7 +519,7 @@ def main(argv: list[str] | None = None) -> int:
             case = load_case(args.case)
             if args.status:
                 issue = update_issue(case, args.issue_id, args.status, args.note or "",
-                                     related_test=args.related_test)
+                                     related_test=args.related_test, actor=args.actor)
                 save_case(args.case, case)
             else:
                 if args.note or args.related_test:
@@ -495,7 +529,8 @@ def main(argv: list[str] | None = None) -> int:
                 _print_json(issue)
             else:
                 print(f"{issue['id']} · {issue['title']}")
-                print(f"Source: {issue['origin']} ({issue['evidence_status']}); Human: {issue['human_status']}")
+                actor = issue['human_history'][-1].get('actor', 'human') if issue['human_history'] else 'human'
+                print(f"Source: {issue['origin']} ({issue['evidence_status']}); Review ({actor}): {issue['human_status']}")
                 print(f"Repair: {repair_state(issue)}")
                 for evidence in issue["evidence"]:
                     print(f"Evidence: {evidence['file']}:{evidence['start_line']}-{evidence['end_line']}")
@@ -507,6 +542,23 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"Impact: {issue['impact']}")
                 print(f"Suggested fix: {issue['suggested_fix']}")
             return 0
+        if args.command == 'findings':
+            case = load_case(args.case)
+            index = build_index(Path(case['repository']['root']))
+            snapshot = read_json(args.snapshot)
+            context = validate_snapshot(index, snapshot)
+            report = validate_agent_findings(index, read_json(args.input_file), context)
+            if source_fingerprint(index) != snapshot['source_fingerprint']:
+                raise ValueError('source changed during findings import')
+            attempt = record_import(case, index, context, report, snapshot['snapshot_sha256'],
+                                    reproduction_id=args.reproduction)
+            save_case(args.case, case)
+            if args.json:
+                _print_json(attempt)
+            else:
+                print(f"Codex import: {attempt['status']}; issues: {attempt['accepted_issue_ids']}")
+                print('Quote checks confirm grounding only; findings remain unreviewed.')
+            return 1 if report['rejected'] else 0
         if args.command == "verify":
             argv = command_argv
             if not argv:
@@ -559,6 +611,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "diagnose" and not 1 <= args.max_lines <= MAX_CONTEXT_LINES:
             raise ValueError(f"--max-lines must be from 1 through {MAX_CONTEXT_LINES}")
         index = build_index(args.path)
+        if args.command == 'map':
+            result = write_map(index, args.out, symbol=args.symbol, depth=args.depth)
+            if args.json:
+                _print_json(result)
+            else:
+                print(f"Map generated: {result['directory']}")
+            return 0
         if args.command == "report":
             if args.symbol:
                 build_impact(index, args.symbol)
@@ -599,11 +658,16 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "scan":
             payload = _scan_data(index)
             printer = _print_scan
+        elif args.command == 'overview':
+            payload = build_overview(index)
+            printer = lambda data: print(json.dumps(data, ensure_ascii=False, indent=2))
         elif args.command == "context":
             payload = build_context(
                 index, args.symbol, args.max_lines,
                 include_symbols=tuple(args.include_symbol),
             )
+            if args.snapshot_out is not None:
+                write_new_json(args.snapshot_out, build_snapshot(index, payload, tuple(args.include_symbol)))
             printer = _print_context
         elif args.command == "impact":
             payload = build_impact(index, args.symbol, args.depth)

@@ -39,7 +39,9 @@ def repair_state(issue: dict) -> str:
         and after["source_fingerprint"] == after.get("source_fingerprint_after")
         and before["source_fingerprint"] != after["source_fingerprint"]
     ):
-        return "有修复证据（同一回归命令：修改前失败、源码变更、修改后通过；人工确认关联）"
+        actor = human[-1].get('actor', 'human')
+        label = 'Codex 确认关联' if actor == 'codex' else '人工确认关联'
+        return f"有修复证据（同一回归命令：修改前失败、源码变更、修改后通过；{label}）"
     if after and after["status"] != "passed":
         return "复查未通过"
     return "仍需复核"
@@ -190,13 +192,22 @@ def render_report(case: dict) -> str:
             lines.append(f"  - 关联显式复现：{_code(attempt['reproduction_id'])}；AI 结论仍待人工复核。")
         for rejected in attempt.get("rejected", []):
             lines.append(f"  - 引文拒绝：{_inline(rejected.get('title', '(untitled)'))}；{_inline('; '.join(rejected['reasons']))}")
+    if case.get('imports'):
+        lines.extend(['', '## 离线发现导入', ''])
+        for item in case['imports']:
+            lines.append(f"- {_inline(item['at'])} · {_inline(item['producer'])} · {_inline(item['status'])} · 上下文快照 {_code(item['snapshot_sha256'])} · 接受 {len(item['accepted_issue_ids'])}；拒绝 {len(item['rejected'])}")
+            for rejected in item['rejected']:
+                lines.append(f"  - {_inline(rejected['title'])}：{_inline('; '.join(rejected['reasons']))}")
     lines.extend(["", "## Issues", ""])
     if not case["issues"]:
         lines.extend(["目前没有已记录 issue。空发现不证明仓库没有缺陷。", ""])
     for issue in case["issues"]:
+        history = issue.get('human_history', [])
+        actor = history[-1].get('actor', 'human') if history else 'human'
+        review_label = 'Codex 判断' if actor == 'codex' else '人工判断'
         lines.extend([
             f"### {issue['id']} · {_inline(issue['title'])}", "",
-            f"- 来源：{_inline(issue['origin'])}；来源证据：{_inline(issue['evidence_status'])}；人工判断：{_inline(issue['human_status'])}",
+            f"- 来源：{_inline(issue.get('producer', issue['origin']))}；来源证据：{_inline(issue['evidence_status'])}；{review_label}：{_inline(issue['human_status'])}",
             f"- 修复状态：{repair_state(issue)}",
         ])
         if issue["origin"] == "ai":
@@ -217,9 +228,9 @@ def render_report(case: dict) -> str:
         if "confidence" in issue:
             lines.extend([f"模型自报置信度：{issue['confidence']}（不代表产品判定）", ""])
         if issue.get("human_history"):
-            lines.extend(["**人工记录**", ""])
+            lines.extend(["**复核记录**", ""])
             for item in issue["human_history"]:
-                lines.append(f"- {_inline(item['at'])} · {_inline(item['status'])} · {_inline(item['note'])} · 测试关联：{'是' if item.get('related_test') else '未确认'}")
+                lines.append(f"- {_inline(item['at'])} · {_inline(item.get('actor', 'human'))} · {_inline(item['status'])} · {_inline(item['note'])} · 测试关联：{'是' if item.get('related_test') else '未确认'}")
             lines.append("")
         if issue.get("verification"):
             lines.extend(["**回归记录**", ""])

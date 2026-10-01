@@ -18,7 +18,7 @@ _GENERATED_DIRS = {
 }
 
 
-def discover_python_files(root: Path) -> tuple[list[str], str]:
+def discover_files(root: Path, *, python_only: bool = False) -> tuple[list[str], str]:
     root = Path(root).resolve()
     if not root.is_dir():
         raise ValueError(f"Not a directory: {root}")
@@ -57,7 +57,7 @@ def discover_python_files(root: Path) -> tuple[list[str], str]:
                 relative = candidate.relative_to(root)
             except ValueError:
                 continue
-            if relative.suffix != ".py" or any(
+            if (python_only and relative.suffix != ".py") or any(
                 part in _GENERATED_DIRS for part in relative.parts[:-1]
             ):
                 continue
@@ -88,10 +88,14 @@ def discover_python_files(root: Path) -> tuple[list[str], str]:
             and not (current_path / name).is_symlink()
         ]
         for name in filenames:
-            if not name.endswith(".py"):
+            if python_only and not name.endswith(".py"):
                 continue
             path = current_path / name
             if path.is_symlink() or not path.is_file():
                 continue
             files.append(path.relative_to(root).as_posix())
     return sorted(set(files)), "walk"
+
+
+def discover_python_files(root: Path) -> tuple[list[str], str]:
+    return discover_files(root, python_only=True)
