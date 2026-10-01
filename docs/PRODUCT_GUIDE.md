@@ -1,6 +1,6 @@
 # AI Repo Doctor 产品闭环指导书
 
-更新日期：2026-10-01。当前状态：v0.5.0 本地候选版已实现 Codex 工具接口、可导出 Skill、离线交互 HTML 与 SVG，并部署到 Mac。面向人的页面只呈现仓库结构和关系，详细调查由 Codex 处理。公开稳定版仍为 v0.4.1；原生浏览器离线打开与下载、新会话 Skill 隐式匹配和远程 CI 尚待独立确认。执行状态见[目标计划](superpowers/plans/2026-10-01-codex-tools-repo-map-goals.md)与[候选版交付记录](delivery/2026-10-01-v050-candidate.md)。
+更新日期：2026-10-01。当前状态：v0.5.0 本地候选版已实现 Codex 工具接口、可导出 Skill、离线交互 HTML 与 SVG，并部署到 Mac。面向人的页面只呈现仓库结构和关系，详细调查由 Codex 处理。功能提交的远程 Python 3.11–3.13 与地图交互 CI 已通过。公开稳定版仍为 v0.4.1；原生浏览器离线打开与下载、新会话 Skill 隐式匹配尚待独立确认。执行状态见[目标计划](superpowers/plans/2026-10-01-codex-tools-repo-map-goals.md)与[候选版交付记录](delivery/2026-10-01-v050-candidate.md)。
 
 **公开稳定版 v0.4.1：** [稳定性修复版](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.4.1)解决了后台子进程持有输出时超时无法及时返回，以及新一轮失败检查仍显示上一轮修复证据的问题。合并提交 `d7dd1df` 的 Python 3.11–3.13 CI 通过，385 个离线测试通过；最终 wheel 在干净环境完成了两轮修复、失败记录预览、超时记录保存和报告重开。修复保持在原有命令执行和报告机制内。
 
