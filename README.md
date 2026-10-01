@@ -1,6 +1,8 @@
 # AI Repo Doctor
 
-一个以证据为先的 Python 代码库诊断 CLI。它在本地建立符号、局部导入和静态调用关系，保存调查任务与报告，并把可选 DeepSeek 诊断转换为可复核的 issue。扫描、报告和诊断不会运行目标仓库代码；只有用户显式调用 `reproduce` 或 `verify -- <命令>` 才会在该仓库运行检查。
+为 Codex 提供本地 Python 仓库结构、上下文和证据的 CLI，并生成供人查看的离线结构关系图。Codex 负责问题判断、方案和代码修改；Repo Doctor 保存调查记录并校验来源。主要流程不需要 API Key。扫描和地图生成不会运行目标仓库代码；只有显式调用 `reproduce` 或 `verify -- <命令>` 才会运行检查。
+
+本分支准备 v0.5.0 本地候选版；公开稳定版仍为 v0.4.1。新能力请按下方源码构建方式安装，完整用法见 [Codex 与仓库地图](docs/CODEX_AND_MAP.md)。
 
 ## 安装与快速开始
 
@@ -16,8 +18,20 @@ python3 -m venv .venv
 
 ```bash
 python3 -m pip wheel --no-deps --wheel-dir dist .
-.venv/bin/python -m pip install dist/ai_repo_doctor-0.4.1-py3-none-any.whl
+.venv/bin/python -m pip install dist/ai_repo_doctor-0.5.0-py3-none-any.whl
 ```
+
+### 让 Codex 调用，并查看项目结构
+
+```bash
+repo-doctor overview /path/to/python-repo --json
+repo-doctor map /path/to/python-repo --out ./repo-map
+repo-doctor skill export --out ~/.agents/skills/repo-doctor
+```
+
+打开 `repo-map/map.html`，搜索文件与符号、切换结构树和静态关系图；`structure.svg` 与 `relations.svg` 同时生成，也可在页面导出当前视图。页面只呈现项目结构。地图的数据与资源都在本地，不需要启动服务。分析边界和隐藏数量会保留在图中。
+
+Skill 导出会保留已有目录；若目录已存在，请先查看其内容并选择新的导出位置。Skill 被 Codex 加载后可以使用 `$repo-doctor` 显式调用；按描述匹配任务的隐式调用不是必然触发。工具不修改 Codex 全局配置和 AGENTS 规则。
 
 ### 五分钟走完一条离线闭环
 
@@ -78,7 +92,7 @@ $RD impact /path/to/python-repo 'app.py::target'
 
 `scan` 文本输出会给出示例符号 ID；`symbols --query` 可按名称、限定名或 ID 检索，找不到精确匹配时显示候选而不替用户选定。完整索引在 `scan --json` 输出中，包括文件、符号、导入声明、调用点、局部导入边、已解析调用边、语义关系、导入环和解析错误。
 
-JSON 命令使用 `schema_version: 2`。`call_edges` 只表示普通静态调用；`semantic_edges` 单独记录显式本地重导出和 Click 命令注册。符号包含装饰器和 overload 签名元数据，调用边通过 `via_reexports` 保留重导出链。`context` 会为命令组和回调标出注册关系，`impact` 将语义关系与普通调用影响分开列出。
+各命令独立声明 `schema_version`；完整扫描和现有上下文等使用版本 2，概览、快照与地图使用版本 1。`call_edges` 只表示普通静态调用；`semantic_edges` 单独记录显式本地重导出和 Click 命令注册。符号包含装饰器和 overload 签名元数据，调用边通过 `via_reexports` 保留重导出链。`context` 会为命令组和回调标出注册关系，`impact` 将语义关系与普通调用影响分开列出。
 
 ## 让 ChatGPT 诊断一个函数
 

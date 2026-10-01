@@ -17,7 +17,7 @@ from .source import read_source
 
 
 SCHEMA_VERSION = 1
-TOOL_VERSION = "0.4.1"
+TOOL_VERSION = "0.5.0"
 
 
 def timestamp() -> str:
@@ -256,17 +256,36 @@ def require_reproduction(case: dict, reproduction_id: str, current_fingerprint: 
     return record
 
 
-def update_issue(case: dict, issue_id: str, status: str, note: str, *, related_test: bool = False) -> dict:
+def update_issue(case: dict, issue_id: str, status: str, note: str, *, related_test: bool = False,
+                 actor: str = 'human') -> dict:
     if not note.strip():
         raise ValueError("--note is required when changing issue status")
     issue = require_issue(case, issue_id)
     if status not in {"confirmed", "rejected", "resolved"}:
         raise ValueError("invalid issue status")
+    if actor not in {'human', 'codex'}:
+        raise ValueError('invalid review actor')
     issue["human_status"] = status
     issue["human_history"].append({
         "at": timestamp(), "status": status, "note": note.strip(), "related_test": related_test,
+        "actor": actor,
     })
     return issue
+
+
+def record_import(case: dict, index: RepoIndex, context: dict, report: dict,
+                  snapshot_sha256: str, *, reproduction_id: str | None = None) -> dict:
+    """Reuse issue construction, recording an offline producer rather than a cloud call."""
+    attempt = record_diagnosis(case, index, context, '', '', '', report,
+                               reproduction_id=reproduction_id)
+    case['diagnoses'].pop()
+    for key in ('request_sha256', 'response_format', 'model'):
+        attempt.pop(key)
+    attempt.update(producer='codex', snapshot_sha256=snapshot_sha256)
+    for issue_id in attempt['accepted_issue_ids']:
+        require_issue(case, issue_id)['producer'] = 'codex'
+    case.setdefault('imports', []).append(attempt)
+    return attempt
 
 
 def record_diagnosis(

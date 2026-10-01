@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Repo Doctor · 仓库结构关系图</title><style>@@STYLE@@</style></head>
+<body>
+<header><div><span class="brand">REPO DOCTOR</span><h1 id="repo-name">仓库结构关系图</h1></div>
+<div class="actions"><button id="export">导出当前 SVG</button></div></header>
+<section class="toolbar" aria-label="图形控制">
+<label>视图 <select id="mode"><option value="structure">结构树</option><option value="relations">关系图</option></select></label>
+<label>邻域 <select id="depth"><option value="1">1 层</option><option value="2">2 层</option></select></label>
+<label><input id="tests" type="checkbox">显示测试</label>
+<button id="reset">仓库总览</button><button id="zoom-in" aria-label="放大">＋</button><button id="zoom-out" aria-label="缩小">−</button><button id="fit">适应画布</button>
+<span id="filters" class="filters"></span>
+</section>
+<main><aside><label for="search">搜索目录、文件或符号</label><input id="search" type="search" placeholder="输入名称或路径">
+<div id="selection" aria-live="polite">选择一个节点查看其结构位置。</div>
+<div id="node-list" role="list" aria-label="仓库节点"></div></aside>
+<section id="canvas" aria-label="仓库图形"><div id="drawing"></div></section></main>
+<footer><span id="summary"></span><span id="source"></span></footer>
+<script id="map-data" type="application/json">@@DATA@@</script>
+<script>@@SCRIPT@@</script>
+</body></html>
