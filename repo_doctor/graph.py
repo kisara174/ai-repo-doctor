@@ -151,6 +151,27 @@ def _resolve_class_expression(
     return symbol_id
 
 
+def _resolve_module_instance_call(
+    call: CallSite, caller: Symbol, index: RepoIndex
+) -> str | None:
+    if caller.kind != "function" or caller.parent is not None:
+        return None
+    binding = index.module_instances.get(caller.file, {}).get(call.receiver)
+    if binding is None or call.name not in binding.methods:
+        return None
+    if (binding.line, binding.column) >= (caller.start_line, 0):
+        return None
+    class_id = f"{caller.file}::{binding.class_name}"
+    cls = index.symbols.get(class_id)
+    if cls is None or cls.kind != "class" or cls.parent is not None:
+        return None
+    target = f"{class_id}.{call.name}"
+    method = index.symbols.get(target)
+    if method is None or method.kind != "method" or method.parent != class_id:
+        return None
+    return target
+
+
 def _resolve_call(
     call: CallSite,
     index: RepoIndex,
@@ -196,7 +217,7 @@ def _resolve_call(
         symbol = index.symbols.get(target) if target else None
         return target if symbol is not None and symbol.kind == "method" else None
     if receiver in index.module_bindings.get(caller.file, set()):
-        return None
+        return _resolve_module_instance_call(call, caller, index)
     alias = _unique_alias(aliases, caller.file, None, receiver)
     if (caller.file, None, receiver) in aliases and alias is None:
         return None

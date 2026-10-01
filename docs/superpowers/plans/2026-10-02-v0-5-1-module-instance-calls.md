@@ -10,7 +10,7 @@
 
 **Spec:** 本文第二、三节为本阶段设计与行为合同；依据已接受的“提高调用关系与改动影响分析实用性”方向。
 
-日期：2026-10-02。状态：**实施中：T0 基线已保存，T1 已取得预期 RED；T2–T8 待完成。**
+日期：2026-10-02。状态：**实施中：T0–T3 已完成，T4–T8 待完成。**
 
 ## 一、基线与实际问题
 
@@ -78,6 +78,8 @@ def run():
 | 条件/循环/try/with 中构造，多目标或解包赋值 | 不建立候选 |
 | 重复赋值，即使重复同一种构造；del；导入名冲突 | 不建立候选 |
 | 文件中对实例名或类名出现 global 声明 | 拒绝对应候选，包含只读 global 的保守情况 |
+| 文件中 NamedExpr 写实例名或类名；类内 NamedExpr 写方法名 | 拒绝对应候选或移除方法，覆盖定义默认值中的绑定 |
+| 文件中出现星号导入 | 本文件不启用新增模块实例解析，无法证明名称未被替换 |
 | 文件中出现直接 exec/eval/globals/locals 调用 | 本文件不启用新增模块实例解析 |
 | `alias = instance`、`configure(instance)` 或返回实例本身 | 视为实例逃逸，拒绝候选 |
 | 对实例/类的直接属性或下标写入、删除；直接 setattr/delattr | 拒绝对应候选；不做别名追踪 |
@@ -188,21 +190,21 @@ python3 -B -m unittest discover -s tests -p 'test_module_instances.py' -v
 
 **文件：model.py、parser.py、index.py。责任：主代理。**
 
-- [ ] 添加第三节的 ModuleInstanceBinding 和带默认值字段，保留所有现有 dataclass 字段顺序。
-- [ ] 实现 _attribute_root；只剥离 ast.Attribute/ast.Subscript 的 value，末端不是 Name 则返回 None。
-- [ ] 实现 _eligible_instance_methods：采集直接 def/async def；核对唯一性、装饰器、self 参数和第二节方法失效条件。类体复杂情况采取保守拒绝，不引入类型注解推断。
-- [ ] 实现 _module_instance_bindings：先复用 _ModuleBindings 统计整文件模块绑定，再遍历 tree.body 的直接 Assign/AnnAssign。
-- [ ] ClassDef 必须是 tree.body 中的直接定义；其绑定条目必须只对应这个 ClassDef。实例绑定条目必须只对应当前 Name target。不借助一个临时 Symbol 模拟模块作用域。
-- [ ] 先计算文件级反射/global/属性改写/逃逸，再生成候选；不能生成后忽略后续重新赋值。
-- [ ] 使用 _end_position 保存构造结束位置；确认类定义在赋值之前。
-- [ ] 在 parse_python_file 返回 ParsedFile 时按关键字加入 module_instances；解析错误仍返回空默认表。
-- [ ] build_index 增加下面的传递语句，保留原 module_bindings：
+- [x] 添加第三节的 ModuleInstanceBinding 和带默认值字段，保留所有现有 dataclass 字段顺序。
+- [x] 实现 _attribute_root；只剥离 ast.Attribute/ast.Subscript 的 value，末端不是 Name 则返回 None。
+- [x] 实现 _eligible_instance_methods：采集直接 def/async def；核对唯一性、装饰器、self 参数和第二节方法失效条件。类体复杂情况采取保守拒绝，不引入类型注解推断。
+- [x] 实现 _module_instance_bindings：先复用 _ModuleBindings 统计整文件模块绑定，再遍历 tree.body 的直接 Assign/AnnAssign。
+- [x] ClassDef 必须是 tree.body 中的直接定义；其绑定条目必须只对应这个 ClassDef。实例绑定条目必须只对应当前 Name target。不借助一个临时 Symbol 模拟模块作用域。
+- [x] 先计算文件级反射/global/属性改写/逃逸，再生成候选；不能生成后忽略后续重新赋值。
+- [x] 使用 _end_position 保存构造结束位置；确认类定义在赋值之前。
+- [x] 在 parse_python_file 返回 ParsedFile 时按关键字加入 module_instances；解析错误仍返回空默认表。
+- [x] build_index 增加下面的传递语句，保留原 module_bindings：
 
 ```python
 index.module_instances[path] = parsed.module_instances
 ```
 
-- [ ] 独立检查附录 A 四个支持例会建立候选。构造来源、改写或逃逸类负例不得建立候选，或候选方法集中不得包含 send；parameter_shadow、nested_scope、function_defined_before_binding 可以保留候选，由 T3 的调用作用域与位置保护拒绝。图解析尚未接入时，正例的 RED 仍应保留。
+- [x] 独立检查附录 A 四个支持例会建立候选。构造来源、改写或逃逸类负例不得建立候选，或候选方法集中不得包含 send；parameter_shadow、nested_scope、function_defined_before_binding 可以保留候选，由 T3 的调用作用域与位置保护拒绝。图解析尚未接入时，正例的 RED 仍应保留。
 
 **退出条件：** 候选生成符合合同；没有改变局部实例和导入的解释规则。构造证据与调用者局部变量分离。
 
@@ -232,19 +234,19 @@ def _resolve_module_instance_call(call, caller, index):
     return target
 ```
 
-- [ ] 将上面逻辑加上第三节类型签名。
-- [ ] 保留现有 simple receiver/expression 检查与 local_bindings 分支的优先级。
-- [ ] 只替换现有 `receiver in index.module_bindings` 分支的返回值：
+- [x] 将上面逻辑加上第三节类型签名。
+- [x] 保留现有 simple receiver/expression 检查与 local_bindings 分支的优先级。
+- [x] 只替换现有 `receiver in index.module_bindings` 分支的返回值：
 
 ```python
 if receiver in index.module_bindings.get(caller.file, set()):
     return _resolve_module_instance_call(call, caller, index)
 ```
 
-- [ ] 不删除 module_bindings，不放宽 import alias/同名类/局部遮蔽保护，不改 _reexport_binding_for_call。
-- [ ] 新增边仍由 resolve_graph 创建原 CallEdge：caller、callee、调用行；不新增关系类型。
-- [ ] 运行 T1 单文件命令，取得真实 GREEN。
-- [ ] 运行既有图解析与 Click 语义相关检查，保护局部实例、导入遮蔽、重导出和注册关系：
+- [x] 不删除 module_bindings，不放宽 import alias/同名类/局部遮蔽保护，不改 _reexport_binding_for_call。
+- [x] 新增边仍由 resolve_graph 创建原 CallEdge：caller、callee、调用行；不新增关系类型。
+- [x] 运行 T1 单文件命令，取得真实 GREEN。
+- [x] 运行既有图解析与 Click 语义相关检查，保护局部实例、导入遮蔽、重导出和注册关系：
 
 ```sh
 python3 -B -m unittest discover -s tests -p 'test_graph.py' -v
@@ -436,6 +438,7 @@ NEGATIVES = {
     "deleted": CLASS + BIND + "del client\n" + CALL,
     "factory": CLASS + "client = factory()\n" + CALL,
     "imported_instance": CLASS + "from provider import client\n" + CALL,
+    "wildcard_import": CLASS + BIND + "from provider import *\n" + CALL,
     "class_import_collision": "from provider import Client\n" + CLASS + BIND + CALL,
     "class_rebound": CLASS + "Client = object\n" + BIND + CALL,
     "parameter_shadow": CLASS + BIND + "def run(client):\n    return client.send()\n",
@@ -521,3 +524,7 @@ T0–T8 全部完成时，必须同时满足：
 实施过程中以真实输出更新复选框和交付记录。计划代码与步骤是未来操作说明，不能据此宣称功能已经实现。
 
 编写复核：已检查 8 个 Python 文档代码块的语法、4 个支持样例和 24 个拒绝样例的源码语法，并核对支持样例调用均位于第 6 行。本次未执行文档中的测试、样本仓库代码、发布或部署步骤。
+
+T3 审查补充：星号导入不能提供精确名称绑定证据。新增 wildcard_import 负例取得 RED 后，新增白名单对此文件保守禁用；现为 4 个支持例、25 个拒绝例。原有解析行为保持，未扩展到跨模块类型推导。证据保存在本轮外部目录。
+
+T3 绑定复核补充：共享 _ModuleBindings 不进入定义默认值。新增 definition_default_rebinds_instance 与 method_default_rebinds_method 两个 RED 后，以 NamedExpr 写入禁用候选/方法，未修改共享 visitor 或局部构造算法。最终为 4 个支持例、27 个拒绝例；见 t3-definition-binding-red.txt、t3-final-green.txt。

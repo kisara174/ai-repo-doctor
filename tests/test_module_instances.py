@@ -28,6 +28,11 @@ NEGATIVES = {
     "deleted": CLASS + BIND + "del client\n" + CALL,
     "factory": CLASS + "client = factory()\n" + CALL,
     "imported_instance": CLASS + "from provider import client\n" + CALL,
+    "wildcard_import": CLASS + BIND + "from provider import *\n" + CALL,
+    "definition_default_rebinds_instance": (
+        CLASS + BIND
+        + "def reset(value=(client := None)):\n    return value\n" + CALL
+    ),
     "class_import_collision": "from provider import Client\n" + CLASS + BIND + CALL,
     "class_rebound": CLASS + "Client = object\n" + BIND + CALL,
     "parameter_shadow": CLASS + BIND + "def run(client):\n    return client.send()\n",
@@ -59,6 +64,11 @@ NEGATIVES = {
     "self_method_patch": (
         "class Client:\n    def __init__(self):\n        self.send = lambda: 2\n"
         "    def send(self):\n        return 1\n" + BIND + CALL
+    ),
+    "method_default_rebinds_method": (
+        "class Client:\n    def send(self):\n        return 1\n"
+        "    def configure(self, value=(send := replacement)):\n        return value\n"
+        + BIND + CALL
     ),
     "ambiguous_class": CLASS + CLASS + BIND + CALL,
 }

@@ -27,6 +27,7 @@ def build_index(root: Path) -> RepoIndex:
         index.registration_calls.extend(parsed.registration_calls)
         index.attribute_rebindings.extend(parsed.attribute_rebindings)
         index.module_bindings[path] = parsed.module_bindings
+        index.module_instances[path] = parsed.module_instances
         if parsed.error:
             index.parse_errors.append(parsed.error)
     for symbol_id, candidates in candidates_by_id.items():
