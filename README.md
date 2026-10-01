@@ -2,22 +2,22 @@
 
 为 Codex 提供本地 Python 仓库结构、上下文和证据的 CLI，并生成供人查看的离线结构关系图。Codex 负责问题判断、方案和代码修改；Repo Doctor 保存调查记录并校验来源。主要流程不需要 API Key。扫描和地图生成不会运行目标仓库代码；只有显式调用 `reproduce` 或 `verify -- <命令>` 才会运行检查。
 
-[v0.5.0 稳定版](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.5.0) 已交付 Codex 接入与离线关系图，并部署到这台 Mac；发行包和安装入口见下方。完整用法见 [Codex 与仓库地图](docs/CODEX_AND_MAP.md)，实际发布证据见 [交付记录](docs/delivery/2026-10-01-product-closure.md)。
+[v0.5.1 稳定版](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.5.1) 已交付 Codex 接入与离线关系图，并部署到这台 Mac；发行包和安装入口见下方。完整用法见 [Codex 与仓库地图](docs/CODEX_AND_MAP.md)，实际发布证据见 [v0.5.1 交付记录](docs/delivery/2026-10-02-v0.5.1-call-coverage.md)。
 
-当前目标、剩余工作和完成标准统一见[稳定基础版指导清单](docs/superpowers/plans/2026-10-01-basic-product-optimization-guide.md)，实际产物与使用确认见[收尾交付记录](docs/delivery/2026-10-01-product-closure.md)。此前的模型评估和阶段计划保留为历史。
+本轮目标、执行阶段与完成标准见[v0.5.1 T0–T8 计划](docs/superpowers/plans/2026-10-02-v0-5-1-module-instance-calls.md)。v0.5.0 的 R1–R5 及实际使用确认保留于[基础版收尾记录](docs/delivery/2026-10-01-product-closure.md)；此前模型评估和阶段计划保留为历史。
 
 ## 安装与快速开始
 
-需要 Python 3.11+；安装 Git 后扫描会遵循目标仓库的 ignore 规则。安装 v0.5.0 发行 wheel：
+需要 Python 3.11+；安装 Git 后扫描会遵循目标仓库的 ignore 规则。安装 v0.5.1 发行 wheel：
 
 ```bash
 python3 -m venv .venv
-.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.5.0/ai_repo_doctor-0.5.0-py3-none-any.whl'
+.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.5.1/ai_repo_doctor-0.5.1-py3-none-any.whl'
 export PATH="$PWD/.venv/bin:$PATH"
 repo-doctor --help
 ```
 
-本项目在这台 Mac 上已安装，普通终端直接使用 `repo-doctor`，无需激活环境或重新加载 Key。当前主目录也已同步到 0.5.0；从源码运行 `python3 -m repo_doctor` 时请确认所在 checkout 的 `pyproject.toml` 版本。
+本项目在这台 Mac 上已安装，普通终端直接使用 `repo-doctor`，无需激活环境或重新加载 Key。当前主目录也已同步到 0.5.1；从源码运行 `python3 -m repo_doctor` 时请确认所在 checkout 的 `pyproject.toml` 版本。
 
 如需保留历史版本 **v0.4.1**，请安装到另一个环境。该旧版本支持报告与检查记录，不含下方 0.5.0 的 `overview`、`map`、`skill` 和 `findings import` 新命令：
 
@@ -222,6 +222,7 @@ python3 -m repo_doctor impact /path/to/python-repo 'app/services/user.py::UserSe
 - `typing.overload` 声明在同名唯一具体实现下作为签名元数据保留，不会成为额外的可执行符号或普通调用目标；缺少唯一实现时继续标记为歧义。
 - Click 支持通过未遮蔽的显式 `click` 导入识别 `group`、`command` 装饰器，以及同一模块中唯一命令组的 `.command()` / `.group()` 注册关系（包括嵌套组）。这些注册边保留装饰器行号，但不计入普通调用统计或 impact 调用深度。
 - Git 仓库采用 Git 标准 ignore 规则；非 Git 目录使用常见生成目录排除规则，不解释 `.gitignore`。
+- v0.5.1 对同文件、唯一顶层直接构造的模块实例补充普通方法调用关系；context、impact、地图使用同一调用证据。要求类和方法来源明确、receiver 无局部遮蔽且未见改写/逃逸；星号导入、相关 global/反射和赋值表达式会保守拒绝。导入实例、工厂、继承和动态回调不由此规则解析；间接别名改写和不可见运行时替换仍在边界外。
 - 调用图只连向静态可定位的局部目标。对局部变量，只解析调用前唯一且无条件的简单本地类构造绑定（例如 `client = Client()`）；`with ... as client` 还要求对应的 `__enter__` / `__aenter__` 能直接证明返回 `self`、无需额外必填参数，并且类上存在匹配的 `__exit__` / `__aexit__`。复杂工厂、重绑定和多态分派仍可能无法解析。重名的条件定义会标为歧义；函数内部 import 的别名、动态 import、反射、猴子补丁、别名传播和外部包调用也可能无法解析。关联测试仅表示静态引用，不等于测试覆盖率。
 - 上下文预算以源码行数计算；片段被截断时会标记。每次命令重新扫描当前工作树，不保留旧索引。
 - 自动生成或应用补丁、自动运行目标仓库测试，以及跨多个目标符号的整体审查不在当前范围内。`reproduce` 和 `verify` 只执行用户明确输入的单条命令。
