@@ -1,8 +1,8 @@
 # Codex 调用与仓库结构关系图
 
-v0.5.0 本地候选版。人类查看结构关系图，详细调查由 Codex 使用工具处理。公开发布状态以 README 与 GitHub 标签为准。
+v0.5.0 使用说明。人类查看结构关系图，详细调查由 Codex 使用工具处理。正式发布和部署证据见收尾交付记录。
 
-当前执行入口为[稳定基础版指导清单](superpowers/plans/2026-10-01-basic-product-optimization-guide.md)，已完成产物和实际使用的待确认条件见[收尾交付记录](delivery/2026-10-01-product-closure.md)。
+当前执行入口为[稳定基础版指导清单](superpowers/plans/2026-10-01-basic-product-optimization-guide.md)，已完成产物和实际使用确认见[收尾交付记录](delivery/2026-10-01-product-closure.md)。
 
 ## 1. 一次安装
 

@@ -2,25 +2,24 @@
 
 为 Codex 提供本地 Python 仓库结构、上下文和证据的 CLI，并生成供人查看的离线结构关系图。Codex 负责问题判断、方案和代码修改；Repo Doctor 保存调查记录并校验来源。主要流程不需要 API Key。扫描和地图生成不会运行目标仓库代码；只有显式调用 `reproduce` 或 `verify -- <命令>` 才会运行检查。
 
-本分支准备 v0.5.0 本地候选版；公开稳定版仍为 v0.4.1。新能力请按下方源码构建方式安装，完整用法见 [Codex 与仓库地图](docs/CODEX_AND_MAP.md)。
+v0.5.0 包含 Codex 接入与离线关系图；发行包和安装入口见下方。完整用法见 [Codex 与仓库地图](docs/CODEX_AND_MAP.md)，实际发布证据见 [交付记录](docs/delivery/2026-10-01-product-closure.md)。
 
-当前目标、剩余工作和完成标准统一见[稳定基础版指导清单](docs/superpowers/plans/2026-10-01-basic-product-optimization-guide.md)，实际产物与待确认条件见[收尾交付记录](docs/delivery/2026-10-01-product-closure.md)。此前的模型评估和阶段计划保留为历史。
+当前目标、剩余工作和完成标准统一见[稳定基础版指导清单](docs/superpowers/plans/2026-10-01-basic-product-optimization-guide.md)，实际产物与使用确认见[收尾交付记录](docs/delivery/2026-10-01-product-closure.md)。此前的模型评估和阶段计划保留为历史。
 
 ## 安装与快速开始
 
-需要 Python 3.11+；安装 Git 后扫描会遵循目标仓库的 ignore 规则。以下安装 **0.5.0 候选版**，包含 Codex 接入和地图功能。在本分支的源码目录执行：
+需要 Python 3.11+；安装 Git 后扫描会遵循目标仓库的 ignore 规则。安装 v0.5.0 发行 wheel：
 
 ```bash
 python3 -m venv .venv
-python3 -m pip wheel --no-deps --wheel-dir dist .
-.venv/bin/python -m pip install dist/ai_repo_doctor-0.5.0-py3-none-any.whl
+.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.5.0/ai_repo_doctor-0.5.0-py3-none-any.whl'
 export PATH="$PWD/.venv/bin:$PATH"
 repo-doctor --help
 ```
 
 本项目在这台 Mac 上已安装，普通终端直接使用 `repo-doctor`，无需激活环境或重新加载 Key。当前主目录也已同步到 0.5.0；从源码运行 `python3 -m repo_doctor` 时请确认所在 checkout 的 `pyproject.toml` 版本。
 
-如需保留公开稳定版 **v0.4.1**，请安装到另一个环境。该旧版本支持报告与检查记录，不含下方 0.5.0 的 `overview`、`map`、`skill` 和 `findings import` 新命令：
+如需保留历史版本 **v0.4.1**，请安装到另一个环境。该旧版本支持报告与检查记录，不含下方 0.5.0 的 `overview`、`map`、`skill` 和 `findings import` 新命令：
 
 ```bash
 python3 -m venv .venv-v041
