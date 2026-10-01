@@ -4,6 +4,8 @@
 
 本分支准备 v0.5.0 本地候选版；公开稳定版仍为 v0.4.1。新能力请按下方源码构建方式安装，完整用法见 [Codex 与仓库地图](docs/CODEX_AND_MAP.md)。
 
+当前目标、剩余工作和完成标准统一见[稳定基础版指导清单](docs/superpowers/plans/2026-10-01-basic-product-optimization-guide.md)，实际产物与待确认条件见[收尾交付记录](docs/delivery/2026-10-01-product-closure.md)。此前的模型评估和阶段计划保留为历史。
+
 ## 安装与快速开始
 
 需要 Python 3.11+；安装 Git 后扫描会遵循目标仓库的 ignore 规则。以下安装 **0.5.0 候选版**，包含 Codex 接入和地图功能。在本分支的源码目录执行：

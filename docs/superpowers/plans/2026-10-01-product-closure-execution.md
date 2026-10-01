@@ -1,5 +1,7 @@
 # AI Repo Doctor 基础版产品收尾执行计划
 
+> **2026-10-01 执行入口调整：** 用户已授权按[稳定基础版指导清单](2026-10-01-basic-product-optimization-guide.md)继续执行。本文保留 C1–C4 实施细节与历史证据；C5 的实际使用和 C6 的正式交付对应新清单的剩余工作。当前状态以 R1–R5 为准，已完成任务不重复执行。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `executing-plans` task-by-task. 主代理负责设计、排错、风险和验收；仅将文中已锁定的机械步骤按 AGENTS 路由给有界执行器。每项完成后更新复选框和交付记录。
 
 **Goal:** 交付一个版本与入口一致、Codex 能按需调用、人能搜索查看和导出结构关系图的 Python 基础版，并明确每一条使用流程是否已闭环。
@@ -23,7 +25,9 @@
 
 完成画面：在主目录或普通终端使用一致版本；Codex 获取概览和带源码行的影响结果；人打开图后能找到目标目录、看局部关系、保存并重开 SVG；所有条件确认后整合发布。需要修复时，Codex 修改，Repo Doctor 记录明确选择的检查。
 
-## 工作位置与当前基线
+## 旧计划制定时的基线（历史）
+
+以下版本与分支是 C1 开始前的状态，当前工作位置、版本与剩余任务见新的指导清单。
 
 - 实施工作树：`/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor`。
 - 复用分支和 PR：`codex/codex-tools-repo-map`、GitHub PR #30。
@@ -109,11 +113,11 @@ python3 -B -m repo_doctor map /private/tmp/repo-doctor-closure-check/fixture --o
 
 **材料：** `~/.local/share/ai-repo-doctor/evaluations/2026-09-30-schedule/repo`，修订 `82a43db1b938d8fdf60103bd41f329e06c8d3651`。
 
-- [ ] 1. 核对修订和目标仓库未修改。用户问题固定为：“定时任务检查从哪里进入，`Scheduler.run_pending` 如何推进到实际任务执行，改动它可能影响哪些已解析调用？”
-- [ ] 2. 使用已安装 Skill 的顺序，运行 `overview --json`、`symbols --query run_pending --json`，从真实搜索结果选择类方法 ID，再运行 `context --max-lines 120 --json`、`impact --depth 2 --json`。
-- [ ] 3. 如预算不足，只为回答该问题补充已返回或实际源码中的 `_run_job`、`Job.run`，保留每段路径/行号、被省略内容、无法解析的边；不凭名称补画调用关系。
-- [ ] 4. 写中文结论：入口、执行链、已解析影响、动态回调/外部调用的边界。记录用了哪些命令和内容预算，不声称节省某比例 token、时间或发现新 bug。
-- [ ] 5. 用最终安装包生成自身、schedule 总览，以及指定 `Scheduler.run_pending` 的局部图。保存到 `~/.local/share/ai-repo-doctor/maps/2026-10-01-product-closure/` 下的新子目录。
+- [x] 1. 核对修订和目标仓库未修改。用户问题固定为：“定时任务检查从哪里进入，`Scheduler.run_pending` 如何推进到实际任务执行，改动它可能影响哪些已解析调用？”
+- [x] 2. 使用已安装 Skill 的顺序，运行 `overview --json`、`symbols --query run_pending --json`，从真实搜索结果选择类方法 ID，再运行 `context --max-lines 120 --json`、`impact --depth 2 --json`。
+- [x] 3. 如预算不足，只为回答该问题补充已返回或实际源码中的 `_run_job`、`Job.run`，保留每段路径/行号、被省略内容、无法解析的边；不凭名称补画调用关系。
+- [x] 4. 写中文结论：入口、执行链、已解析影响、动态回调/外部调用的边界。记录用了哪些命令和内容预算，不声称节省某比例 token、时间或发现新 bug。
+- [x] 5. 用最终安装包生成自身、schedule 总览，以及指定 `Scheduler.run_pending` 的局部图。保存到 `~/.local/share/ai-repo-doctor/maps/2026-10-01-product-closure/` 下的新子目录。
 
 **完成结果：** 一次真实结构问题有可追溯答案和给人阅读的地图。问题不涉及缺陷时无需生成 issue；原有受控发现/修复记录作为记录机制证据，不重复模型评估。
 
@@ -121,17 +125,17 @@ python3 -B -m repo_doctor map /private/tmp/repo-doctor-closure-check/fixture --o
 
 **Files:** `README.md`、`docs/CODEX_AND_MAP.md`、`docs/PRODUCT_GUIDE.md`、本计划及交付记录；Mac 外部安装和保存目录。Python 版本仍为 0.5.0。
 
-- [ ] 1. README 首先说明新功能对应的 0.5.0 候选安装方式；将旧稳定 0.4.1 安装单独标为旧版本，不让用户装旧版后使用新命令。
-- [ ] 2. Mac 已部署用户的入口写为 `repo-doctor`；不要求重新配置 Key 或手动激活环境。说明从源码执行时使用当前主目录，避免在旧 checkout 构建旧包。
-- [ ] 3. 在中立目录完成候选 wheel 构建/安装。新包保存于 `~/.local/share/ai-repo-doctor/releases/v0.5.0-closure-candidate/`；旧候选原样保留。核对版本、包内 Skill/HTML/JS/CSS、无运行依赖和 SHA256。
-- [ ] 4. 新建干净验证环境安装同一 wheel，确认 import 来自 site-packages；通过安装入口读取真实仓库并生成地图。已有 Skill 未变时只核对一致性，不能覆盖其他 Skill 或配置。
-- [ ] 5. 更新 Mac 安装说明和本轮部署记录；记录新 wheel 路径/哈希、源码修订、Skill 路径、最终地图与尚待确认条件。旧稳定部署记录保留。
-- [ ] 6. 功能代码冻结后运行一次 Python 全套回归；重跑 Node/实际打包页面检查只为确认同一包具有本轮修复。之后仅为具体失败追加检查。
+- [x] 1. README 首先说明新功能对应的 0.5.0 候选安装方式；将旧稳定 0.4.1 安装单独标为旧版本，不让用户装旧版后使用新命令。
+- [x] 2. Mac 已部署用户的入口写为 `repo-doctor`；不要求重新配置 Key 或手动激活环境。说明从源码执行时使用当前主目录，避免在旧 checkout 构建旧包。
+- [x] 3. 在中立目录完成候选 wheel 构建/安装。新包保存于 `~/.local/share/ai-repo-doctor/releases/v0.5.0-closure-candidate/`；旧候选原样保留。核对版本、包内 Skill/HTML/JS/CSS、无运行依赖和 SHA256。
+- [x] 4. 新建干净验证环境安装同一 wheel，确认 import 来自 site-packages；通过安装入口读取真实仓库并生成地图。已有 Skill 未变时只核对一致性，不能覆盖其他 Skill 或配置。
+- [x] 5. 更新 Mac 安装说明和本轮部署记录；记录新 wheel 路径/哈希、源码修订、Skill 路径、最终地图与尚待确认条件。旧稳定部署记录保留。
+- [x] 6. 功能代码冻结后运行一次 Python 全套回归；重跑 Node/实际打包页面检查只为确认同一包具有本轮修复。之后仅为具体失败追加检查。
 
 ## C5：完成人的地图使用与新会话调用
 
 - [ ] 1. 在允许的原生浏览器操作中打开最终 `map.html`，沿用户问题查看目录、选中路径和局部关系，保存当前 SVG，并重开下载文件。
-- [ ] 2. 浏览器限制仍存在时，将最终文件链接和具体操作一次性提供给用户，说明限制来源；等待其实际结果，同时推进不依赖该结果的 CI、文档和版本同步。不请求重复代码审阅。
+- [x] 2. 浏览器限制仍存在时，将最终文件链接和具体操作一次性提供给用户，说明限制来源；等待其实际结果，同时推进不依赖该结果的 CI、文档和版本同步。不请求重复代码审阅。
 - [ ] 3. 新 Codex 会话显式使用 `$repo-doctor` 完成同一结构问题；记是否按需调用工具。用户未明确要求新建聊天时不自行创建用户任务；提供可直接使用的简短提示。
 - [ ] 4. 分别记录“Skill 已加载”“当前会话能调用”“新会话完整流程”“隐式匹配”四种证据。隐式匹配不是必然条件，不能把当前会话的手动工具调用算作全新会话验证。
 
@@ -148,7 +152,9 @@ python3 -B -m repo_doctor map /private/tmp/repo-doctor-closure-check/fixture --o
 - [ ] 5. 下载/安装正式发行 wheel，核对资源与版本、打开已有报告，再同步主目录到正式提交；更新稳定版安装指令与交付状态。
 - [ ] 6. C5 外部条件未确认时：完成步骤 1–3 和发布准备；保留草稿 PR，不标稳定、不创建稳定标签。最终明确列出已完成与剩余条件，不能以“所有测试通过”代替闭环结论。
 
-## 有界执行器任务包：C2 的纯回归材料
+## 已执行的有界执行器任务包：C2 的纯回归材料
+
+以下任务包保留为历史。reveal 已实现，其 RED 合同只适用于修改前源码，后续不要重复派发。
 
 ### Objective
 
@@ -182,7 +188,7 @@ python3 -B -m repo_doctor map /private/tmp/repo-doctor-closure-check/fixture --o
 
 ## 执行状态与证据
 
-各 C 项复选框为唯一执行状态；最终结果同时汇总到 `docs/delivery/2026-10-01-product-closure.md`。新增真实问题先定位，只修复与目标流程有关的阻塞；已满足条件的部分不重复实施。
+C 项复选框记录本次收尾的已发生步骤；当前总状态以新指导清单 R1–R5 和 `docs/delivery/2026-10-01-product-closure.md` 为准。新增真实问题先定位，只修复与目标流程有关的阻塞；已满足条件的部分不重复实施。
 
 ### 2026-10-01 C1/C2 实施记录
 
@@ -190,3 +196,10 @@ python3 -B -m repo_doctor map /private/tmp/repo-doctor-closure-check/fixture --o
 - 主目录源码与安装入口 `overview` 结果相同，源码指纹 `21789fdc6f80213d110c3f98a4cc4ef7be8dd35fc6ce39d17b64126eea6da057`；源码版本 0.5.0，中立目录核对安装元数据为 0.5.0。
 - Luna Max 仅插入既定纯回归块；主代理检查实际 diff 并重新运行，得到预期 reveal 缺失断言。DOM 旧页面也失败于“Directory search must open the selected directory”。
 - 最小修复后纯投影与实际页面 DOM 均通过，包含 250 个根文件挤占预算、目录展开/高亮/定位、原有文件调用焦点与当前 SVG 序列化。RED/GREEN 输出保存于 `/private/tmp/repo-doctor-closure-check/`。
+
+### C3/C4 实施记录
+
+- 功能提交 `19dd92a`；代码冻结后 401 项 Python 回归一次通过。候选 wheel SHA256 `9f5491da5b76a75922803ec2b1baa770d122a049f6689884a0ff474a2a007129`；包资源及无运行依赖核对完成，同包在干净环境和 Mac 安装，实际打包页面 DOM/SVG 检查通过。
+- schedule 修订 `82a43db1b938d8fdf60103bd41f329e06c8d3651`，结构问题输出与三份地图已保存。基础上下文 28 行，补充 Job.run 与模块入口后 59 行，均未耗尽 120 行预算。操作前后仓库状态相同。
+- C5 已提供最终文件与明确步骤，等待用户实际结果；未绕过浏览器工具拒绝，未自行创建新会话。
+- GraphFlow 增量索引返回 144 个文件、1824 个符号、2901 个引用；随后诊断确认 root 为主目录，索引缓存非过期。
