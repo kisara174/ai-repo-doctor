@@ -10,7 +10,7 @@
 
 **Spec:** 本文第二、三节为本阶段设计与行为合同；依据已接受的“提高调用关系与改动影响分析实用性”方向。
 
-日期：2026-10-02。状态：**计划已编写，T0–T8 尚未执行。本次没有实施解析器、测试、部署或发布变更。**
+日期：2026-10-02。状态：**实施中：T0 基线已保存，T1 已取得预期 RED；T2–T8 待完成。**
 
 ## 一、基线与实际问题
 
@@ -151,13 +151,13 @@ def _resolve_module_instance_call(
 
 **责任：主代理。产物：外部 baseline.json、before-context.json、before-impact.json。**
 
-- [ ] 确认已加载 AGENTS、相关技能与 GraphFlow；核对主目录、工作树、默认分支和实际 HEAD。
-- [ ] 优先复用上述干净工作树。在执行时创建 `codex/v0-5-1-module-instance-calls` 分支；若同名分支已存在，先判断是否就是本任务，不能覆盖。
-- [ ] 保存四份用户文档哈希，参照 `~/.local/share/ai-repo-doctor/workspace-preservation/2026-10-01-product-closure/manifest.json`。
-- [ ] 将运行证据保存到新建的 `~/.local/share/ai-repo-doctor/evaluations/v0.5.1-module-instance-calls/`。目录已有内容时复用已确认的同任务记录，不覆盖历史。
-- [ ] 用当前安装入口只收集一次固定目标的 context 和 impact；记录 argv、退出码、源码修订、Git 状态和输出。已有可核对的同版原始输出可直接引用。
-- [ ] 确认第 854 行的包装调用尚未解析；若已出现，停止本修复路径，核对是否已有他人实现，不能重复添加。
-- [ ] 样本 Git 状态按实际保存；本计划不清理其 GraphFlow 未跟踪目录。
+- [x] 确认已加载 AGENTS、相关技能与 GraphFlow；核对主目录、工作树、默认分支和实际 HEAD。
+- [x] 优先复用上述干净工作树。在执行时创建 `codex/v0-5-1-module-instance-calls` 分支；若同名分支已存在，先判断是否就是本任务，不能覆盖。
+- [x] 保存四份用户文档哈希，参照 `~/.local/share/ai-repo-doctor/workspace-preservation/2026-10-01-product-closure/manifest.json`。
+- [x] 将运行证据保存到新建的 `~/.local/share/ai-repo-doctor/evaluations/v0.5.1-module-instance-calls/`。目录已有内容时复用已确认的同任务记录，不覆盖历史。
+- [x] 用当前安装入口只收集一次固定目标的 context 和 impact；记录 argv、退出码、源码修订、Git 状态和输出。已有可核对的同版原始输出可直接引用。
+- [x] 确认第 854 行的包装调用尚未解析；若已出现，停止本修复路径，核对是否已有他人实现，不能重复添加。
+- [x] 样本 Git 状态按实际保存；本计划不清理其 GraphFlow 未跟踪目录。
 
 命令：
 
@@ -172,11 +172,11 @@ def _resolve_module_instance_call(
 
 **文件：新建 `tests/test_module_instances.py`。责任：主代理；复制材料可按第六节有条件委派。**
 
-- [ ] 原样采用附录 A；所有输入只通过 build_index 静态解析，不导入或执行样例。
-- [ ] 运行下列单文件命令。预期四个支持子例缺少调用边，拒绝子例保持无边；保存真实输出。
-- [ ] 若拒绝子例已出现错误边，由主代理定位是否属于现有行为或本计划必要范围，不能修改断言让它通过。
-- [ ] 保存新边合同：`app.py::run → app.py::Client.send`，实际调用行 6。
-- [ ] 本阶段只提交测试材料和计划状态，不改解析器。
+- [x] 原样采用附录 A；所有输入只通过 build_index 静态解析，不导入或执行样例。
+- [x] 运行下列单文件命令。预期四个支持子例缺少调用边，拒绝子例保持无边；保存真实输出。
+- [x] 若拒绝子例已出现错误边，由主代理定位是否属于现有行为或本计划必要范围，不能修改断言让它通过。
+- [x] 保存新边合同：`app.py::run → app.py::Client.send`，实际调用行 6。
+- [x] 本阶段只提交测试材料和计划状态，不改解析器。
 
 ```sh
 python3 -B -m unittest discover -s tests -p 'test_module_instances.py' -v
