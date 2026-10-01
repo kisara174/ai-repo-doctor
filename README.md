@@ -2,7 +2,7 @@
 
 为 Codex 提供本地 Python 仓库结构、上下文和证据的 CLI，并生成供人查看的离线结构关系图。Codex 负责问题判断、方案和代码修改；Repo Doctor 保存调查记录并校验来源。主要流程不需要 API Key。扫描和地图生成不会运行目标仓库代码；只有显式调用 `reproduce` 或 `verify -- <命令>` 才会运行检查。
 
-v0.5.0 包含 Codex 接入与离线关系图；发行包和安装入口见下方。完整用法见 [Codex 与仓库地图](docs/CODEX_AND_MAP.md)，实际发布证据见 [交付记录](docs/delivery/2026-10-01-product-closure.md)。
+[v0.5.0 稳定版](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.5.0) 已交付 Codex 接入与离线关系图，并部署到这台 Mac；发行包和安装入口见下方。完整用法见 [Codex 与仓库地图](docs/CODEX_AND_MAP.md)，实际发布证据见 [交付记录](docs/delivery/2026-10-01-product-closure.md)。
 
 当前目标、剩余工作和完成标准统一见[稳定基础版指导清单](docs/superpowers/plans/2026-10-01-basic-product-optimization-guide.md)，实际产物与使用确认见[收尾交付记录](docs/delivery/2026-10-01-product-closure.md)。此前的模型评估和阶段计划保留为历史。
 

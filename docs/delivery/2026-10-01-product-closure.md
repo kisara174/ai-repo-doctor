@@ -4,16 +4,16 @@
 
 ## 1. 当前交付状态
 
-**0.5.0 收尾候选版已部署到 Mac。** 主目录与安装入口统一；目录搜索缺陷已修复；固定真实仓库的问题调查、HTML/SVG 生成、同一 wheel 的干净安装均已完成。公开稳定版仍为 0.4.1。用户已分别确认新会话完整 Skill 调用及原生 HTML/SVG 操作通过，当前执行正式发布；稳定交付以随后 R4/R5 记录为准。
+**v0.5.0 稳定基础版已公开发布并部署到 Mac，R1–R5 完成。** PR #30 正式合并源码为 `206e418bfa4b26e3aa1ad7663056b2c04da8640d`；发行 wheel、公开下载、干净安装、Mac 入口与 29 个运行文件已核对一致。用户已分别确认新会话 Skill 四步调用及原生 HTML/SVG 使用通过。四份用户原文与已有 Skill 保留，主要流程无需 API Key。
 
 | 环节 | 实际结果 |
 | --- | --- |
 | C1 主目录与版本 | 主目录分支 `codex/local-product-closure` 已同步；四份用户原文保留并按 SHA256 核对 |
 | C2 目录导航 | 纯投影与实际生成页面均取得 RED→GREEN，包含搜索展开、高亮、定位和大量文件下的目标保留 |
 | C3 真实用途 | 已用 schedule 回答定时检查到执行的源码路径，保存命令、JSON 与三份最终地图 |
-| C4 安装 | 同一候选 wheel 在干净环境及 Mac 安装；资源、版本和无运行依赖已核对 |
+| C4 安装 | 正式 wheel 在干净环境及 Mac 安装；29 个运行文件、版本和无运行依赖已核对 |
 | C5 人的使用 / 新会话 | 用户确认新会话四步调用，以及原生 HTML 目录导航、当前 SVG 导出重开均通过 |
-| C6 正式交付 | 实际使用门槛已齐，执行 PR #30 正式整合、构建、发布与安装 |
+| C6 正式交付 | PR #30 已合并，v0.5.0 正式构建、稳定发布、公开包下载核对、Mac 安装与交付完成 |
 
 当前产品的基本用途：让 Codex 先获取小而有来源的仓库概览，再按目标取源码、调用与影响证据；给人一个只展示结构和关系的离线地图。Codex 负责详细分析和修改。有明确发现时，工具可校验证据、保存 issue，并记录明确选择的复现与修复复查。结构问题本身无需制造 issue。
 
@@ -75,7 +75,7 @@ repo-doctor context REPO 'schedule/__init__.py::Scheduler.run_pending' \
 
 全部命令退出 0。命令参数、输出大小、原始 JSON、仓库前后状态保存在 `releases/v0.5.0-closure-candidate/usage/`。只记录实际预算与观察，不声称节省某比例时间或 token。
 
-## 4. 安装产物与地图
+## 4. 候选安装产物与地图（历史，正式包见第 9 节）
 
 - 功能及安装文档提交：`19dd92ae8bfb77d534761cfb916eb8dd8e83eaac`。
 - wheel：`~/.local/share/ai-repo-doctor/releases/v0.5.0-closure-candidate/ai_repo_doctor-0.5.0-py3-none-any.whl`。
@@ -116,11 +116,11 @@ repo-doctor context REPO 'schedule/__init__.py::Scheduler.run_pending' \
 
 当前总入口已统一至 R1–R5 指导清单；README、Codex 用法、产品指导书与旧执行计划指向同一份状态。文档提交 `3a75d2d` 的 Python 3.11–3.13 和地图 CI 全部通过；本轮没有生产代码、依赖或测试改动。
 
-主目录快进同步后，四份用户原文及指导清单初稿哈希保留。安装包与主目录 29 个运行资源字节一致，安装 CLI 与源码模块启动的 overview 输出一致，源码指纹为 `62acffe9211a9022e63b609226d3be0a1462cfb08066fb0a551767362c55b026`。当前仍安装同一功能提交 19dd92a 的候选 wheel；文档提交与构建源码分别记录。
+主目录快进同步后，四份用户原文及指导清单初稿哈希保留。安装包与主目录 29 个运行资源字节一致，安装 CLI 与源码模块启动的 overview 输出一致，源码指纹为 `62acffe9211a9022e63b609226d3be0a1462cfb08066fb0a551767362c55b026`。当时安装同一功能提交 19dd92a 的候选 wheel；现已更换为第 9 节的正式包，文档提交与构建源码分别记录。
 
 实际同步记录：`releases/v0.5.0-closure-candidate/closure-synchronization-3a75d2d.json`；最新 head/CI 记录见 `deployment-closure-candidate-0.5.0.json` 和 PR #30。GraphFlow root 已确认为主目录，索引缓存非过期。
 
-R1、R2 与 R3 已完成；两项实际使用分别由用户确认。继续 R4 稳定发布与 R5 最终交付，没有用测试通过代替人的实际操作结果。
+R1、R2 与 R3 已完成；两项实际使用分别由用户确认。R4 稳定发布与 R5 最终交付随后完成，见第 9 节；没有用测试通过代替人的实际操作结果。
 
 ## 7. R2-2 用户回传确认
 
@@ -133,3 +133,63 @@ R2-1 随后也收到用户确认，见下方记录。
 ## 8. R2-1 用户确认原生地图
 
 用户对最终 self/map.html 的原生打开、目录搜索展开/高亮/定位、当前 SVG 导出及下载文件重开回复“确认”。确认来源是用户反馈，未收到原始截图或 SVG 文件；未绕过浏览器工具限制。外部记录：`releases/v0.5.0-closure-candidate/r2-native-map-confirmation.json`。两项必需使用门槛均已通过，执行正式发布。
+
+## 9. R4/R5 稳定发布与使用交付
+
+| 项目 | 最终结果 |
+| --- | --- |
+| 稳定版本 | [v0.5.0](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.5.0)，非预览、非草稿 |
+| 正式源码 / 标签 | `206e418bfa4b26e3aa1ad7663056b2c04da8640d`，PR #30 合并至 `codex/repo-doctor-v1` |
+| 正式 wheel | `~/.local/share/ai-repo-doctor/releases/v0.5.0/ai_repo_doctor-0.5.0-py3-none-any.whl` |
+| wheel SHA256 | `38cdca72c0e33336053c38593ca5f1b47e73ee0f764aebea16d86871f5479a59`，公开下载核对一致 |
+| 发布门槛 | 合并提交的 Python 3.11、3.12、3.13 与离线地图 CI 全部通过 |
+| 干净安装 / Mac | 同一 wheel，无运行依赖；29 个运行文件匹配正式源码，overview 结果一致 |
+| 已有报告 | 固定 schedule case 重开成功，case.json 与 report.md 内容未改变 |
+| 用户环境 | 普通登录终端能找到 `~/.local/bin/repo-doctor`；已有 Skill 与四份原文保留 |
+| 正式收据 | `~/.local/share/ai-repo-doctor/deployment-v0.5.0.json`，包含源码、包、安装、公开下载和使用确认 |
+
+正式包从标签所指合并提交构建。之后的交付文档提交只补充已发生的结果；运行文件不变，标签不移动。旧候选包、旧稳定部署收据和本轮原始输出保留。
+
+### 安装或更新
+
+这台 Mac 已完成安装，普通终端直接使用 `repo-doctor`，不需要激活环境或重配 Key。其他机器需要 Python 3.11+：
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.5.0/ai_repo_doctor-0.5.0-py3-none-any.whl'
+.venv/bin/repo-doctor --help
+```
+
+已有环境更新时使用对应 Python 的 `-m pip install --upgrade` 安装同一 URL。这是 GitHub 发行 wheel；未声称已经发布到 PyPI。需要导出 Skill 时选择尚不存在的目录：
+
+```sh
+.venv/bin/repo-doctor skill export --out ~/.agents/skills/repo-doctor
+```
+
+这台 Mac 的 Skill 已安装，原样保留，无需重复导出。
+
+### 给 Codex 的可复制提示
+
+> 使用 $repo-doctor 分析 /绝对路径/你的Python仓库。先读取概览，搜索并选择真实符号 ID，再获取有界源码上下文与改动影响证据；详细解释放在对话中，区分已解析的静态关系、源码补充解释和未解析范围。生成离线结构关系图到一个尚不存在的输出目录，供人查看。只有出现具体发现时才保存来源明确的调查记录；本次只读分析，不运行或修改目标仓库代码。
+
+### 人的地图入口
+
+已生成地图位于 `~/.local/share/ai-repo-doctor/maps/2026-10-01-product-closure/`：
+
+- `self/map.html`：本项目交互地图；`self/structure.svg`：结构概览。
+- `schedule/map.html`：固定真实仓库交互地图；`schedule/structure.svg`：结构概览。
+- `schedule-run-pending/relations.svg`：Scheduler.run_pending 的一跳静态关系。
+
+地图保留功能提交 19dd92a 的快照来源；正式包的运行实现与其一致。查看新的仓库时执行 `repo-doctor map REPO --out NEW_MAP_DIRECTORY`，直接打开生成的 `map.html`，不用启动服务。需要当前视图时点击“导出当前 SVG”。
+
+### 真实问题与必要调查记录
+
+第 3 节说明 schedule 从 `run_pending` 筛选到期任务、排序、调用 `_run_job`，再由 `Job.run` 执行回调并安排下一次执行。该解释有源码路径与行号支持，同时区分工具已解析边和源码可见的动态/隐式关系；不声称运行时全覆盖。
+
+普通结构问答不需创建 issue。有具体发现时按 [Codex 用法](../CODEX_AND_MAP.md#4-保存-codex-的发现)保存 context 快照并导入 findings；Codex 判断后记录 actor/status，只有明确授权的 reproduce/verify 命令才运行检查，再重开 report 查看当前状态。
+
+### 边界与本轮结束
+
+静态关系不完整；未解析调用不是 bug 数量。地图是快照，源码改变后重新生成。上下文受预算约束；引用校验不代表缺陷成立。Skill 显式调用是本版已验证入口，隐式匹配不保证触发。
+
+R1–R5 均已完成，基础产品闭合。本轮停止扩展；后续优化仅按具体使用问题作为独立任务启动。

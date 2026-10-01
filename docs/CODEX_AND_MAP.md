@@ -1,19 +1,18 @@
 # Codex 调用与仓库结构关系图
 
-v0.5.0 使用说明。人类查看结构关系图，详细调查由 Codex 使用工具处理。正式发布和部署证据见收尾交付记录。
+v0.5.0 稳定版使用说明。人类查看结构关系图，详细调查由 Codex 使用工具处理。正式发布和部署证据见收尾交付记录。
 
 当前执行入口为[稳定基础版指导清单](superpowers/plans/2026-10-01-basic-product-optimization-guide.md)，已完成产物和实际使用确认见[收尾交付记录](delivery/2026-10-01-product-closure.md)。
 
 ## 1. 一次安装
 
-这台 Mac 已部署 0.5.0 候选版，普通终端直接执行 `repo-doctor`；不需要手动激活环境或重新加载 Key。主目录源码同步至相同版本。已有 Skill 原样保留；用户已确认新会话显式调用的四步流程全部成功。
+这台 Mac 已部署 0.5.0 稳定版，普通终端直接执行 `repo-doctor`；不需要手动激活环境或重新加载 Key。主目录源码同步至相同版本。已有 Skill 原样保留；用户已确认新会话显式调用的四步流程全部成功。
 
-在项目源码目录构建 wheel，再安装到你使用的 Python 3.11+ 环境：
+其他机器可直接将公开发行 wheel 安装到 Python 3.11+ 环境：
 
 ```sh
 python3 -m venv .venv
-python3 -m pip wheel --no-deps --wheel-dir dist .
-.venv/bin/python -m pip install dist/ai_repo_doctor-0.5.0-py3-none-any.whl
+.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.5.0/ai_repo_doctor-0.5.0-py3-none-any.whl'
 export PATH="$PWD/.venv/bin:$PATH"
 repo-doctor skill export --out ~/.agents/skills/repo-doctor
 ```
