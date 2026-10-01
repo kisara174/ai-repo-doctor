@@ -21,6 +21,14 @@ class LocalConstructor:
 
 
 @dataclass(frozen=True, slots=True)
+class ModuleInstanceBinding:
+    class_name: str
+    line: int
+    column: int
+    methods: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class DecoratorRef:
     expression: str
     line: int
@@ -120,6 +128,7 @@ class ParsedFile:
     error: ParseError | None = None
     registration_calls: list[CommandRegistrationCall] = field(default_factory=list)
     attribute_rebindings: list[AttributeRebinding] = field(default_factory=list)
+    module_instances: dict[str, ModuleInstanceBinding] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,3 +182,4 @@ class RepoIndex:
     registration_calls: list[CommandRegistrationCall] = field(default_factory=list)
     attribute_rebindings: list[AttributeRebinding] = field(default_factory=list)
     import_cycles: list[list[str]] = field(default_factory=list)
+    module_instances: dict[str, dict[str, ModuleInstanceBinding]] = field(default_factory=dict)

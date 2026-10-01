@@ -12,6 +12,7 @@ from .model import (
     FileRecord,
     ImportRef,
     LocalConstructor,
+    ModuleInstanceBinding,
     OverloadSignature,
     ParsedFile,
     ParseError,
@@ -487,6 +488,120 @@ class _ModuleBindings(ast.NodeVisitor):
         self.generic_visit(node)
 
 
+def _attribute_root(node: ast.AST) -> str | None:
+    while isinstance(node, (ast.Attribute, ast.Subscript)):
+        node = node.value
+    return node.id if isinstance(node, ast.Name) else None
+
+
+def _eligible_instance_methods(node: ast.ClassDef) -> tuple[str, ...]:
+    """Keep unique ordinary methods whose dispatch is not visibly replaced."""
+    if node.decorator_list or node.bases or node.keywords:
+        return ()
+    bindings = _ModuleBindings()
+    for statement in node.body:
+        bindings.visit(statement)
+    custom_dispatch = {
+        "__new__", "__getattr__", "__getattribute__", "__setattr__", "__delattr__"
+    }
+    if custom_dispatch.intersection(bindings.bindings):
+        return ()
+    methods = set()
+    for statement in node.body:
+        if not isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        args = (*statement.args.posonlyargs, *statement.args.args)
+        if (
+            not statement.decorator_list
+            and args and args[0].arg == "self"
+            and bindings.bindings[statement.name] == [(id(statement), None)]
+        ):
+            methods.add(statement.name)
+    for child in ast.walk(node):
+        if isinstance(child, ast.NamedExpr) and isinstance(child.target, ast.Name):
+            methods.discard(child.target.id)
+        if isinstance(child, ast.Attribute) and _attribute_root(child) == "self":
+            if child.attr in {"__dict__", "__class__"}:
+                return ()
+            if isinstance(child.ctx, (ast.Store, ast.Del)):
+                methods.discard(child.attr)
+        if (
+            isinstance(child, ast.Call)
+            and isinstance(child.func, ast.Name)
+            and child.func.id in {"setattr", "delattr"}
+            and child.args and _attribute_root(child.args[0]) == "self"
+        ):
+            return ()
+    return tuple(sorted(methods))
+
+
+def _module_instance_bindings(tree: ast.Module) -> dict[str, ModuleInstanceBinding]:
+    """Collect direct same-file constructions, rejecting visible uncertainty."""
+    bindings = _ModuleBindings()
+    bindings.visit(tree)
+    nodes = list(ast.walk(tree))
+    parents = {id(child): parent for parent in nodes for child in ast.iter_child_nodes(parent)}
+    invalid_names: set[str] = set()
+    for child in nodes:
+        if isinstance(child, ast.ImportFrom) and any(alias.name == "*" for alias in child.names):
+            # A wildcard may replace either the class or instance name.
+            return {}
+        if isinstance(child, ast.Global):
+            invalid_names.update(child.names)
+        if isinstance(child, ast.NamedExpr) and isinstance(child.target, ast.Name):
+            invalid_names.add(child.target.id)
+        if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
+            if child.func.id in {"exec", "eval", "globals", "locals"}:
+                return {}
+            if child.func.id in {"setattr", "delattr"} and child.args:
+                root = _attribute_root(child.args[0])
+                if root is not None:
+                    invalid_names.add(root)
+        if isinstance(child, (ast.Attribute, ast.Subscript)) and isinstance(child.ctx, (ast.Store, ast.Del)):
+            root = _attribute_root(child)
+            if root is not None:
+                invalid_names.add(root)
+    classes = {
+        child.name: child for child in tree.body
+        if isinstance(child, ast.ClassDef)
+        and bindings.bindings[child.name] == [(id(child), None)]
+        and child.name not in invalid_names
+    }
+    candidates = {}
+    for statement in tree.body:
+        if isinstance(statement, ast.Assign) and len(statement.targets) == 1:
+            target = statement.targets[0]
+        elif isinstance(statement, ast.AnnAssign) and statement.value is not None:
+            target = statement.target
+        else:
+            continue
+        value = statement.value
+        if (
+            not isinstance(target, ast.Name)
+            or not isinstance(value, ast.Call) or not isinstance(value.func, ast.Name)
+            or target.id in invalid_names
+            or bindings.bindings[target.id] != [(id(target), None)]
+        ):
+            continue
+        cls = classes.get(value.func.id)
+        if cls is None or _end_position(cls) >= (statement.lineno, statement.col_offset):
+            continue
+        methods = _eligible_instance_methods(cls)
+        if methods:
+            line, column = _end_position(statement)
+            candidates[target.id] = ModuleInstanceBinding(cls.name, line, column, methods)
+    escaped = set()
+    for child in nodes:
+        if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load) and child.id in candidates:
+            parent = parents.get(id(child))
+            if (
+                not isinstance(parent, ast.Attribute) or parent.value is not child
+                or parent.attr in {"__dict__", "__class__"}
+            ):
+                escaped.add(child.id)
+    return {name: binding for name, binding in candidates.items() if name not in escaped}
+
+
 def _overload_aliases(
     tree: ast.Module, module_import_ids: set[int]
 ) -> tuple[dict[str, str], dict[str, str]]:
@@ -848,4 +963,5 @@ def parse_python_file(
         extractor.module_bindings,
         registration_calls=extractor.registration_calls,
         attribute_rebindings=extractor.attribute_rebindings,
+        module_instances=_module_instance_bindings(tree),
     )
