@@ -10,7 +10,7 @@
 
 **Spec:** 本文第二、三节为本阶段设计与行为合同；依据已接受的“提高调用关系与改动影响分析实用性”方向。
 
-日期：2026-10-02。状态：**实施中：T0–T3 已完成，T4–T8 待完成。**
+日期：2026-10-02。状态：**实施中：T0–T5 已完成，T6–T8 待完成。**
 
 ## 一、基线与实际问题
 
@@ -266,14 +266,14 @@ def dynamic(obj):
     return obj.send()
 ```
 
-- [ ] 使用 build_context(index, "app.py::Client.send")，断言 call_evidence 有 run→Client.send，file=app.py、line=6。
-- [ ] 使用 build_impact(index, "app.py::Client.send", depth=2)，断言 run 距离 1，call_path_evidence 指向 app.py:6。
-- [ ] 通过既有 cli.main 的 map 入口生成到临时新目录，参数为 `--symbol app.py::Client.send --depth 1 --json`。
-- [ ] 读取 map.json，断言 call edge 的 source 为 `symbol:app.py::run`、target 为 `symbol:app.py::Client.send`、evidence 为 `[{"file": "app.py", "line": 6}]`；局部视图含两端节点。
-- [ ] 断言动态 obj.send 没有指向 Client.send 的边；coverage.unresolved_calls 保留 1。
-- [ ] 生成的 map.html、structure.svg、relations.svg、map.json 均存在；用 ElementTree 解析 SVG。沿用现有渲染格式，不改 UI。
-- [ ] 若下游漏边，先确认它们实际消费的 index.call_edges；主代理只修复已证明的传递问题，保持 schema 和 budgets。
-- [ ] 运行新输出测试及相关既有检查：
+- [x] 使用 build_context(index, "app.py::Client.send")，断言 call_evidence 有 run→Client.send，file=app.py、line=6。
+- [x] 使用 build_impact(index, "app.py::Client.send", depth=2)，断言 run 距离 1，call_path_evidence 指向 app.py:6。
+- [x] 通过既有 cli.main 的 map 入口生成到临时新目录，参数为 `--symbol app.py::Client.send --depth 1 --json`。
+- [x] 读取 map.json，断言 call edge 的 source 为 `symbol:app.py::run`、target 为 `symbol:app.py::Client.send`、evidence 为 `[{"file": "app.py", "line": 6}]`；局部视图含两端节点。
+- [x] 断言动态 obj.send 没有指向 Client.send 的边；coverage.unresolved_calls 保留 1。
+- [x] 生成的 map.html、structure.svg、relations.svg、map.json 均存在；用 ElementTree 解析 SVG。沿用现有渲染格式，不改 UI。
+- [x] 若下游漏边，先确认它们实际消费的 index.call_edges；主代理只修复已证明的传递问题，保持 schema 和 budgets。
+- [x] 运行新输出测试及相关既有检查：
 
 ```sh
 python3 -B -m unittest discover -s tests -p 'test_module_instance_outputs.py' -v
@@ -287,15 +287,15 @@ python3 -B -m unittest discover -s tests -p 'test_repo_map.py' -v
 
 **允许范围：样本只读；新证据和地图目录。责任：主代理。**
 
-- [ ] 核对固定修订与 T0 保存的状态；从工作树源码入口执行一次 after context 和 impact，不误用仍为 0.5.0 的已安装 CLI。
-- [ ] 必须出现 `schedule/__init__.py::run_pending → schedule/__init__.py::Scheduler.run_pending`，调用证据第 854 行。
-- [ ] 保留第 101 行 run_pending→_run_job 的旧边和已有直接测试调用者。
-- [ ] impact 的公共包装入口距离为 1；第二层只按实际解析结果说明，不规定新增调用者总数。
-- [ ] 对比所有新增 call_edges，逐条审查来源，不能只看总数提高。其他 Scheduler 公共包装方法如符合相同合同，可形成新边。
-- [ ] 不把 Job.should_run、__lt__、job.run() 参数对象或 self.job_func() 当作本次新增规则已解析的完整执行链。
-- [ ] 生成针对 Scheduler.run_pending 的新局部地图到本轮输出目录，不覆盖 0.5.0 地图。
-- [ ] 保存中文前后对照：以前需手工补充的公共入口，现在可由 impact/context/map 直接提供；注明调用、预算和静态边界。
-- [ ] 核对样本 Git 状态与 T0 一致、已跟踪文件未变。记录缓存目录原状，不清理。
+- [x] 核对固定修订与 T0 保存的状态；从工作树源码入口执行一次 after context 和 impact，不误用仍为 0.5.0 的已安装 CLI。
+- [x] 必须出现 `schedule/__init__.py::run_pending → schedule/__init__.py::Scheduler.run_pending`，调用证据第 854 行。
+- [x] 保留第 101 行 run_pending→_run_job 的旧边和已有直接测试调用者。
+- [x] impact 的公共包装入口距离为 1；第二层只按实际解析结果说明，不规定新增调用者总数。
+- [x] 对比所有新增 call_edges，逐条审查来源，不能只看总数提高。其他 Scheduler 公共包装方法如符合相同合同，可形成新边。
+- [x] 不把 Job.should_run、__lt__、job.run() 参数对象或 self.job_func() 当作本次新增规则已解析的完整执行链。
+- [x] 生成针对 Scheduler.run_pending 的新局部地图到本轮输出目录，不覆盖 0.5.0 地图。
+- [x] 保存中文前后对照：以前需手工补充的公共入口，现在可由 impact/context/map 直接提供；注明调用、预算和静态边界。
+- [x] 核对样本 Git 状态与 T0 一致、已跟踪文件未变。记录缓存目录原状，不清理。
 
 源码入口命令（cwd 为功能工作树）：
 
@@ -310,19 +310,19 @@ python3 -B -m repo_doctor impact /Users/kisara/.local/share/ai-repo-doctor/evalu
 
 **文件：pyproject.toml、本文及新交付记录。责任：主代理。**
 
-- [ ] 确认 T1–T5 通过；将版本改为 0.5.1，依赖与 Python 下限不变。
-- [ ] 冻结功能代码后，按现有发布门槛运行一次全套离线回归：
+- [x] 确认 T1–T5 通过；将版本改为 0.5.1，依赖与 Python 下限不变。
+- [x] 冻结功能代码后，按现有发布门槛运行一次全套离线回归：
 
 ```sh
 python3 -B -m unittest discover -s tests -q
 git diff --check
 ```
 
-- [ ] 审查实际 diff：必须没有下游 UI、Key、依赖和无关解析器重构。确认旧公开 schema/命令参数兼容。
-- [ ] 新交付记录写实际命令、退出码、源码提交、新增边审查和边界；不能提前宣称正式发行。
+- [x] 审查实际 diff：必须没有下游 UI、Key、依赖和无关解析器重构。确认旧公开 schema/命令参数兼容。
+- [x] 新交付记录写实际命令、退出码、源码提交、新增边审查和边界；不能提前宣称正式发行。
 - [ ] 提交并推送功能分支，创建到实际默认分支 `codex/repo-doctor-v1` 的 PR；创建后附加到当前任务。
 - [ ] 核对当前 PR head 的 Python 3.11–3.13 与地图 CI，全通过才整合。
-- [ ] 不因为说明文字再重复本地全套测试。发现具体失败时运行对应检查。
+- [x] 不因为说明文字再重复本地全套测试。发现具体失败时运行对应检查。
 
 **退出条件：** 提交可审查，代码冻结结果和当前 head CI 均通过。主代理完成审查，不委派 Luna 作接受判断。
 
