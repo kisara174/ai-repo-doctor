@@ -9,3 +9,7 @@ root.mkdir(parents=True)
 (root / 'a.py').write_text('def target():\n    return 1\n\nclass Box:\n    def go(self):\n        return target()\n', encoding='utf-8')
 (root / 'b.py').write_text('from a import target\n\ndef run():\n    return target()\n', encoding='utf-8')
 (root / 'test_a.py').write_text('from a import target\ndef test_it(): return target()\n', encoding='utf-8')
+for directory in ('pkg/deep', 'other'):
+    folder = root / directory
+    folder.mkdir(parents=True)
+    (folder / 'README.md').write_text('Structure navigation fixture.\n', encoding='utf-8')

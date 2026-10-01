@@ -37,4 +37,44 @@ assert.deepEqual(ids(fileFocus),['file:a.py','file:b.py'], 'Selecting a file mus
 assert.deepEqual(Array.from(fileFocus.edges,e=>e.id),['file-call1'], 'File focus must retain the aggregated call edge');
 const symbolFocus=scope.RepoMap.project(data,{mode:'relations',tests:false,kinds:['call'],target:'symbol:a.py::C.run',depth:1});
 assert.deepEqual(Array.from(symbolFocus.edges,e=>e.id),['call1'], 'Symbol focus must retain the actual symbol call');
+assert.equal(typeof scope.RepoMap.reveal, 'function', 'Directory search must expose the reveal operation');
+data.nodes.push(
+  {id:'dir:pkg',kind:'directory',file:'pkg',parent:'dir:.',is_test:false},
+  {id:'dir:pkg/deep',kind:'directory',file:'pkg/deep',parent:'dir:pkg',is_test:false},
+  {id:'file:pkg/deep/README.md',kind:'file',file:'pkg/deep/README.md',parent:'dir:pkg/deep',is_test:false,python:false},
+  {id:'dir:other',kind:'directory',file:'other',parent:'dir:.',is_test:false},
+  {id:'file:other/README.md',kind:'file',file:'other/README.md',parent:'dir:other',is_test:false,python:false},
+);
+data.edges.push(
+  {id:'c4',kind:'contains',source:'dir:.',target:'dir:pkg'},
+  {id:'c5',kind:'contains',source:'dir:pkg',target:'dir:pkg/deep'},
+  {id:'c6',kind:'contains',source:'dir:pkg/deep',target:'file:pkg/deep/README.md'},
+  {id:'c7',kind:'contains',source:'dir:.',target:'dir:other'},
+  {id:'c8',kind:'contains',source:'dir:other',target:'file:other/README.md'},
+);
+const revealed=scope.RepoMap.reveal(data,{
+  mode:'relations',target:'symbol:a.py::C.run',tests:false,kinds:[],
+  closed:['dir:pkg','dir:pkg/deep'],expanded:['file:a.py'],
+},'dir:pkg/deep');
+assert.equal(revealed.mode,'structure');
+assert.equal(revealed.target,null);
+assert.equal(revealed.selected,'dir:pkg/deep');
+assert.deepEqual(Array.from(revealed.expanded),[],'Directory search must collapse unrelated symbols');
+assert.ok(revealed.closed.includes('dir:other'),'Unrelated directory must stay closed');
+assert.ok(!revealed.closed.includes('dir:pkg')&&!revealed.closed.includes('dir:pkg/deep'),'Selected directory and ancestors must open');
+const revealedView=scope.RepoMap.project(data,revealed);
+assert.ok(ids(revealedView).includes('dir:pkg/deep'),'Selected directory must remain visible');
+assert.ok(ids(revealedView).includes('file:pkg/deep/README.md'),'Selected directory children must be visible');
+assert.ok(!ids(revealedView).includes('file:other/README.md'),'Unrelated directory children must remain hidden');
+for(let i=0;i<250;i++) data.nodes.push({
+  id:'file:000-'+String(i).padStart(3,'0')+'.md',kind:'file',
+  file:'000-'+String(i).padStart(3,'0')+'.md',parent:'dir:.',is_test:false,python:false,
+});
+const crowded=scope.RepoMap.project(data,revealed);
+assert.ok(crowded.nodes.length<=200,'Directory reveal must respect the existing node cap');
+for(const required of ['dir:.','dir:pkg','dir:pkg/deep','file:pkg/deep/README.md']) {
+  assert.ok(ids(crowded).includes(required),'Directory search must retain '+required+' despite many earlier siblings');
+}
+const crowdedIds=new Set(ids(crowded));
+assert.ok(crowded.edges.every(edge=>crowdedIds.has(edge.source)&&crowdedIds.has(edge.target)),'Capped views must not contain dangling edges');
 console.log('Map viewer: collapsed descendants, hierarchy order, test filtering, and file/symbol call focus passed');

@@ -4,11 +4,15 @@ v0.5.0 本地候选版。人类查看结构关系图，详细调查由 Codex 使
 
 ## 1. 一次安装
 
+这台 Mac 已部署 0.5.0 候选版，普通终端直接执行 `repo-doctor`；不需要手动激活环境或重新加载 Key。主目录源码同步至相同版本。已有 Skill 原样保留，新会话显式调用的完整流程仍需实际确认。
+
 在项目源码目录构建 wheel，再安装到你使用的 Python 3.11+ 环境：
 
 ```sh
+python3 -m venv .venv
 python3 -m pip wheel --no-deps --wheel-dir dist .
-python3 -m pip install dist/ai_repo_doctor-0.5.0-py3-none-any.whl
+.venv/bin/python -m pip install dist/ai_repo_doctor-0.5.0-py3-none-any.whl
+export PATH="$PWD/.venv/bin:$PATH"
 repo-doctor skill export --out ~/.agents/skills/repo-doctor
 ```
 
@@ -49,7 +53,7 @@ repo-doctor map REPO --out NEW_FOCUSED_MAP --symbol SYMBOL --depth 1
 | `relations.svg` | 默认文件关系或指定符号的局部关系 |
 | `map.json` | 同一数据源，供 Codex 或其他工具继续处理 |
 
-直接打开 HTML。默认先显示可展开的结构总览；页面支持搜索、目录/文件/类展开、测试文件和关系类型筛选、邻域深度、缩放、拖动或滚轮平移、当前视图 SVG 导出。文件级概览汇总跨文件关系，点击文件可聚焦相邻文件；集中在一个文件的项目可搜索函数或生成指定符号图，查看文件内部的关系。
+直接打开 HTML。默认先显示可展开的结构总览；页面支持搜索、目录/文件/类展开、测试文件和关系类型筛选、邻域深度、缩放、拖动或滚轮平移、当前视图 SVG 导出。搜索目录会展开目标及祖先、显示其直接子项并高亮定位；无关目录保持收起，即使有大量靠前的文件，也优先保留目标路径。文件级概览汇总跨文件关系，点击文件可聚焦相邻文件；集中在一个文件的项目可搜索函数或生成指定符号图，查看文件内部的关系。
 
 箭头从调用者、导入者或注册来源指向目标。目录包含、导入、调用、重导出和注册分开标识。图只反映已解析的静态 Python 关系，未解析调用和解析失败不等于 bug。默认隐藏测试，单视图最多 200 个节点、500 条边；图中明确显示未显示数量。仓库中的其他文件只呈现路径元数据，默认不嵌入源码内容。
 

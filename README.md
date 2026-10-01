@@ -6,19 +6,23 @@
 
 ## 安装与快速开始
 
-需要 Python 3.11+；安装 Git 后扫描会遵循目标仓库的 ignore 规则。安装 `v0.4.1`：
+需要 Python 3.11+；安装 Git 后扫描会遵循目标仓库的 ignore 规则。以下安装 **0.5.0 候选版**，包含 Codex 接入和地图功能。在本分支的源码目录执行：
 
 ```bash
 python3 -m venv .venv
-.venv/bin/python -m pip install 'git+https://github.com/kisara174/ai-repo-doctor.git@v0.4.1'
-.venv/bin/repo-doctor --help
-```
-
-也可以从源码构建并安装 wheel：
-
-```bash
 python3 -m pip wheel --no-deps --wheel-dir dist .
 .venv/bin/python -m pip install dist/ai_repo_doctor-0.5.0-py3-none-any.whl
+export PATH="$PWD/.venv/bin:$PATH"
+repo-doctor --help
+```
+
+本项目在这台 Mac 上已安装，普通终端直接使用 `repo-doctor`，无需激活环境或重新加载 Key。当前主目录也已同步到 0.5.0；从源码运行 `python3 -m repo_doctor` 时请确认所在 checkout 的 `pyproject.toml` 版本。
+
+如需保留公开稳定版 **v0.4.1**，请安装到另一个环境。该旧版本支持报告与检查记录，不含下方 0.5.0 的 `overview`、`map`、`skill` 和 `findings import` 新命令：
+
+```bash
+python3 -m venv .venv-v041
+.venv-v041/bin/python -m pip install 'git+https://github.com/kisara174/ai-repo-doctor.git@v0.4.1'
 ```
 
 ### 让 Codex 调用，并查看项目结构

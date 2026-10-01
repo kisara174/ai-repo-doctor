@@ -42,16 +42,16 @@
 
 **范围：** 主目录 Git 分支；四份冲突文档的备份；外部保存目录 `~/.local/share/ai-repo-doctor/workspace-preservation/2026-10-01-product-closure/`。
 
-- [ ] 1. 提交本执行计划到复用的功能分支。检查主目录无已跟踪文件修改；若发现修改，先判断来源，不覆盖。
-- [ ] 2. 用 `git ls-files --others --exclude-standard -z` 与 `git ls-tree -r --name-only -z codex/codex-tools-repo-map` 求交集。当前交集为以下四份文档：
+- [x] 1. 提交本执行计划到复用的功能分支。检查主目录无已跟踪文件修改；若发现修改，先判断来源，不覆盖。
+- [x] 2. 用 `git ls-files --others --exclude-standard -z` 与 `git ls-tree -r --name-only -z codex/codex-tools-repo-map` 求交集。当前交集为以下四份文档：
   - `docs/superpowers/plans/2026-09-24-post-v3-execution.md`
   - `docs/superpowers/plans/2026-09-24-post-v3-handoff.md`
   - `docs/superpowers/plans/2026-09-24-repo-doctor-v3.md`
   - `docs/superpowers/specs/2026-09-24-repo-doctor-v3-design.md`
-- [ ] 3. 为上述文件保存路径、字节数、SHA256、旧分支与旧 HEAD 的 `manifest.json`，将文件移动到外部保存目录的 `files/<相对路径>`；目标必须不存在。逐个核对哈希。任何失败停止切换并恢复已移动文件。
-- [ ] 4. 主目录执行 `git switch -c codex/local-product-closure codex/codex-tools-repo-map`。不要切换到已被另一工作树占用的同名分支，不使用强制选项。
-- [ ] 5. 从备份将四份原文复制回原位置，保留其内容；与新分支不同的内容作为用户本地修改保留，不加入本轮功能提交。`.graphflow-cache` 和 `graphflow-out` 不移动、不清理。
-- [ ] 6. 核对每份原文与备份的 SHA256 相等；在主目录运行 `python3 -B -m repo_doctor overview . --json`，再通过安装环境的 console script 读取同一仓库。二者应成功并具有相同源码指纹；`pyproject.toml` 和安装元数据均为 0.5.0。
+- [x] 3. 为上述文件保存路径、字节数、SHA256、旧分支与旧 HEAD 的 `manifest.json`，将文件移动到外部保存目录的 `files/<相对路径>`；目标必须不存在。逐个核对哈希。任何失败停止切换并恢复已移动文件。
+- [x] 4. 主目录执行 `git switch -c codex/local-product-closure codex/codex-tools-repo-map`。不要切换到已被另一工作树占用的同名分支，不使用强制选项。
+- [x] 5. 从备份将四份原文复制回原位置，保留其内容；与新分支不同的内容作为用户本地修改保留，不加入本轮功能提交。`.graphflow-cache` 和 `graphflow-out` 不移动、不清理。
+- [x] 6. 核对每份原文与备份的 SHA256 相等；在主目录运行 `python3 -B -m repo_doctor overview . --json`，再通过安装环境的 console script 读取同一仓库。二者应成功并具有相同源码指纹；`pyproject.toml` 和安装元数据均为 0.5.0。
 
 **完成结果：** 主目录启动新命令，原文内容不丢失，旧分支和备份可恢复。Python 的当前目录优先加载规则保持正常，版本一致消除误用。
 
@@ -71,9 +71,9 @@
 - 选中目录应高亮，并在渲染后将相机移到它的结构位置；目录搜索不能再次 toggle 将目标收起。重置清除选中状态。
 - 文件和符号搜索仍进入现有关系邻域，保持文件聚合调用、符号真实调用和测试筛选行为。
 
-- [ ] 1. 先添加纯投影回归：嵌套目标目录展开、无关目录不展开；250 个根文件挤占视图时目标、祖先及直接子节点仍可见。使用真正的 `RepoMap` 函数，不能以模拟实现替代。
-- [ ] 2. 执行 Node 检查，确认在当前实现上失败；首先断言 `typeof scope.RepoMap.reveal === 'function'`，预期错误为目录 reveal 缺失。记录失败后再写生产代码。
-- [ ] 3. 主代理实现最小 reveal 和预算优先次序。例如：
+- [x] 1. 先添加纯投影回归：嵌套目标目录展开、无关目录不展开；250 个根文件挤占视图时目标、祖先及直接子节点仍可见。使用真正的 `RepoMap` 函数，不能以模拟实现替代。
+- [x] 2. 执行 Node 检查，确认在当前实现上失败；首先断言 `typeof scope.RepoMap.reveal === 'function'`，预期错误为目录 reveal 缺失。记录失败后再写生产代码。
+- [x] 3. 主代理实现最小 reveal 和预算优先次序。例如：
 
 ```js
 function reveal(data, state, nodeId) {
@@ -89,9 +89,9 @@ function reveal(data, state, nodeId) {
 }
 ```
 
-- [ ] 4. 搜索目录采用 `reveal`，普通展开操作继续 toggle。用 `state.selected` 设置结构节点高亮；选中目录的相机 y 值根据节点位置和可见高度计算，原生渲染仍使用当前 SVG。
-- [ ] 5. 在 DOM 受控材料中加入 `pkg/deep/README.md` 和 `other/README.md`。它们是非 Python 文件，不改变现有文件关系测试。先添加目录搜索行为断言，确认旧页面失败；生成新页面后确认：选中 deep、显示其子文件、other 的子文件未出现、选中高亮、相机定位、导出 SVG 与当前图一致。
-- [ ] 6. 执行下列针对性检查，检查实际 diff 后提交修复：
+- [x] 4. 搜索目录采用 `reveal`，普通展开操作继续 toggle。用 `state.selected` 设置结构节点高亮；选中目录的相机 y 值根据节点位置和可见高度计算，原生渲染仍使用当前 SVG。
+- [x] 5. 在 DOM 受控材料中加入 `pkg/deep/README.md` 和 `other/README.md`。它们是非 Python 文件，不改变现有文件关系测试。先添加目录搜索行为断言，确认旧页面失败；生成新页面后确认：选中 deep、显示其子文件、other 的子文件未出现、选中高亮、相机定位、导出 SVG 与当前图一致。
+- [x] 6. 执行下列针对性检查，检查实际 diff 后提交修复：
 
 ```sh
 NODE=/Users/kisara/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node
@@ -183,3 +183,10 @@ python3 -B -m repo_doctor map /private/tmp/repo-doctor-closure-check/fixture --o
 ## 执行状态与证据
 
 各 C 项复选框为唯一执行状态；最终结果同时汇总到 `docs/delivery/2026-10-01-product-closure.md`。新增真实问题先定位，只修复与目标流程有关的阻塞；已满足条件的部分不重复实施。
+
+### 2026-10-01 C1/C2 实施记录
+
+- 计划提交 `25d60eb`；主目录已切换至 `codex/local-product-closure`。四份原文复制回原位置，外部 `workspace-preservation/2026-10-01-product-closure/manifest.json` 保存旧分支、修订及 SHA256，核对一致。
+- 主目录源码与安装入口 `overview` 结果相同，源码指纹 `21789fdc6f80213d110c3f98a4cc4ef7be8dd35fc6ce39d17b64126eea6da057`；源码版本 0.5.0，中立目录核对安装元数据为 0.5.0。
+- Luna Max 仅插入既定纯回归块；主代理检查实际 diff 并重新运行，得到预期 reveal 缺失断言。DOM 旧页面也失败于“Directory search must open the selected directory”。
+- 最小修复后纯投影与实际页面 DOM 均通过，包含 250 个根文件挤占预算、目录展开/高亮/定位、原有文件调用焦点与当前 SVG 序列化。RED/GREEN 输出保存于 `/private/tmp/repo-doctor-closure-check/`。
