@@ -10,6 +10,7 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
+from ._version import __version__
 from .context import build_context, build_impact
 from .agent_tools import (
     build_overview, build_snapshot, read_json, validate_agent_findings,
@@ -351,6 +352,7 @@ def _print_doctor(payload: dict) -> None:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="repo-doctor", description="Evidence-first analysis of a local Python repository")
+    parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}')
     subcommands = parser.add_subparsers(dest="command", required=True)
     skill = subcommands.add_parser('skill', help='Export the bundled Codex skill')
     skill_commands = skill.add_subparsers(dest='skill_action', required=True)

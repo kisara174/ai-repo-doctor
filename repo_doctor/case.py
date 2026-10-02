@@ -9,6 +9,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+from ._version import __version__
 from .architecture import build_architecture_summary
 from .context import build_impact
 from .leads import build_review_leads
@@ -17,7 +18,8 @@ from .source import read_source
 
 
 SCHEMA_VERSION = 1
-TOOL_VERSION = "0.5.0"
+TOOL_VERSION = __version__
+MAX_CASE_BYTES = 8 * 1024 * 1024
 
 
 def timestamp() -> str:
@@ -182,19 +184,28 @@ def save_case(directory: Path, case: dict) -> None:
     from .report import render_report
 
     directory = _checked_directory(directory)
-    if case.get("schema_version") != SCHEMA_VERSION:
-        raise ValueError("unsupported case schema")
-    case["updated_at"] = timestamp()
-    _atomic_write(directory / "report.md", render_report(case))
-    _atomic_write(directory / "case.json", json.dumps(case, ensure_ascii=False, indent=2) + "\n")
+    candidate = {**case, "updated_at": timestamp()}
+    _validate_case(candidate)
+    case_text = json.dumps(candidate, ensure_ascii=False, indent=2) + "\n"
+    report_text = render_report(candidate)
+    if len(case_text.encode("utf-8")) > MAX_CASE_BYTES:
+        raise ValueError("case.json exceeds 8 MiB; create a new case for further findings")
+    _atomic_write(directory / "report.md", report_text)
+    _atomic_write(directory / "case.json", case_text)
+    case["updated_at"] = candidate["updated_at"]
 
 
 def load_case(directory: Path) -> dict:
     directory = _checked_directory(directory)
-    path = directory / "case.json"
-    if path.stat().st_size > 8 * 1024 * 1024:
+    with (directory / "case.json").open("rb") as stream:
+        data = stream.read(MAX_CASE_BYTES + 1)
+    if len(data) > MAX_CASE_BYTES:
         raise ValueError("case.json exceeds 8 MiB")
-    case = json.loads(path.read_text(encoding="utf-8"))
+    return _validate_case(json.loads(data.decode("utf-8")))
+
+
+def _validate_case(case: object) -> dict:
+    """Check the shared readable-case contract without changing its data."""
     if not isinstance(case, dict) or case.get("schema_version") != SCHEMA_VERSION:
         raise ValueError("unsupported case schema")
     repo = case.get("repository")
@@ -265,11 +276,18 @@ def update_issue(case: dict, issue_id: str, status: str, note: str, *, related_t
         raise ValueError("invalid issue status")
     if actor not in {'human', 'codex'}:
         raise ValueError('invalid review actor')
-    issue["human_status"] = status
-    issue["human_history"].append({
+    review = {
         "at": timestamp(), "status": status, "note": note.strip(), "related_test": related_test,
         "actor": actor,
-    })
+    }
+    if related_test:
+        history = issue.get("verification", [])
+        argv = history[-1].get("argv") if history else None
+        if not isinstance(argv, list) or not argv or not all(isinstance(item, str) and item for item in argv):
+            raise ValueError("--related-test requires a recorded regression command")
+        review["related_test_argv"] = list(argv)
+    issue["human_status"] = status
+    issue["human_history"].append(review)
     return issue
 
 

@@ -1,23 +1,22 @@
 # Codex 调用与仓库结构关系图
 
-v0.5.1 稳定版使用说明。人类查看结构关系图，详细调查由 Codex 使用工具处理。正式发布和部署证据见[v0.5.1 交付记录](delivery/2026-10-02-v0.5.1-call-coverage.md)。
-
-本轮已按[v0.5.1 T0–T8 计划](superpowers/plans/2026-10-02-v0-5-1-module-instance-calls.md)完成。v0.5.0 基础版及原生 HTML/SVG、新会话 Skill 的使用确认保留于[历史收尾记录](delivery/2026-10-01-product-closure.md)。
+v0.5.2 使用说明。离线结构和来源证据供 Codex 调查，HTML/SVG 供人查看项目结构。当前修复已实现，正式发布与 Mac 升级待交付门槛通过，见 [交付记录](delivery/2026-10-02-v0.5.2-reliability.md)。
 
 ## 1. 一次安装
 
-这台 Mac 已部署 0.5.1 稳定版，普通终端直接执行 `repo-doctor`；不需要手动激活环境或重新加载 Key。主目录源码同步至相同版本。已有 Skill 原样保留；用户已确认新会话显式调用的四步流程全部成功。
-
-其他机器可直接将公开发行 wheel 安装到 Python 3.11+ 环境：
+其他机器使用 Python 3.11+ 安装发行 wheel；以下地址在 v0.5.2 发布后可用：
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.5.1/ai_repo_doctor-0.5.1-py3-none-any.whl'
+.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.5.2/ai_repo_doctor-0.5.2-py3-none-any.whl'
 export PATH="$PWD/.venv/bin:$PATH"
+repo-doctor --version
 repo-doctor skill export --out ~/.agents/skills/repo-doctor
 ```
 
-导出目录必须尚不存在，工具不会覆盖既有 Skill。用户目录 `$HOME/.agents/skills` 和显式 `$repo-doctor` 调用见[官方 Skill 文档](https://learn.chatgpt.com/docs/build-skills)。若当前 Codex 会话尚未发现 Skill，重启客户端后再显式调用；隐式匹配是否触发取决于任务描述。安装不会新增 MCP 服务或更改全局配置。
+这台 Mac 的持久命令位于 `~/.local/bin/repo-doctor`，当前部署仍为 v0.5.1；D8 完成后升级为 v0.5.2，无需激活环境。已有 Skill 保持原样。
+
+Skill 导出目录必须尚不存在。Codex 中可显式使用 `$repo-doctor`；如果当前会话尚未发现 Skill，重新启动客户端再调用。安装不新增 MCP 服务，也不修改全局配置。旧版与可选云端接口见 [兼容参考](LEGACY_USAGE.md)。
 
 ## 2. 用 Codex 阅读仓库
 
@@ -85,15 +84,92 @@ repo-doctor report show CASE --json
 
 底层旧状态字段 `human_status`/`human_history` 保持兼容；新记录增加 `actor`，显示时区分 Codex 和人的判断。旧报告未含 actor 时按原有人工记录解释。
 
-## 5. 需要修复时
+## 5. 可复制的受控离线例子
 
-修复由 Codex 在用户授权范围内完成。Repo Doctor 只记录显式检查：
+下面只执行你自己创建的 app.py，不运行外部仓库代码。所有输出名称必须尚不存在。示例约定 value() 应返回 2；这是演示使用者提供的预期，工具不会自行推断这个需求。
 
 ```sh
-repo-doctor reproduce CASE --json -- COMMAND ARGS
-repo-doctor findings import CASE --from FINDINGS.json --context CONTEXT.json --producer codex --reproduction R-001 --json
-repo-doctor verify CASE ISSUE --phase after --json -- COMMAND ARGS
-repo-doctor issue CASE ISSUE --status resolved --actor codex --note '修改及回归依据' --related-test --json
+mkdir example-repo
+cat > example-repo/app.py <<'PY'
+def value():
+    return 1
+
+def entry():
+    return value()
+PY
+repo-doctor overview example-repo --json
+repo-doctor symbols example-repo --query value --json
+# 搜索可得到真实 ID app.py::value
+repo-doctor context example-repo 'app.py::value' --snapshot-out example-context.json --json
+repo-doctor impact example-repo 'app.py::value' --depth 2 --json
+repo-doctor map example-repo --out example-map
+repo-doctor report create example-repo --out example-case --json
+cat > example-findings.json <<'JSON'
+{
+  "findings": [{
+    "title": "value 不满足返回 2 的约定",
+    "category": "correctness",
+    "confidence": 0.9,
+    "evidence": [{
+      "file": "app.py",
+      "start_line": 2,
+      "end_line": 2,
+      "quote": "    return 1",
+      "symbol": "app.py::value"
+    }],
+    "reasoning": "本例的使用者约定 value() 返回 2，当前源码返回 1。",
+    "impact": "entry() 调用 value()，也不满足本例约定。",
+    "suggested_fix": "由 Codex 或使用者把 value 的返回值改为 2，并显式检查。"
+  }]
+}
+JSON
+repo-doctor findings import example-case --from example-findings.json --context example-context.json --producer codex --json
+repo-doctor issue example-case A-001 --status confirmed --actor codex --note '对照本例约定及源码' --json
+# 预期退出码 1；命令在 example-repo 内执行
+repo-doctor verify example-case A-001 --phase before -- python3 -B -c 'import app; assert app.value() == 2'
+python3 - <<'PY'
+from pathlib import Path
+Path('example-repo/app.py').write_text('def value():\n    return 2\n\ndef entry():\n    return value()\n', encoding='utf-8')
+PY
+# 预期退出码 0；argv 必须与 before 完全一致
+repo-doctor verify example-case A-001 --phase after -- python3 -B -c 'import app; assert app.value() == 2'
+repo-doctor issue example-case A-001 --status resolved --actor codex --note '本轮检查覆盖该问题' --related-test --json
+repo-doctor report show example-case
 ```
 
-关联复现必须是未截断、来源仍有效的最新失败记录。修改前后要用同一命令；源码版本和运行期间是否改变都记录下来。`--related-test` 只在检查确实对应此 issue 时使用。报告不会将 Codex 的判断写成用户亲自确认，也不会把某次检查通过写成整仓无缺陷。
+最终 case.json 与 report.md 保存来源、Codex 判断和检查记录。`report show` 根据保存数据渲染，不重新扫描。没有支持的发现时导入 `{"findings": []}`；普通结构问答不必创建 case。
+
+也可在 finding 出现前用 `reproduce CASE -- COMMAND ARGS` 保存失败，再用 findings import 的 `--reproduction R-001` 关联。它必须是来源仍有效、未截断的最新失败记录。读取 issue ID 以实际输出为准。
+
+### 回归关联与结果
+
+“有修复证据”要求：最近一条记录是通过的 after；它之前最近的 before 失败且 argv 完全相同；两次运行期间 Python 源码未变，运行前后指纹不同；resolved 判断明确关联该命令。开始新的 before 后，上一轮证据不能替代当前轮。
+
+换命令后先完成这条新命令的 before/after，再重新执行 `issue --status resolved --actor codex --note '新命令关联依据' --related-test`。旧任务只有一种检查命令时可解释原有关联；包含多种命令却缺少明确关联时显示待复核，提示重新确认，读取不会改写旧任务。
+
+verify/reproduce 只运行显式参数数组，不经隐式 shell；默认 120 秒、可调 1–300 秒，最多保存 16 KiB 输出，去除 DeepSeek Key。它们不提供操作系统级隔离。状态通过只说明这个检查结果，不能证明整仓无缺陷。
+
+| 结果 | 含义 |
+| --- | --- |
+| static_fact | 本地解析事实；导入环本身不等于缺陷 |
+| quote_verified | 引文与快照匹配，推理仍需判断 |
+| unreviewed / confirmed / rejected / resolved | 未审、确认相关、驳回、已处理，保留 actor 与备注 |
+| passed / failed / timeout / command_error | 检查通过、失败、超时、无法启动 |
+| 仍需复核 / 复查未通过 / 有修复证据 | 当前记录是否满足上述局部证据条件 |
+
+## 6. 容量与旧任务救援
+
+普通 case.json 按 UTF-8 字节计算，上限 8 MiB。保存前校验完整候选数据，超限返回 2；之前成功保存的 case.json 和 report.md 保持不变，仍可重开。后续发现请新建 case，工具不自动删除、截断或迁移历史。
+
+旧版本产生的超大 case 无法用普通 report show 读取时，可用**安装 Repo Doctor 的同一解释器**导出只读档案；上限为 32 MiB，不需克隆源码：
+
+```sh
+# 按上面的 .venv 安装时
+.venv/bin/python -m repo_doctor.case_recovery OLD_CASE --out NEW_ARCHIVE
+# 这台 Mac 的持久安装
+~/.local/share/ai-repo-doctor/venv/bin/python -m repo_doctor.case_recovery OLD_CASE --out NEW_ARCHIVE
+```
+
+两条命令择一。输出目录必须不存在且在源任务外；工具保留原件，生成 original-case.json（完整原字节）、recovered-report.md 和 recovery.json（来源和产物哈希）。完整成功才有 recovery.json；出错返回 2，并可能留下部分产物供人工查看。
+
+档案可直接阅读，不能作为可续写 case。旧 tool_version 和历史原样保留，当前导出器版本单独记录；后续调查另建普通 case 和新快照。
