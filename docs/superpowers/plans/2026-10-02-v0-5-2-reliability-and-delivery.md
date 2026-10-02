@@ -10,7 +10,7 @@
 
 **Spec:** 第 2 节为自包含设计合同，实施者先读第 1–4 节。审计原始证据位于 `/Users/kisara/.local/share/ai-repo-doctor/audits/2026-10-02-v0.5.1/`；其他机器没有该目录时，仍可按本文件复现和实施。
 
-**状态：** 2026-10-02 编写。D0–D8 尚未实施。本轮只写计划，本文代码、命令、验收结果不得被当作已执行。
+**状态：** 2026-10-02 编写。执行已开始；D0、D1 已完成，D2 进行中。以下示例需结合交付记录中的实际证据理解。
 
 ## Global Constraints
 
@@ -193,8 +193,8 @@ D0 现场 → D1 回归轮 → D2 保存 → D3 救援 → D4 版本
 
 | 阶段 | 用户成果 | 状态 |
 | --- | --- | --- |
-| D0 | 可追溯基线与隔离位置 | 待执行 |
-| D1 | 当前失败轮不误报闭合 | 待执行 |
+| D0 | 可追溯基线与隔离位置 | 完成 |
+| D1 | 当前失败轮不误报闭合 | 完成 |
 | D2 | 超限保留原件，成功保存可重开 | 待执行 |
 | D3 | 超大历史完整可查阅 | 待执行 |
 | D4 | 包、CLI、新报告版本一致 | 待执行 |
@@ -212,7 +212,7 @@ D0 现场 → D1 回归轮 → D2 保存 → D3 救援 → D4 版本
 
 **Produces:** baseline.json：真实 HEAD/分支、四份用户文件 hash、旧 wheel、CLI/Skill、旧报告 hash、worktree 状态。
 
-- [ ] 查询主目录、现有 worktree 与远端默认分支。
+- [x] 查询主目录、现有 worktree 与远端默认分支。
 
 ```sh
 git -C '/Users/kisara/Documents/ChatGPT/AI Repo Doctor' status --short
@@ -220,10 +220,10 @@ git -C '/Users/kisara/.codex/worktrees/diagnosis-evaluation/AI Repo Doctor' stat
 gh repo view kisara174/ai-repo-doctor --json defaultBranchRef
 ```
 
-- [ ] 按 manifest 核对四份用户文件；保存旧 schedule case、Skill、部署收据、0.5.1 wheel hash。不得读取 Key 文件。
-- [ ] 优先复用干净 worktree，从当前 HEAD 新建 `codex/v0-5-2-reliability`。分支已有则核对来源后接续，不能覆盖。先让执行 worktree 包含本计划最新版；主目录文档尚未提交时，只复制本计划和本次 PRODUCT_GUIDE 入口，不复制四份用户历史改动。
-- [ ] 执行 worktree 先 GraphFlow context，再登记执行 DAG，回答全部设计与范围工作项。
-- [ ] 写 baseline.json 和交付记录，D0 完成必须附实际证据，其他阶段仍待执行。
+- [x] 按 manifest 核对四份用户文件；保存旧 schedule case、Skill、部署收据、0.5.1 wheel hash。不得读取 Key 文件。
+- [x] 优先复用干净 worktree，从当前 HEAD 新建 `codex/v0-5-2-reliability`。分支已有则核对来源后接续，不能覆盖。先让执行 worktree 包含本计划最新版；主目录文档尚未提交时，只复制本计划和本次 PRODUCT_GUIDE 入口，不复制四份用户历史改动。
+- [x] 执行 worktree 先 GraphFlow context，再登记执行 DAG，回答全部设计与范围工作项。
+- [x] 写 baseline.json 和交付记录，D0 完成必须附实际证据，其他阶段仍待执行。
 
 **Validation:** 主目录原四份改动保留，hash 与 manifest 一致；执行 worktree 没有未知改动；从 `/private/tmp` 查询安装 metadata 为 0.5.1。
 
@@ -235,7 +235,7 @@ gh repo view kisara174/ai-repo-doctor --json defaultBranchRef
 
 **Interfaces:** 保持 repair_state(issue: dict) -> str、update_issue 的现有参数；新 related_test_argv 是可选历史字段。
 
-- [ ] 新测试文件建立如下完整夹具，不调用云端。
+- [x] 新测试文件建立如下完整夹具，不调用云端。
 
 ```python
 import copy
@@ -277,7 +277,7 @@ class RepairStateTests(unittest.TestCase):
         self.assertEqual(issue, original)
 ```
 
-- [ ] 跑新文件，记录 F1 真实 RED；增加没有 before、最后只有 before、argv 不同、after 失败、运行变源、同 argv 新轮、旧多 argv 关联不明确七种断言。
+- [x] 跑新文件，记录 F1 真实 RED；增加没有 before、最后只有 before、argv 不同、after 失败、运行变源、同 argv 新轮、旧多 argv 关联不明确七种断言。
 具体输入与断言如下，均以 make_issue() 为初始夹具并分别独立执行：
 
 | 补充案例 | 修改夹具 | 预期 |
@@ -290,7 +290,7 @@ class RepairStateTests(unittest.TestCase):
 | 同 argv 新轮 | 追加 A before failed/three、A after passed/four | 有修复证据，沿用 A 关联 |
 | 旧多命令 | 删除关联 argv 字段，再追加 B before/after，维持 resolved/related_test | 仍需复核，不改对象 |
 
-- [ ] 替换原 matching argv 搜索，仅寻找最新 before，随后比较命令。
+- [x] 替换原 matching argv 搜索，仅寻找最新 before，随后比较命令。
 
 ```python
 history = issue.get('verification', [])
@@ -301,10 +301,10 @@ if before is not None and before['argv'] != after['argv']:
     before = None
 ```
 
-- [ ] 实现关联解释：新字段比较 argv；旧字段只有唯一 argv 才回退；修复证据同时检查 §2.1 的状态与指纹条件。
-- [ ] update_issue 在修改对象前检查已有检查 argv，复制入新记录；无命令时抛 ValueError。只标 resolved 不附 --related-test 仍允许。
-- [ ] 添加实际 CLI 跨轮测试：自建语法错误 app 和 S-001；A 的 unittest before 失败，修复后 A after 通过并关联；增加 B 检查的未修复行为，B before 失败，再跑 A after。报告仍待复核，B 失败记录存在。
-- [ ] B 真修复并 B after 通过仍待关联；用 actor codex 关联 B 后才显示 Codex 修复证据。全部执行仅限自建目录。
+- [x] 实现关联解释：新字段比较 argv；旧字段只有唯一 argv 才回退；修复证据同时检查 §2.1 的状态与指纹条件。
+- [x] update_issue 在修改对象前检查已有检查 argv，复制入新记录；无命令时抛 ValueError。只标 resolved 不附 --related-test 仍允许。
+- [x] 添加实际 CLI 跨轮测试：自建语法错误 app 和 S-001；A 的 unittest before 失败，修复后 A after 通过并关联；增加 B 检查的未修复行为，B before 失败，再跑 A after。报告仍待复核，B 失败记录存在。
+- [x] B 真修复并 B after 通过仍待关联；用 actor codex 关联 B 后才显示 Codex 修复证据。全部执行仅限自建目录。
 
 ```sh
 python3 -B -m unittest discover -s tests -p 'test_repair_state.py' -v

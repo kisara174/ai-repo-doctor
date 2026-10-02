@@ -40,6 +40,32 @@ class ProductVerifyTests(unittest.TestCase):
             self.assertEqual(self.run_main("diagnose", repo, "app.py::value", "--case", case_dir)[0], 0)
         return repo, case_dir
 
+    def test_latest_failed_command_cannot_close_with_previous_command(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            repo, case_dir = base / "repo", base / "case"
+            repo.mkdir()
+            (repo / "app.py").write_text("def value(:\n", encoding="utf-8")
+            self.assertEqual(self.run_main("report", "create", repo, "--out", case_dir)[0], 0)
+            a = [sys.executable, "-B", "-c", "import app; assert app.value() == 2"]
+            b = [sys.executable, "-B", "-c", "import app; assert app.entry() == 2"]
+            self.assertEqual(self.run_main("verify", case_dir, "S-001", "--phase", "before", "--", *a)[0], 1)
+            (repo / "app.py").write_text("def value():\n    return 2\n\ndef entry():\n    return value()\n", encoding="utf-8")
+            self.assertEqual(self.run_main("verify", case_dir, "S-001", "--phase", "after", "--", *a)[0], 0)
+            self.assertEqual(self.run_main("issue", case_dir, "S-001", "--status", "resolved",
+                                          "--actor", "codex", "--note", "A checks value", "--related-test")[0], 0)
+            self.assertIn("有修复证据", self.run_main("report", "show", case_dir)[1])
+            (repo / "app.py").write_text("def value():\n    return 2\n\ndef entry():\n    return 0\n", encoding="utf-8")
+            self.assertEqual(self.run_main("verify", case_dir, "S-001", "--phase", "before", "--", *b)[0], 1)
+            self.assertEqual(self.run_main("verify", case_dir, "S-001", "--phase", "after", "--", *a)[0], 0)
+            self.assertNotIn("有修复证据", self.run_main("report", "show", case_dir)[1])
+            (repo / "app.py").write_text("def value():\n    return 2\n\ndef entry():\n    return 2\n", encoding="utf-8")
+            self.assertEqual(self.run_main("verify", case_dir, "S-001", "--phase", "after", "--", *b)[0], 0)
+            self.assertNotIn("有修复证据", self.run_main("report", "show", case_dir)[1])
+            self.assertEqual(self.run_main("issue", case_dir, "S-001", "--status", "resolved",
+                                          "--actor", "codex", "--note", "B checks entry", "--related-test")[0], 0)
+            self.assertIn("Codex 确认关联", self.run_main("report", "show", case_dir)[1])
+
     def test_before_after_same_command_requires_source_change_and_human_confirmation(self):
         with tempfile.TemporaryDirectory() as directory:
             repo, case_dir = self.make_case_with_issue(Path(directory))

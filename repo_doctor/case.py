@@ -265,11 +265,18 @@ def update_issue(case: dict, issue_id: str, status: str, note: str, *, related_t
         raise ValueError("invalid issue status")
     if actor not in {'human', 'codex'}:
         raise ValueError('invalid review actor')
-    issue["human_status"] = status
-    issue["human_history"].append({
+    review = {
         "at": timestamp(), "status": status, "note": note.strip(), "related_test": related_test,
         "actor": actor,
-    })
+    }
+    if related_test:
+        history = issue.get("verification", [])
+        argv = history[-1].get("argv") if history else None
+        if not isinstance(argv, list) or not argv or not all(isinstance(item, str) and item for item in argv):
+            raise ValueError("--related-test requires a recorded regression command")
+        review["related_test_argv"] = list(argv)
+    issue["human_status"] = status
+    issue["human_history"].append(review)
     return issue
 
 

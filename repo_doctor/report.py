@@ -23,15 +23,30 @@ def _code(value: object) -> str:
     return f"{fence}{space}{text}{space}{fence}"
 
 
+def _related_test_argv(issue: dict) -> list[str] | None:
+    history = issue.get("human_history", [])
+    if not history or history[-1]["status"] != "resolved" or not history[-1].get("related_test"):
+        return None
+    review = history[-1]
+    if "related_test_argv" in review:
+        return review["related_test_argv"]
+    # Old records did not name the related command. A single distinct command
+    # is unambiguous; multiple commands need a new explicit association.
+    commands = {tuple(item["argv"]) for item in issue.get("verification", [])}
+    return list(next(iter(commands))) if len(commands) == 1 else None
+
+
 def repair_state(issue: dict) -> str:
     history = issue.get("verification", [])
     after = history[-1] if history and history[-1]["phase"] == "after" else None
     before = None
     if after is not None:
         before = next((item for item in reversed(history[:-1])
-                       if item["phase"] == "before" and item["argv"] == after["argv"]), None)
+                       if item["phase"] == "before"), None)
+        if before is not None and before["argv"] != after["argv"]:
+            before = None
     human = issue.get("human_history", [])
-    related = bool(human and human[-1]["status"] == "resolved" and human[-1].get("related_test"))
+    related = after is not None and _related_test_argv(issue) == after["argv"]
     if (
         issue.get("human_status") == "resolved" and related and before and after
         and before["status"] == "failed" and after["status"] == "passed"
@@ -210,6 +225,10 @@ def render_report(case: dict) -> str:
             f"- 来源：{_inline(issue.get('producer', issue['origin']))}；来源证据：{_inline(issue['evidence_status'])}；{review_label}：{_inline(issue['human_status'])}",
             f"- 修复状态：{repair_state(issue)}",
         ])
+        if (history and history[-1].get('related_test')
+                and 'related_test_argv' not in history[-1]
+                and len({tuple(item['argv']) for item in issue.get('verification', [])}) > 1):
+            lines.append("- 旧复核记录包含多种检查命令，关联不明确；请用 issue --status resolved --related-test --note 重新确认当前命令。")
         if issue["origin"] == "ai":
             lines.append("- 判断性质：AI 假设；引文通过不代表缺陷已证实。")
         if issue.get("reproduction_id"):
