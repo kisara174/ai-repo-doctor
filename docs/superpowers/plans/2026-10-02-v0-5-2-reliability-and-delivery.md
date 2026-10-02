@@ -538,7 +538,7 @@ python3 -B -m unittest discover -s tests -q
 ```
 
 - [x] 主代理审查最终 diff：允许文件、边界、旧兼容、无新网络依赖、没有把失败证据改成成功；记录 freeze SHA 和源码 hash。
-- [x] 用临时 body 文件创建正式 PR，附 F1–F3 前后结果、旧关联变化、救援定位和安装 receipt。创建后必须 Codex attach_artifact。
+- [ ] 用临时 body 文件创建正式 PR，附 F1–F3 前后结果、旧关联变化、救援定位和安装 receipt。创建后必须 Codex attach_artifact。
 - [ ] 等 PR 当前 head 的完整 CI。旧 SHA 的绿色不能验收最新代码；源码改变重跑相关门槛。
 
 **Acceptance:** 同一候选 wheel 在仓库外通过全部 receipt 项，全套离线门槛和当前 head CI 通过，冻结与审查证据已保存。
