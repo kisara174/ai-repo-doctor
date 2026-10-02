@@ -4,11 +4,11 @@
 
 需要 Python 3.11+。扫描、调查和地图生成不运行目标仓库代码；只有显式 reproduce/verify 才执行指定命令。
 
-**v0.5.2 交付进行中：** 当前已实现可靠性修复，公开下载和 Mac 升级待发布门槛通过。已发布的上一稳定版为 [v0.5.1](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.5.1)。阶段和证据见 [v0.5.2 交付记录](docs/delivery/2026-10-02-v0.5.2-reliability.md)。
+[v0.5.2 稳定版](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.5.2) 已发布并部署到这台 Mac。普通终端直接运行 `repo-doctor --version`，无需激活环境。三项可靠性修复与安装证据见 [交付记录](docs/delivery/2026-10-02-v0.5.2-reliability.md)。
 
 ## 安装
 
-下面是 v0.5.2 的正式安装地址，**本轮发布后可用**：
+从公开发行 wheel 安装 v0.5.2：
 
 ```sh
 python3 -m venv .venv
