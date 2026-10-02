@@ -77,6 +77,11 @@ jobs:
           "$RD" issue "$RUNNER_TEMP/repo-doctor-case" S-001 --status resolved --note 'CI sample fix and regression' --related-test
           "$RD" report show "$RUNNER_TEMP/repo-doctor-case" > "$RUNNER_TEMP/final-report.md"
           grep -q '有修复证据' "$RUNNER_TEMP/final-report.md"
+          cp "$GITHUB_WORKSPACE/tools/validate_release_install.py" "$RUNNER_TEMP/validate_release_install.py"
+          "$RUNNER_TEMP/repo-doctor-venv/bin/python" "$RUNNER_TEMP/validate_release_install.py" \
+            --python "$RUNNER_TEMP/repo-doctor-venv/bin/python" \
+            --cli "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" \
+            --out "$RUNNER_TEMP/installed-release-evidence"
 
   map-viewer:
     name: Offline map interaction and SVG

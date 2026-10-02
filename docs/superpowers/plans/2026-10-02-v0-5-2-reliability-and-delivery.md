@@ -10,7 +10,7 @@
 
 **Spec:** 第 2 节为自包含设计合同，实施者先读第 1–4 节。审计原始证据位于 `/Users/kisara/.local/share/ai-repo-doctor/audits/2026-10-02-v0.5.1/`；其他机器没有该目录时，仍可按本文件复现和实施。
 
-**状态：** 2026-10-02 编写。执行已开始；D0–D5 已完成，D6 进行中。以下示例需结合交付记录中的实际证据理解。
+**状态：** 2026-10-02 编写。执行已开始；D0–D5 已完成，D6 本地验收完成，PR/CI 门槛进行中。以下示例需结合交付记录中的实际证据理解。
 
 ## Global Constraints
 
@@ -475,9 +475,9 @@ python3 -B -m repo_doctor --version
 
 ### D6.1 独立校验器
 
-- [ ] 用 argparse/subprocess/tempfile/json/hashlib/Path 编写；每条命令保存 argv、cwd、exit_code、stdout、stderr。任一断言失败返回非零，不能只保存错误继续宣布成功。
-- [ ] 子进程 cwd 为证据目录或 /private/tmp，去除 PYTHONPATH；metadata 查询必须 version 为 0.5.2，import_path 在 site-packages。
-- [ ] 在自建仓库使用以下源码并准备两条检查，所有 target code 执行仅限这里：
+- [x] 用 argparse/subprocess/tempfile/json/hashlib/Path 编写；每条命令保存 argv、cwd、exit_code、stdout、stderr。任一断言失败返回非零，不能只保存错误继续宣布成功。
+- [x] 子进程 cwd 为证据目录或 /private/tmp，去除 PYTHONPATH；metadata 查询必须 version 为 0.5.2，import_path 在 site-packages。
+- [x] 在自建仓库使用以下源码并准备两条检查，所有 target code 执行仅限这里：
 
 ```python
 # app.py 初始内容
@@ -493,13 +493,13 @@ command_a = [installed_python, '-B', '-c', 'import app; assert app.value() == 2'
 command_b = [installed_python, '-B', '-c', 'import app; assert app.entry() == 2']
 ```
 
-- [ ] 调 overview、symbols 取得 app.py::value，再 context snapshot、impact、map、report create。impact 必须含 app.py::entry，四份地图必须存在，两张 SVG 可 XML 解析。
-- [ ] 写完整 finding，引用 value 第 2 行 return 1，导入保存为 A-001。A before 返回 1；改 value 返回 2，A after 返回 0；actor codex 关联后重开报告含修复证据。
-- [ ] 将 entry 改为 return 0，B before 返回 1；A after 通过仍待复核。改 entry 返回 2，B after 通过仍待关联；显式关联 B 后闭合。确认报告中的命令与当前轮相符。
-- [ ] 用新快照/新 case 写 reasoning 长度 800000 的合法 finding（单份 JSON 小于 1 MiB）；前五次导入成功，第六次返回 2。第六次前后 case.json/report.md 双 hash 均不变，前五次正常任务可重开。
-- [ ] 手动生成仅供复现的超大历史 case，使用已安装 Python 的 case_recovery 模块导出；核对原字节、原文件 hash、完整六个 issue 和 receipt。新 save_case 不负责写这个超限原件。
-- [ ] 旧单命令 case 的读取不改字节；过期 snapshot 导入返回 2且正常任务不变。核对 --version/new case/package metadata 三者一致。
-- [ ] 最终 receipt 至少如下，任一 false、缺项或 map_files 不为 4 都失败：
+- [x] 调 overview、symbols 取得 app.py::value，再 context snapshot、impact、map、report create。impact 必须含 app.py::entry，四份地图必须存在，两张 SVG 可 XML 解析。
+- [x] 写完整 finding，引用 value 第 2 行 return 1，导入保存为 A-001。A before 返回 1；改 value 返回 2，A after 返回 0；actor codex 关联后重开报告含修复证据。
+- [x] 将 entry 改为 return 0，B before 返回 1；A after 通过仍待复核。改 entry 返回 2，B after 通过仍待关联；显式关联 B 后闭合。确认报告中的命令与当前轮相符。
+- [x] 用新快照/新 case 写 reasoning 长度 800000 的合法 finding（单份 JSON 小于 1 MiB）；前五次导入成功，第六次返回 2。第六次前后 case.json/report.md 双 hash 均不变，前五次正常任务可重开。
+- [x] 手动生成仅供复现的超大历史 case，使用已安装 Python 的 case_recovery 模块导出；核对原字节、原文件 hash、完整六个 issue 和 receipt。新 save_case 不负责写这个超限原件。
+- [x] 旧单命令 case 的读取不改字节；过期 snapshot 导入返回 2且正常任务不变。核对 --version/new case/package metadata 三者一致。
+- [x] 最终 receipt 至少如下，任一 false、缺项或 map_files 不为 4 都失败：
 
 ```json
 {
@@ -521,8 +521,8 @@ command_b = [installed_python, '-B', '-c', 'import app; assert app.entry() == 2'
 
 ### D6.2 候选 wheel 与 CI
 
-- [ ] 从明确的候选源码 Git archive 构建 wheel，安装到新临时 venv，沿用现有 build 工具，不增加运行依赖。候选 SHA、wheel hash 和运行文件清单写 receipt。
-- [ ] 校验器复制到仓库外，用候选环境调用。禁止源码 import 冒充安装后检验。
+- [x] 从明确的候选源码 Git archive 构建 wheel，安装到新临时 venv，沿用现有 build 工具，不增加运行依赖。候选 SHA、wheel hash 和运行文件清单写 receipt。
+- [x] 校验器复制到仓库外，用候选环境调用。禁止源码 import 冒充安装后检验。
 
 ```sh
 "$RD_TEST_PYTHON" "$RD_VALIDATOR" --python "$RD_TEST_PYTHON" --cli "$RD_TEST_CLI" --out "$RD_NEW_EVIDENCE"
@@ -530,15 +530,15 @@ command_b = [installed_python, '-B', '-c', 'import app; assert app.entry() == 2'
 
 RD_TEST_PYTHON、RD_TEST_CLI、RD_VALIDATOR、RD_NEW_EVIDENCE 在运行前设置为实际新建 venv、仓库外校验器副本和证据目录的绝对路径；不能使用旧持久安装通过候选门槛。
 
-- [ ] 在 CI 的已有 wheel 安装步骤追加校验，指定 RUNNER_TEMP 内已安装 Python/CLI。保留原 smoke、Python 矩阵和地图交互门槛。
-- [ ] 代码冻结后跑一次全套离线测试，记录真实数量和输出，不硬编码必须恰好某个数量。
+- [x] 在 CI 的已有 wheel 安装步骤追加校验，指定 RUNNER_TEMP 内已安装 Python/CLI。保留原 smoke、Python 矩阵和地图交互门槛。
+- [x] 代码冻结后跑一次全套离线测试，记录真实数量和输出，不硬编码必须恰好某个数量。
 
 ```sh
 python3 -B -m unittest discover -s tests -q
 ```
 
-- [ ] 主代理审查最终 diff：允许文件、边界、旧兼容、无新网络依赖、没有把失败证据改成成功；记录 freeze SHA 和源码 hash。
-- [ ] 用临时 body 文件创建正式 PR，附 F1–F3 前后结果、旧关联变化、救援定位和安装 receipt。创建后必须 Codex attach_artifact。
+- [x] 主代理审查最终 diff：允许文件、边界、旧兼容、无新网络依赖、没有把失败证据改成成功；记录 freeze SHA 和源码 hash。
+- [x] 用临时 body 文件创建正式 PR，附 F1–F3 前后结果、旧关联变化、救援定位和安装 receipt。创建后必须 Codex attach_artifact。
 - [ ] 等 PR 当前 head 的完整 CI。旧 SHA 的绿色不能验收最新代码；源码改变重跑相关门槛。
 
 **Acceptance:** 同一候选 wheel 在仓库外通过全部 receipt 项，全套离线门槛和当前 head CI 通过，冻结与审查证据已保存。
