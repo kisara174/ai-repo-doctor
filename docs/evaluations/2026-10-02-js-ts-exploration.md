@@ -1,6 +1,6 @@
 # JS/TS 只读调查探索
 
-执行日期：2026-10-02。当前阶段：A1 完成；解析器、原型和去留门槛尚未验证。
+执行日期：2026-10-02。当前阶段：A0–A2 完成；原型和去留门槛尚未验证。
 
 稳定产品仍是 Python v0.5.2。实验在 `codex/js-ts-readonly-preview` worktree 进行，未改产品源码、稳定入口、已安装 Skill 或 Key。
 
@@ -33,6 +33,12 @@
 
 稳定 CLI 的两个 overview 和两个 symbols 均退出 0；没有返回 JS/TS 符号 ID，所以没有虚构 ID 调用 context/impact。兼容命令不计入上述源码基线。
 
+## A2 解析器核对
+
+在仓库外独立 venv 安装 tree-sitter 0.26.0、JavaScript grammar 0.25.0、TypeScript grammar 0.23.2，使用 binary wheels；当前 Python 3.14.5 / Mac arm64。实际安装退出 0，pip-report.json 保留三包分发 URL 和 SHA256。两种语言的 Unicode/emoji、CRLF、BOM、无末尾换行和错误语法共 10 项检查通过。详情见 dependency-check.json；没有安装另一套后端或运行 Node。
+
+[Tree-sitter 官方接口](https://github.com/tree-sitter/py-tree-sitter)满足本轮语法节点与行号提取；[TypeScript Compiler API](https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API)还提供 Program 与类型检查器，并采用 npm/Node 工具链，本轮只比较资料，没有安装。本产品的唯一候选规则比[TypeScript 扩展替换](https://www.typescriptlang.org/docs/handbook/modules/reference.html#file-extension-substitution)更保守，不能冒充编译器语义。
+
 ## 未完成项
 
-A2 隔离安装、API/编码检查；A3 AST 原型、夹具和六题调查；A4 五项去留门槛。只有 A4 go 后才实施产品接入和独立预览交付。
+A3 AST 原型、夹具和六题调查；A4 五项去留门槛。只有 A4 go 后才实施产品接入和独立预览交付。

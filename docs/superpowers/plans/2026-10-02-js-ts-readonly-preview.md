@@ -10,7 +10,7 @@
 
 **Spec:** [JS/TS 只读调查预览规格](../specs/2026-10-02-js-ts-readonly-preview-design.md)。执行者必须先读规格；接口和限制以该文档为准。
 
-**状态：** 2026-10-02 开始实施。A0–A1 已完成并保存仓库外收据；A2–A4、B1–B4 尚未完成。使用隔离 worktree 的 codex/js-ts-readonly-preview 分支，Mac 稳定版仍为 v0.5.2。
+**状态：** 2026-10-02 开始实施。A0–A2 已完成并保存仓库外收据；A3–A4、B1–B4 尚未完成。使用隔离 worktree 的 codex/js-ts-readonly-preview 分支，Mac 稳定版仍为 v0.5.2。
 
 ## Global Constraints
 
@@ -218,16 +218,16 @@ oracle.json 最小条目：
 **允许改动：** JST_EVIDENCE/parser-venv、dependency-check.json、探索文档的方案记录。
 **禁止：** pyproject.toml、全局 Python/Node、稳定 venv。
 
-- [ ] 读取规格的官方资料，记录 TypeScript Compiler API 与 Tree-sitter 的运行环境、符号定位和语义解析区别。
-- [ ] 创建单独环境，优先只安装已核对的 binary wheels：
+- [x] 读取规格的官方资料，记录 TypeScript Compiler API 与 Tree-sitter 的运行环境、符号定位和语义解析区别。
+- [x] 创建单独环境，优先只安装已核对的 binary wheels：
 
 ~~~sh
 python3 -m venv "$JST_EVIDENCE/parser-venv"
 "$JST_EVIDENCE/parser-venv/bin/python" -m pip install --only-binary=:all: tree-sitter==0.26.0 tree-sitter-javascript==0.25.0 tree-sitter-typescript==0.23.2
 ~~~
 
-- [ ] 保存 Python 路径/版本、平台架构、pip 安装退出码、三包实际版本与分发哈希，不声称不同版本号必然 ABI 兼容。
-- [ ] 使用下段代码，仅解析本计划自写字符串：
+- [x] 保存 Python 路径/版本、平台架构、pip 安装退出码、三包实际版本与分发哈希，不声称不同版本号必然 ABI 兼容。
+- [x] 使用下段代码，仅解析本计划自写字符串：
 
 ~~~python
 from tree_sitter import Language, Parser
@@ -244,9 +244,9 @@ for grammar, source in [
     assert tree.root_node.start_point.row == 0
 ~~~
 
-- [ ] 再解析含中文/emoji、CRLF、BOM、无末尾换行和明显语法错误的自写字符串；核对字节列与人类行号不混用。
-- [ ] 记录三个候选包在当前 Mac 的结果。选择 Tree-sitter 的条件是能够满足有限源码提取，不要求类型检查。
-- [ ] 写 dependency-check.json 的 status=passed/failed，chosen_backend、versions、checks、limits 和 source_urls。写实际退出码，不能仅引用 PyPI wheel 列表称安装通过。
+- [x] 再解析含中文/emoji、CRLF、BOM、无末尾换行和明显语法错误的自写字符串；核对字节列与人类行号不混用。
+- [x] 记录三个候选包在当前 Mac 的结果。选择 Tree-sitter 的条件是能够满足有限源码提取，不要求类型检查。
+- [x] 写 dependency-check.json 的 status=passed/failed，chosen_backend、versions、checks、limits 和 source_urls。写实际退出码，不能仅引用 PyPI wheel 列表称安装通过。
 
 **通过：** 三包可安装/API 可用，行号和错误行为有证据；不需 Node 来运行分析。
 **停止：** 无匹配 wheel、ABI/API 不合、编码/行号错误。由主代理提出具体修订；不默默换包、源码编译、安装 Node 或做多轮框架竞赛。若现有约束无法满足，保留 A1 的六题，把原型步骤标 blocked，直接进入 A4 写技术 no-go；A3 不得勾为完成，B 阶段不启动。
