@@ -43,6 +43,34 @@ class ProductCliTests(unittest.TestCase):
             self.assertIn("Candidates", output)
             self.assertIn("app.py::target", output)
 
+    def test_import_that_exceeds_case_capacity_keeps_previous_task_readable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            repo, case_dir = base / 'repo', base / 'case'
+            repo.mkdir()
+            (repo / 'app.py').write_text('def target():\n    return 2\n', encoding='utf-8')
+            self.assertEqual(self.run_main('report', 'create', repo, '--out', case_dir)[0], 0)
+            snapshot = base / 'context.json'
+            self.assertEqual(self.run_main('context', repo, 'app.py::target', '--snapshot-out', snapshot)[0], 0)
+            finding = dict(title='Bounded input', category='behavior', confidence=0.5,
+                           reasoning='r' * 800000, impact='Candidate only', suggested_fix='Review',
+                           evidence=[dict(file='app.py', start_line=2, end_line=2, quote='return 2')])
+            payload = base / 'findings.json'
+            payload.write_text(json.dumps({'findings': [finding]}), encoding='utf-8')
+            self.assertLess(payload.stat().st_size, 1024 * 1024)
+            argv = ['findings', 'import', case_dir, '--from', payload, '--context', snapshot,
+                    '--producer', 'codex', '--json']
+            for _ in range(5):
+                self.assertEqual(self.run_main(*argv)[0], 0)
+            original = {name: (case_dir / name).read_bytes() for name in ('case.json', 'report.md')}
+            status, _, error = self.run_main(*argv)
+            self.assertEqual(status, 2, error)
+            self.assertIn('exceeds 8 MiB', error)
+            self.assertEqual(original, {name: (case_dir / name).read_bytes() for name in original})
+            status, output, error = self.run_main('report', 'show', case_dir, '--json')
+            self.assertEqual(status, 0, error)
+            self.assertEqual(len(json.loads(output)['issues']), 5)
+
     def test_diagnosis_creates_stable_issue_and_preserves_human_judgment(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)

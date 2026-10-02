@@ -172,6 +172,60 @@ class ProductCaseTests(unittest.TestCase):
             self.assertEqual(reopened["target"]["impact"]["affected_symbols"], [])
             self.assertEqual(reopened["issues"][0]["id"], "S-001")
 
+    def test_oversize_save_preserves_both_existing_files(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            repo = base / 'repo'
+            repo.mkdir()
+            (repo / 'app.py').write_text('def value():\n    return 1\n', encoding='utf-8')
+            out = base / 'case'
+            case = create_case(build_index(repo), out)
+            before = {name: (out / name).read_bytes() for name in ('case.json', 'report.md')}
+            case['padding'] = '中' * 5000
+            with patch('repo_doctor.case.MAX_CASE_BYTES', 8192, create=True):
+                with self.assertRaisesRegex(ValueError, 'exceeds'):
+                    save_case(out, case)
+            self.assertEqual(before, {name: (out / name).read_bytes() for name in before})
+            self.assertEqual(load_case(out)['issues'], [])
+
+    def test_case_size_boundary_counts_utf8_bytes_including_newline(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            repo = base / 'repo'
+            repo.mkdir()
+            (repo / 'app.py').write_text('value = 1\n', encoding='utf-8')
+            out = base / 'case'
+            with patch('repo_doctor.case.timestamp', return_value='2026-10-02T00:00:00+00:00'):
+                case = create_case(build_index(repo), out)
+                case['padding'] = '中' * 100
+                size = len((json.dumps(case, ensure_ascii=False, indent=2) + '\n').encode('utf-8'))
+                with patch('repo_doctor.case.MAX_CASE_BYTES', size, create=True):
+                    save_case(out, case)
+                    self.assertEqual(load_case(out)['padding'], '中' * 100)
+                original = {name: (out / name).read_bytes() for name in ('case.json', 'report.md')}
+                with patch('repo_doctor.case.MAX_CASE_BYTES', size - 1, create=True):
+                    with self.assertRaisesRegex(ValueError, 'exceeds'):
+                        save_case(out, case)
+                    with self.assertRaisesRegex(ValueError, 'exceeds'):
+                        load_case(out)
+                self.assertEqual(original, {name: (out / name).read_bytes() for name in original})
+
+    def test_invalid_candidate_is_rejected_before_either_file_changes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            repo = base / 'repo'
+            repo.mkdir()
+            (repo / 'app.py').write_text('value = 1\n', encoding='utf-8')
+            out = base / 'case'
+            case = create_case(build_index(repo), out)
+            before = {name: (out / name).read_bytes() for name in ('case.json', 'report.md')}
+            case['previews'] = 'not a list'
+            with self.assertRaises(ValueError):
+                save_case(out, case)
+            self.assertEqual(before, {name: (out / name).read_bytes() for name in before})
+
     def test_create_refuses_to_replace_existing_case(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)

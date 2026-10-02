@@ -10,7 +10,7 @@
 
 **Spec:** 第 2 节为自包含设计合同，实施者先读第 1–4 节。审计原始证据位于 `/Users/kisara/.local/share/ai-repo-doctor/audits/2026-10-02-v0.5.1/`；其他机器没有该目录时，仍可按本文件复现和实施。
 
-**状态：** 2026-10-02 编写。执行已开始；D0、D1 已完成，D2 进行中。以下示例需结合交付记录中的实际证据理解。
+**状态：** 2026-10-02 编写。执行已开始；D0、D1 已完成，D2 已完成，D3 进行中。以下示例需结合交付记录中的实际证据理解。
 
 ## Global Constraints
 
@@ -195,7 +195,7 @@ D0 现场 → D1 回归轮 → D2 保存 → D3 救援 → D4 版本
 | --- | --- | --- |
 | D0 | 可追溯基线与隔离位置 | 完成 |
 | D1 | 当前失败轮不误报闭合 | 完成 |
-| D2 | 超限保留原件，成功保存可重开 | 待执行 |
+| D2 | 超限保留原件，成功保存可重开 | 完成 |
 | D3 | 超大历史完整可查阅 | 待执行 |
 | D4 | 包、CLI、新报告版本一致 | 待执行 |
 | D5 | 一条当前产品教程 | 待执行 |
@@ -322,7 +322,7 @@ python3 -B -m unittest discover -s tests -p 'test_reproduction.py' -v
 
 **Interfaces:** MAX_CASE_BYTES；_validate_case(case: object) -> dict；save_case/load_case 的现有签名保持。
 
-- [ ] 在 ProductCaseTests 添加以下行为 RED：
+- [x] 在 ProductCaseTests 添加以下行为 RED：
 
 ```python
 def test_oversize_save_preserves_both_existing_files(self):
@@ -343,9 +343,9 @@ def test_oversize_save_preserves_both_existing_files(self):
         self.assertEqual(load_case(out)['issues'], [])
 ```
 
-- [ ] 记录 RED：目标是未拒绝或原文件被改变，不能把无关错误计为成功复现。
-- [ ] 提取原结构检查为 _validate_case；普通 load 改为有界读取、json.loads、校验。
-- [ ] 保存按以下顺序准备候选，再调用原原子写入。正常两份文件写完后才同步传入对象的 updated_at。
+- [x] 记录 RED：目标是未拒绝或原文件被改变，不能把无关错误计为成功复现。
+- [x] 提取原结构检查为 _validate_case；普通 load 改为有界读取、json.loads、校验。
+- [x] 保存按以下顺序准备候选，再调用原原子写入。正常两份文件写完后才同步传入对象的 updated_at。
 
 ```python
 candidate = {**case, 'updated_at': timestamp()}
@@ -357,9 +357,9 @@ if len(case_text.encode('utf-8')) > MAX_CASE_BYTES:
 # 通过全部检查后，沿用现有 _atomic_write 写两份内容。
 ```
 
-- [ ] 边界测试固定 timestamp，计算真实 byte_count；patch 限制为 byte_count 成功，为 byte_count-1 拒绝且双文件不变。中文 padding 证明按字节而非字符计量。
-- [ ] CLI 再现六次 800 KiB finding：前五次成功，第六次返回 2；保存前后双 hash 一致，前五次任务能 report show 和 issue 读取。
-- [ ] 输入结构缺项也在写入前拒绝，旧文件不变。不能改为删除字段、截断内容或提高上限。
+- [x] 边界测试固定 timestamp，计算真实 byte_count；patch 限制为 byte_count 成功，为 byte_count-1 拒绝且双文件不变。中文 padding 证明按字节而非字符计量。
+- [x] CLI 再现六次 800 KiB finding：前五次成功，第六次返回 2；保存前后双 hash 一致，前五次任务能 report show 和 issue 读取。
+- [x] 输入结构缺项也在写入前拒绝，旧文件不变。不能改为删除字段、截断内容或提高上限。
 
 ```sh
 python3 -B -m unittest discover -s tests -p 'test_product_case.py' -v
