@@ -1,6 +1,6 @@
 # AI Repo Doctor 产品闭环指导书
 
-更新日期：2026-10-02。当前状态：**v0.5.2 稳定版已公开发布并部署到 Mac。** Codex 获取结构与证据并负责详细判断，人查看离线交互 HTML 与 SVG；主要流程无需 API Key。三项审计缺陷的修复、安装验收和交付依据见 [v0.5.2 交付记录](delivery/2026-10-02-v0.5.2-reliability.md) 与 [D0–D8 计划](superpowers/plans/2026-10-02-v0-5-2-reliability-and-delivery.md)。此前 v0.5.1 的 T0–T8 和 v0.5.0 的 R1–R5 保持已交付，历史证据分别见 [v0.5.1](delivery/2026-10-02-v0.5.1-call-coverage.md)、[基础版收尾](delivery/2026-10-01-product-closure.md)。
+更新日期：2026-10-03。当前状态：**v0.5.2 稳定版已公开发布并部署到 Mac。** Codex 获取结构与证据并负责详细判断，人查看离线交互 HTML 与 SVG；主要流程无需 API Key。三项审计缺陷的修复、安装验收和交付依据见 [v0.5.2 交付记录](delivery/2026-10-02-v0.5.2-reliability.md) 与 [D0–D8 计划](superpowers/plans/2026-10-02-v0-5-2-reliability-and-delivery.md)。此前 v0.5.1 的 T0–T8 和 v0.5.0 的 R1–R5 保持已交付，历史证据分别见 [v0.5.1](delivery/2026-10-02-v0.5.1-call-coverage.md)、[基础版收尾](delivery/2026-10-01-product-closure.md)。
 
 **历史稳定版 v0.4.1：** [稳定性修复版](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.4.1)解决了后台子进程持有输出时超时无法及时返回，以及新一轮失败检查仍显示上一轮修复证据的问题。合并提交 `d7dd1df` 的 Python 3.11–3.13 CI 通过，385 个离线测试通过；最终 wheel 在干净环境完成了两轮修复、失败记录预览、超时记录保存和报告重开。修复保持在原有命令执行和报告机制内。
 
@@ -14,7 +14,7 @@ v0.5.1 延续基础版闭环，补充保守的同文件模块实例调用关系�
 
 **当前执行路线：** [v0.5.2 D0–D8](superpowers/plans/2026-10-02-v0-5-2-reliability-and-delivery.md) 已通过代码、来源、公开下载和 Mac 使用门槛。跨轮/跨命令回归误配、不可重开的大任务、新报告版本滞后三项问题已修复；旧任务可有界导出只读档案。最终文档整合提交与 CI 结果记录于 Mac 的 deployment-v0.5.2.json，正式 tag 始终固定在代码来源提交。[V1 两类仓库六题调查](evaluations/2026-10-02-v0.5.2-investigation-value.md)已完成：2 题回答完整、4 题边界明确，无产品阻断；原始命令、补读与四组关系图已归档。新仓库浏览器交互因 file URL 策略拒绝未验收。保持 v0.5.2，不启动 V2；后续从真实用户调查问题继续使用，仅在具体缺口阻塞目标时制定一项最小改进。不安排新的模型竞赛、MCP、数据库或图布局改造。
 
-**已认可的下一阶段方向：** [JS/TS 只读预览详细执行清单](superpowers/plans/2026-10-02-js-ts-readonly-preview.md)，配套 [范围与接口规格](superpowers/specs/2026-10-02-js-ts-readonly-preview-design.md)。A0 稳定基线已核对，正在实施 A1–A4 探索；B1–B4 尚未开始。先在两个固定仓库完成六题探索，由主代理依据实际调查收益决定去留；条件成立后再接入五个只读命令与 HTML/SVG，交付独立安装的 0.6.0a1 预览。Python 稳定入口仍为 v0.5.2。
+**JS/TS 探索结论：** [详细执行清单](superpowers/plans/2026-10-02-js-ts-readonly-preview.md)与[范围规格](superpowers/specs/2026-10-02-js-ts-readonly-preview-design.md)的 A0–A4 已完成。[六题探索报告](evaluations/2026-10-02-js-ts-exploration.md)记录原型、真实故障修正、源码核对和四组 HTML/SVG。decision=no-go：两仓库均未证明减少调查动作，B1–B4 未开始，未交付 0.6.0a1。Python 稳定入口仍为 v0.5.2。下一步如重新批准探索，先验证按问题选择必要命令的最小调查路径，再依照相同口径判断收益。
 
 ## 1. 产品承诺
 

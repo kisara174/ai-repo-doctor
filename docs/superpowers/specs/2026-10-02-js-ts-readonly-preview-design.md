@@ -1,7 +1,7 @@
 # JS/TS 只读调查预览规格
 
 日期：2026-10-02。依据：用户认可的 A0–A4 探索与 B1–B4 产品化清单。
-状态：**用户已批准实施；A0 基线核对完成，开始 A1–A4 探索。新语言解析能力尚未实现或交付。**
+状态：**A0–A4 于 2026-10-03 完成探索；decision=no-go，未证明调查动作减少。实验原型保留，B1–B4 未开始；正式产品仍是 Python v0.5.2。**
 
 ## 1. 目标与完成形态
 
@@ -72,7 +72,7 @@
 | [tree-sitter-javascript](https://pypi.org/project/tree-sitter-javascript/0.25.0/) | 0.25.0 | >=3.10 |
 | [tree-sitter-typescript](https://pypi.org/project/tree-sitter-typescript/0.23.2/) | 0.23.2 | >=3.9 |
 
-**三者 ABI、实际安装与行号行为尚未验证。** A2 必须验证；失败就停止并由主代理更新规格，不默默换版本或增加后端。
+**A2 在独立 Mac arm64 / Python 3.14.5 环境完成安装、API 和编码检查。** A3 真实输入发现 Point 属性崩溃，受控输入复现；原型改用字节偏移推导行号，回归与所选源码证据通过。详情见 [探索报告](../../evaluations/2026-10-02-js-ts-exploration.md)。这不表示所有平台或所有原生 API 无缺陷；不默默换版本或增加后端。
 
 A2 只与 TypeScript Compiler API 做官方资料层面的范围/运行环境比较。若 Tree-sitter 满足限定需求，就选它；不展开性能竞赛，不安装另一套后端来增加任务。
 
@@ -173,7 +173,7 @@ Python/SVG 与 HTML 关系投影改用 analyzed；读取旧地图时用 node.ana
 - JavaScript CLI：[sindresorhus/np，591e003bfc57371cfb8236694e8d784ae5d6fe5f](https://github.com/sindresorhus/np/blob/591e003bfc57371cfb8236694e8d784ae5d6fe5f/package.json)，ESM，bin 指向 source/cli.js。
 - TypeScript 库：[sindresorhus/ts-extras，323908522c9f90f07f99378b43891da742f2319f](https://github.com/sindresorhus/ts-extras/blob/323908522c9f90f07f99378b43891da742f2319f/package.json)，ESM，包 exports 指向 distribution。A1 要区分源码入口与构建产物，不能把不存在的 distribution 当源码。
 
-目前只核对候选清单，未克隆或调查六题。A1 固定这两个提交，选真实返回 ID 与源码参考答案，不预猜入口函数 ID。候选不适合限定范围时由主代理说明原因并修改样本记录，不能由机械执行者替换。
+A1 已固定这两个提交并建立独立源码参考；A3 完成六题调查、补读和图产物。上下文/影响使用实际 symbols 返回的 ID。A4 的动作收益门槛未通过（18 → 30 次），因此本轮不进入产品接入。原问题、源码与原始输出保留。候选后续变更仍须由主代理解释并更新记录，不能由机械执行者替换。
 
 A4 的 go 必须同时满足：
 

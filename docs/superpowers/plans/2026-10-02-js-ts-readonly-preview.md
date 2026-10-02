@@ -10,7 +10,7 @@
 
 **Spec:** [JS/TS 只读调查预览规格](../specs/2026-10-02-js-ts-readonly-preview-design.md)。执行者必须先读规格；接口和限制以该文档为准。
 
-**状态：** 2026-10-02 开始实施。A0–A3 已完成并保存仓库外收据；A4、B1–B4 尚未完成。使用隔离 worktree 的 codex/js-ts-readonly-preview 分支，Mac 稳定版仍为 v0.5.2。
+**状态：** 2026-10-02 开始实施，2026-10-03 探索收尾。A0–A4 已完成，decision=no-go：六题未证明动作减少，B1–B4 未开始。使用隔离 worktree 的 codex/js-ts-readonly-preview 分支，Mac 稳定版仍为 v0.5.2。
 
 ## Global Constraints
 
@@ -340,21 +340,23 @@ main 是搜索词，不是假定存在的 ID；不存在时按真实 candidates 
 
 ## A4｜按收益作 go / no-go
 
+**本轮结果：** gate.json=nno-go，四项门槛通过、调查动作收益未通过；六题从 18 次动作增至 30 次，未弱化门槛。receipts/A4.json 记录完成的 no-go 探索；后续 B 阶段保持条件未启动。
+
 **责任：** 主代理。**允许改动：** 探索文档、gate.json、计划状态。**禁止：** 为了得到 go 修改 oracle、弱化负例或先做 B。
 
-- [ ] 每题填写 status=answered/bounded/blocked、baseline_steps、trial_steps、supplement_reads、reused_records、source_evidence、command_durations、remaining_limits。
-- [ ] 用同一问题与源码范围比较步骤：基线只做源码调查，试验使用原型加补读；两边真正执行并留记录。差值是观察，不能外推人类效率。
-- [ ] 逐项核对规格 §7 的五项 gate：
+- [x] 每题填写 status=answered/bounded/blocked、baseline_steps、trial_steps、supplement_reads、reused_records、source_evidence、command_durations、remaining_limits。
+- [x] 用同一问题与源码范围比较步骤：基线只做源码调查，试验使用原型加补读；两边真正执行并留记录。差值是观察，不能外推人类效率。
+- [x] 逐项核对规格 §7 的五项 gate：
   1. 六题记录齐全；支持范围内至少 4 题回答，每仓库至少 2 题；
   2. 选定符号/行/引文与正关系正确，负例无造边；
   3. 每仓库至少 1 题少一次定位/补读动作；
   4. 实际命令都在记录机器上 30 秒内返回，无截断当成功；
   5. 隔离安装可用，无 Node 分析运行时，无目标执行和稳定目录变更。
-- [ ] gate.json 保存 schema_version=1、decision=go/no-go、每项 met 布尔值、evidence_paths、recorded_at、reason、actor=codex。
-- [ ] 执行 check-gate；脚本只能核对材料/数值一致性，不能替主代理判断有效调查收益。
-- [ ] no-go 时写实际原因和最小可能继续点，A阶段结束，B仍未开始。
-- [ ] 若 A2/A3 因技术约束无法完成，六题明确列出未执行步骤和阻断原因；A4 用失败的依赖/原型证据结束探索，不填编造的试验时间或命令。
-- [ ] go 时引用此 receipt，并冻结 B 阶段允许文件、候选版本与依赖；不扩展语法清单。
+- [x] gate.json 保存 schema_version=1、decision=go/no-go、每项 met 布尔值、evidence_paths、recorded_at、reason、actor=codex。
+- [x] 执行 check-gate；脚本只能核对材料/数值一致性，不能替主代理判断有效调查收益。
+- [x] no-go 时写实际原因和最小可能继续点，A阶段结束，B仍未开始。
+- 本轮不适用（条件保留）：若 A2/A3 因技术约束无法完成，六题明确列出未执行步骤和阻断原因；A4 用失败的依赖/原型证据结束探索，不填编造的试验时间或命令。
+- 本轮不适用（条件保留）：go 时引用此 receipt，并冻结 B 阶段允许文件、候选版本与依赖；不扩展语法清单。
 
 ~~~sh
 python -m tools.js_ts_trial check-trial --evidence-root "$JST_EVIDENCE"
