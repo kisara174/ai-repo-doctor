@@ -9,6 +9,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+from ._version import __version__
 from .architecture import build_architecture_summary
 from .context import build_impact
 from .leads import build_review_leads
@@ -17,7 +18,7 @@ from .source import read_source
 
 
 SCHEMA_VERSION = 1
-TOOL_VERSION = "0.5.0"
+TOOL_VERSION = __version__
 MAX_CASE_BYTES = 8 * 1024 * 1024
 
 

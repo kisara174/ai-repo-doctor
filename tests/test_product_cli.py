@@ -20,6 +20,32 @@ class ProductCliTests(unittest.TestCase):
             status = main(list(map(str, args)))
         return status, out.getvalue(), err.getvalue()
 
+    def test_version_does_not_scan_or_require_a_repository(self):
+        out = io.StringIO()
+        with redirect_stdout(out), patch('repo_doctor.cli.build_index', side_effect=AssertionError('must not scan')):
+            with self.assertRaises(SystemExit) as result:
+                main(['--version'])
+        self.assertEqual(result.exception.code, 0)
+        self.assertEqual(out.getvalue().strip(), 'repo-doctor 0.5.2')
+
+    def test_new_report_version_matches_release_and_old_case_stays_original(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            repo, case_dir = base / 'repo', base / 'case'
+            repo.mkdir()
+            (repo / 'app.py').write_text('value = 1\n', encoding='utf-8')
+            status, output, error = self.run_main('report', 'create', repo, '--out', case_dir, '--json')
+            self.assertEqual(status, 0, error)
+            case = json.loads(output)
+            self.assertEqual(case['tool_version'], '0.5.2')
+            case['tool_version'] = '0.5.0'
+            (case_dir / 'case.json').write_text(json.dumps(case), encoding='utf-8')
+            before = {name: (case_dir / name).read_bytes() for name in ('case.json', 'report.md')}
+            status, output, error = self.run_main('report', 'show', case_dir, '--json')
+            self.assertEqual(status, 0, error)
+            self.assertEqual(json.loads(output)['tool_version'], '0.5.0')
+            self.assertEqual(before, {name: (case_dir / name).read_bytes() for name in before})
+
     def test_create_show_and_symbol_search_are_reopenable(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)

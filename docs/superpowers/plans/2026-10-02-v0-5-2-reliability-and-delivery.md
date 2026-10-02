@@ -10,7 +10,7 @@
 
 **Spec:** 第 2 节为自包含设计合同，实施者先读第 1–4 节。审计原始证据位于 `/Users/kisara/.local/share/ai-repo-doctor/audits/2026-10-02-v0.5.1/`；其他机器没有该目录时，仍可按本文件复现和实施。
 
-**状态：** 2026-10-02 编写。执行已开始；D0、D1 已完成，D2 已完成，D3 已完成，D4 进行中。以下示例需结合交付记录中的实际证据理解。
+**状态：** 2026-10-02 编写。执行已开始；D0–D4 已完成，D5 进行中。以下示例需结合交付记录中的实际证据理解。
 
 ## Global Constraints
 
@@ -197,7 +197,7 @@ D0 现场 → D1 回归轮 → D2 保存 → D3 救援 → D4 版本
 | D1 | 当前失败轮不误报闭合 | 完成 |
 | D2 | 超限保留原件，成功保存可重开 | 完成 |
 | D3 | 超大历史完整可查阅 | 完成 |
-| D4 | 包、CLI、新报告版本一致 | 待执行 |
+| D4 | 包、CLI、新报告版本一致 | 完成 |
 | D5 | 一条当前产品教程 | 待执行 |
 | D6 | 安装后真实流程及冻结证据 | 待执行 |
 | D7 | 公开 wheel 与正式来源一致 | 待执行 |
@@ -413,9 +413,9 @@ python3 -B -m repo_doctor.case_recovery --help
 
 **Interfaces:** __version__: str；TOOL_VERSION 别名；全局 --version。
 
-- [ ] 新测试捕获 main(['--version']) 的 SystemExit 0，断言输出；patch build_index 为会抛错的 mock，证明未扫描。
-- [ ] 新 case 断言 0.5.2，旧 0.5.0 case 的 report show 不改其字段和字节。
-- [ ] 添加字面量常量，删除 project 内静态 version 行，加入以下 dynamic 配置，其他元数据保留：
+- [x] 新测试捕获 main(['--version']) 的 SystemExit 0，断言输出；patch build_index 为会抛错的 mock，证明未扫描。
+- [x] 新 case 断言 0.5.2，旧 0.5.0 case 的 report show 不改其字段和字节。
+- [x] 添加字面量常量，删除 project 内静态 version 行，加入以下 dynamic 配置，其他元数据保留：
 
 ```python
 # repo_doctor/_version.py
@@ -438,7 +438,7 @@ TOOL_VERSION = __version__
 parser.add_argument('--version', action='version', version=f'repo-doctor {__version__}')
 ```
 
-- [ ] 常量模块没有 Git 查询或 metadata 导入；构建不依赖遗留 egg-info。
+- [x] 常量模块没有 Git 查询或 metadata 导入；构建不依赖遗留 egg-info。
 
 ```sh
 python3 -B -m unittest discover -s tests -p 'test_product_cli.py' -v
