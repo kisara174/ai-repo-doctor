@@ -10,7 +10,7 @@
 
 **Spec:** [JS/TS 只读调查预览规格](../specs/2026-10-02-js-ts-readonly-preview-design.md)。执行者必须先读规格；接口和限制以该文档为准。
 
-**状态：** 2026-10-02 开始实施。A0–A2 已完成并保存仓库外收据；A3–A4、B1–B4 尚未完成。使用隔离 worktree 的 codex/js-ts-readonly-preview 分支，Mac 稳定版仍为 v0.5.2。
+**状态：** 2026-10-02 开始实施。A0–A3 已完成并保存仓库外收据；A4、B1–B4 尚未完成。使用隔离 worktree 的 codex/js-ts-readonly-preview 分支，Mac 稳定版仍为 v0.5.2。
 
 ## Global Constraints
 
@@ -253,14 +253,16 @@ for grammar, source in [
 
 ## A3｜隔离原型与六题试验
 
+**2026-10-02 实测修订：** 固定版本安装与小输入通过，但 np 原型首次运行 exit 139。自写 300 函数输入单独读取 Point 属性也 exit -11，字节偏移遍历退出 0。上游 [issue #487](https://github.com/tree-sitter/py-tree-sitter/issues/487)描述相关 Point.column 问题并建议字节偏移。保留版本与范围，改用源码换行字节表推导行号/列；原始崩溃记录和独立回归必须保留。此证据不代表已确认上游根因，也不保证所有原生 API 无缺陷。
+
 **责任：** 主代理负责 walker、接口与补读；固定夹具复制可按附件委派。
 **允许改动：** experiments/js_ts/spike.py、tests/test_js_ts_spike.py、tests/fixtures/js_ts_contract/、tools/js_ts_trial.py 的检查实现、探索文档与证据目录。
 **禁止：** repo_doctor 源码、产品 pyproject、CI、版本、稳定安装。
 
 ### A3.1 原型接口与 AST 提取
 
-- [ ] 先创建附件 1 的固定夹具和独立行证据；check-fixtures 通过后再写 parser。
-- [ ] 在 tests/test_js_ts_spike.py 写下面的契约测试，先确认因不存在 extract 而失败：
+- [x] 先创建附件 1 的固定夹具和独立行证据；check-fixtures 通过后再写 parser。
+- [x] 在 tests/test_js_ts_spike.py 写下面的契约测试，先确认因不存在 extract 而失败：
 
 ~~~python
 from pathlib import Path
@@ -277,8 +279,8 @@ class SpikeContractTests(unittest.TestCase):
         self.assertIsNone(data["error"])
 ~~~
 
-- [ ] 实现 extract(source: str, *, file: str, language: str) -> dict；输出 symbols、esm_imports、esm_exports、calls、identifier_uses、unsafe_bindings、class_header_spans、limits、error。字段以规格的记录契约为准。
-- [ ] 用如下边界代码加载后端、编码与计算行终点，不保存整棵 tree：
+- [x] 实现 extract(source: str, *, file: str, language: str) -> dict；输出 symbols、esm_imports、esm_exports、calls、identifier_uses、unsafe_bindings、class_header_spans、limits、error。字段以规格的记录契约为准。
+- [x] 用如下边界代码加载后端、编码与计算行终点，不保存整棵 tree：
 
 ~~~python
 def parse_tree(source, language):
@@ -294,19 +296,19 @@ def parse_tree(source, language):
     raw = source.encode("utf-8")
     return raw, parser.parse(raw)
 
-def span(node):
-    start = node.start_point.row + 1
-    end = node.end_point.row + (1 if node.end_point.column else 0)
-    return start, max(start, end)
+# A3 实测修订：避免 Point.column 的原生崩溃。
+# 从 UTF-8 raw 的换行字节位置建立 line_starts，使用 bisect_right
+# 计算 start_byte / end_byte 所在行；end_byte 在换行起点时取前一行。
+# 行号从 1 开始，column 仍按字节计，不混用字符列。
 ~~~
 
-- [ ] walker 按节点类型处理：export_statement、function_declaration、generator_function_declaration、lexical_declaration 中 const 的箭头/函数表达式、class_declaration、method_definition、TS function_signature、import_statement、export_clause、call_expression。
-- [ ] 通过 child_by_field_name / named_children 取名称、body、parameters、source；只根据真实 AST 节点生成记录，不用正则猜函数边界。
-- [ ] 具名嵌套维护 parent；没有明确名称的普通回调不生成假符号，也不把其调用归到外层函数。匿名默认导出用 <default>。
-- [ ] 遍历最早 ERROR/missing；有错误则返回 error 和文件行，symbols/imports/calls 清空，禁止“错误前看着可用”的部分图。
-- [ ] 提取参数、局部声明、catch/解构绑定和赋值/更新涉及的名称；无法识别的绑定形态限制整个相关调用范围。先不解析 calls，只保存调用点和限制。
-- [ ] TS 重载签名与唯一实现归并；声明-only 与重复具体实现不当成唯一可调用目标。
-- [ ] 通过以下验证，不跑全项目套件：
+- [x] walker 按节点类型处理：export_statement、function_declaration、generator_function_declaration、lexical_declaration 中 const 的箭头/函数表达式、class_declaration、method_definition、TS function_signature、import_statement、export_clause、call_expression。
+- [x] 通过 child_by_field_name / named_children 取名称、body、parameters、source；只根据真实 AST 节点生成记录，不用正则猜函数边界。
+- [x] 具名嵌套维护 parent；没有明确名称的普通回调不生成假符号，也不把其调用归到外层函数。匿名默认导出用 <default>。
+- [x] 遍历最早 ERROR/missing；有错误则返回 error 和文件行，symbols/imports/calls 清空，禁止“错误前看着可用”的部分图。
+- [x] 提取参数、局部声明、catch/解构绑定和赋值/更新涉及的名称；无法识别的绑定形态限制整个相关调用范围。先不解析 calls，只保存调用点和限制。
+- [x] TS 重载签名与唯一实现归并；声明-only 与重复具体实现不当成唯一可调用目标。
+- [x] 通过以下验证，不跑全项目套件：
 
 ~~~sh
 python -m tools.js_ts_trial check-fixtures --root tests/fixtures/js_ts_contract
@@ -315,14 +317,14 @@ python -m tools.js_ts_trial check-fixtures --root tests/fixtures/js_ts_contract
 
 ### A3.2 原型只读命令
 
-- [ ] 实现 python -m experiments.js_ts.spike 的 overview/symbols/context/impact/map；使用 --languages javascript,typescript 参数，输出与正式接口的公共字段兼容。
-- [ ] overview 有限统计与样例；symbols 搜索真实 ID；context target-first 与显式 includes，行预算至多 120。
-- [ ] ESM 本地文件依赖按规格唯一路径规则提取；原型 impact 的普通调用能力明确 not-supported，空列表必须同时给限制说明，不宣称无影响。
-- [ ] map 复用现有 render_html/render_svg 和数据结构，实验适配 analyzed / python 字段，不改正式 viewer 文件。原型对视图筛选的临时适配必须标实验，不算 B3 完成。
-- [ ] 保存每題的实际 overview/symbols/context/impact 命令；context/impact 用本轮 symbols 返回 ID。图问题再生成总览/聚焦新目录。
-- [ ] 记录补读、复用、实际耗时、源码/图缺口。原型未解析的关系仍由 Codex 补读，不写回图边。
-- [ ] 对照 oracle 核对选定符号与文件关系；可追溯输出、限制和参考答案均归档。
-- [ ] check-trial 验证全部实际命令与源码/图来源；写六题结果表。
+- [x] 实现 python -m experiments.js_ts.spike 的 overview/symbols/context/impact/map；使用 --languages javascript,typescript 参数，输出与正式接口的公共字段兼容。
+- [x] overview 有限统计与样例；symbols 搜索真实 ID；context target-first 与显式 includes，行预算至多 120。
+- [x] ESM 本地文件依赖按规格唯一路径规则提取；原型 impact 的普通调用能力明确 not-supported，空列表必须同时给限制说明，不宣称无影响。
+- [x] map 复用现有 render_html/render_svg 和数据结构，实验适配 analyzed / python 字段，不改正式 viewer 文件。原型对视图筛选的临时适配必须标实验，不算 B3 完成。
+- [x] 保存每題的实际 overview/symbols/context/impact 命令；context/impact 用本轮 symbols 返回 ID。图问题再生成总览/聚焦新目录。
+- [x] 记录补读、复用、实际耗时、源码/图缺口。原型未解析的关系仍由 Codex 补读，不写回图边。
+- [x] 对照 oracle 核对选定符号与文件关系；可追溯输出、限制和参考答案均归档。
+- [x] check-trial 验证全部实际命令与源码/图来源；写六题结果表。
 
 执行形式：
 
