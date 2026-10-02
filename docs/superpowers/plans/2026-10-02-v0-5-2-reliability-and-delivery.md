@@ -10,7 +10,7 @@
 
 **Spec:** 第 2 节为自包含设计合同，实施者先读第 1–4 节。审计原始证据位于 `/Users/kisara/.local/share/ai-repo-doctor/audits/2026-10-02-v0.5.1/`；其他机器没有该目录时，仍可按本文件复现和实施。
 
-**状态：** 2026-10-02 编写。执行已开始；D0、D1 已完成，D2 已完成，D3 进行中。以下示例需结合交付记录中的实际证据理解。
+**状态：** 2026-10-02 编写。执行已开始；D0、D1 已完成，D2 已完成，D3 已完成，D4 进行中。以下示例需结合交付记录中的实际证据理解。
 
 ## Global Constraints
 
@@ -196,7 +196,7 @@ D0 现场 → D1 回归轮 → D2 保存 → D3 救援 → D4 版本
 | D0 | 可追溯基线与隔离位置 | 完成 |
 | D1 | 当前失败轮不误报闭合 | 完成 |
 | D2 | 超限保留原件，成功保存可重开 | 完成 |
-| D3 | 超大历史完整可查阅 | 待执行 |
+| D3 | 超大历史完整可查阅 | 完成 |
 | D4 | 包、CLI、新报告版本一致 | 待执行 |
 | D5 | 一条当前产品教程 | 待执行 |
 | D6 | 安装后真实流程及冻结证据 | 待执行 |
@@ -377,7 +377,7 @@ python3 -B -m unittest discover -s tests -p 'test_agent_tools.py' -v
 
 **Interfaces:** MAX_RECOVERY_BYTES；export_archive(source: Path, destination: Path) -> dict；main(argv: list[str] | None = None) -> int；模块入口。
 
-- [ ] 新测试创建合法 case，再添加 padding 超过正常容量。建立完整输出合同测试，原 schema 和 issue 字段完整。未实现时记录缺少功能；实现后必须以实际档案字节证明成功。
+- [x] 新测试创建合法 case，再添加 padding 超过正常容量。建立完整输出合同测试，原 schema 和 issue 字段完整。未实现时记录缺少功能；实现后必须以实际档案字节证明成功。
 
 ```python
 source_bytes = (source / 'case.json').read_bytes()
@@ -392,11 +392,11 @@ receipt = json.loads((destination / 'recovery.json').read_text())
 assert receipt['source_sha256'] == hashlib.sha256(source_bytes).hexdigest()
 ```
 
-- [ ] 检查输出冲突、源目录/链接、输出路径关系；一次有界读取原字节，超限抛 ValueError；共享 _validate_case 校验。
-- [ ] render_report 生成完整报告，前置只读说明；receipt 记录 §2.3 字段。复制原字节，不调用 save_case。
-- [ ] 输入全部有效后创建新目录，权限独占写入，receipt 最后写。输入错误不得创建输出。
-- [ ] 模块捕获 ValueError/OSError/UnicodeError/JSONDecodeError，错误返回 2；成功打印 JSON receipt，返回 0。
-- [ ] 验证超 32 MiB、已有输出、源链接、输出在源内、畸形 JSON、合法旧 schema、中文、旧多命令、途中写入失败。每个拒绝核对原 hash；途中失败不得写成功 receipt。
+- [x] 检查输出冲突、源目录/链接、输出路径关系；一次有界读取原字节，超限抛 ValueError；共享 _validate_case 校验。
+- [x] render_report 生成完整报告，前置只读说明；receipt 记录 §2.3 字段。复制原字节，不调用 save_case。
+- [x] 输入全部有效后创建新目录，权限独占写入，receipt 最后写。输入错误不得创建输出。
+- [x] 模块捕获 ValueError/OSError/UnicodeError/JSONDecodeError，错误返回 2；成功打印 JSON receipt，返回 0。
+- [x] 验证超 32 MiB、已有输出、源链接、输出在源内、畸形 JSON、合法旧 schema、中文、旧多命令、途中写入失败。每个拒绝核对原 hash；途中失败不得写成功 receipt。
 
 ```sh
 python3 -B -m unittest discover -s tests -p 'test_case_recovery.py' -v
