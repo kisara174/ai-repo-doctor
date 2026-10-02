@@ -1,10 +1,10 @@
 # Codex 调用与仓库结构关系图
 
-v0.5.2 使用说明。离线结构和来源证据供 Codex 调查，HTML/SVG 供人查看项目结构。当前修复已实现，正式发布与 Mac 升级待交付门槛通过，见 [交付记录](delivery/2026-10-02-v0.5.2-reliability.md)。
+v0.5.2 使用说明。离线结构和来源证据供 Codex 调查，HTML/SVG 供人查看项目结构。稳定版已发布并升级这台 Mac，公开下载、干净安装和持久安装均通过验收，见 [交付记录](delivery/2026-10-02-v0.5.2-reliability.md)。
 
 ## 1. 一次安装
 
-其他机器使用 Python 3.11+ 安装发行 wheel；以下地址在 v0.5.2 发布后可用：
+其他机器使用 Python 3.11+ 安装发行 wheel；使用公开安装地址：
 
 ```sh
 python3 -m venv .venv
@@ -14,7 +14,7 @@ repo-doctor --version
 repo-doctor skill export --out ~/.agents/skills/repo-doctor
 ```
 
-这台 Mac 的持久命令位于 `~/.local/bin/repo-doctor`，当前部署仍为 v0.5.1；D8 完成后升级为 v0.5.2，无需激活环境。已有 Skill 保持原样。
+这台 Mac 的持久命令位于 `~/.local/bin/repo-doctor`，已部署 v0.5.2，无需激活环境。已有 Skill 保持原样。
 
 Skill 导出目录必须尚不存在。Codex 中可显式使用 `$repo-doctor`；如果当前会话尚未发现 Skill，重新启动客户端再调用。安装不新增 MCP 服务，也不修改全局配置。旧版与可选云端接口见 [兼容参考](LEGACY_USAGE.md)。
 
