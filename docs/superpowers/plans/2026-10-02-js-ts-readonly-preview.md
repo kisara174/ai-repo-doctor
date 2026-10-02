@@ -10,7 +10,7 @@
 
 **Spec:** [JS/TS 只读调查预览规格](../specs/2026-10-02-js-ts-readonly-preview-design.md)。执行者必须先读规格；接口和限制以该文档为准。
 
-**状态：** 2026-10-02 开始实施。A0 已完成并写入仓库外 baseline.json / receipts/A0.json；A1–A4、B1–B4 尚未完成。使用隔离 worktree 的 codex/js-ts-readonly-preview 分支，Mac 稳定版仍为 v0.5.2。
+**状态：** 2026-10-02 开始实施。A0–A1 已完成并保存仓库外收据；A2–A4、B1–B4 尚未完成。使用隔离 worktree 的 codex/js-ts-readonly-preview 分支，Mac 稳定版仍为 v0.5.2。
 
 ## Global Constraints
 
@@ -150,8 +150,8 @@ for relative, expected in build["runtime_hashes"].items():
 | np | 591e003bfc57371cfb8236694e8d784ae5d6fe5f | https://github.com/sindresorhus/np.git | package.json 的 bin / source/cli.js |
 | ts-extras | 323908522c9f90f07f99378b43891da742f2319f | https://github.com/sindresorhus/ts-extras.git | package.json exports 与实际 source/index.ts 的区别 |
 
-- [ ] 先写 questions.json，再下载这两个 commit；问题 J1/J2/J3 与 T1/T2/T3分别为入口到核心、选定函数关系/影响、图定位文件和局部关系。
-- [ ] 使用 Git fetch 指定 SHA，不用执行时漂移的 main：
+- [x] 先写 questions.json，再下载这两个 commit；问题 J1/J2/J3 与 T1/T2/T3分别为入口到核心、选定函数关系/影响、图定位文件和局部关系。
+- [x] 使用 Git fetch 指定 SHA，不用执行时漂移的 main：
 
 ~~~sh
 git -c core.hooksPath=/dev/null -c core.fsmonitor=false init "$JST_EVIDENCE/repos/np"
@@ -166,14 +166,14 @@ git -C "$JST_EVIDENCE/repos/ts-extras" -c core.hooksPath=/dev/null checkout --de
 
 目录已存在则核对来源后复用，不重复 init/remote add，也不删除。禁止 submodule update、npm install、npm test、np CLI、TS 构建或发布。
 
-- [ ] 针对两个本地根调用 GraphFlow context；仅按锚点或必要的有界源码补读选真实函数。
-- [ ] 手工建立 oracle；每仓库至少 3 个关键符号、2 条本地文件依赖。正/负调用参考也保存，但 A3 不要求已经实现调用能力。
-- [ ] 每条源码依据保存 file、start_line、end_line、quote、whole-file SHA256、固定 commit URL。oracle 由源文件建立，不能从原型输出反推。
-- [ ] 区分 np 的命令入口文件与具体函数；区分 ts-extras 的源码与 distribution 输出，缺失构建文件不造边。
-- [ ] 用稳定 CLI 做 overview/symbols 的兼容性记录；若没有返回 JS/TS ID，不猜一个 ID 去调用 context/impact。这两次命令不计入源码调查的效率基线；baseline_steps 只记录实际源文件搜索/補读。
-- [ ] 六题分别记录 baseline_steps：每次实际命令或独立源码读取算一步，已有材料复用列出 references，不重复计数。不填估计的“人类耗时”。
-- [ ] 编写单一辅助脚本 tools/js_ts_trial.py，冻结下节契约；不扩成通用评估平台。
-- [ ] 校验 sources/oracle，更新探索文档的来源/未执行项。
+- [x] 针对两个本地根调用 GraphFlow context；仅按锚点或必要的有界源码补读选真实函数。
+- [x] 手工建立 oracle；每仓库至少 3 个关键符号、2 条本地文件依赖。正/负调用参考也保存，但 A3 不要求已经实现调用能力。
+- [x] 每条源码依据保存 file、start_line、end_line、quote、whole-file SHA256、固定 commit URL。oracle 由源文件建立，不能从原型输出反推。
+- [x] 区分 np 的命令入口文件与具体函数；区分 ts-extras 的源码与 distribution 输出，缺失构建文件不造边。
+- [x] 用稳定 CLI 做 overview/symbols 的兼容性记录；若没有返回 JS/TS ID，不猜一个 ID 去调用 context/impact。这两次命令不计入源码调查的效率基线；baseline_steps 只记录实际源文件搜索/補读。
+- [x] 六题分别记录 baseline_steps：每次实际命令或独立源码读取算一步，已有材料复用列出 references，不重复计数。不填估计的“人类耗时”。
+- [x] 编写单一辅助脚本 tools/js_ts_trial.py，冻结下节契约；不扩成通用评估平台。
+- [x] 校验 sources/oracle，更新探索文档的来源/未执行项。
 
 辅助脚本子命令：
 
