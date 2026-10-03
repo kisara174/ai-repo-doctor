@@ -10,6 +10,37 @@ from tests.test_js_ts import HAS_EXTRA
 
 @unittest.skipUnless(HAS_EXTRA, 'requires optional js extra')
 class ESMTests(unittest.TestCase):
+    def test_limit_dedup_work_is_bounded_and_preserves_existing_order(self):
+        from unittest.mock import patch
+        from repo_doctor.esm import resolve_esm_graph
+        from repo_doctor.model import AnalysisLimit
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            calls = [f'  missing{i}();' for i in range(120)]
+            (root / 'app.js').write_text('export function entry() {\n' + '\n'.join(calls) + '\n}')
+            index = build_index(root, languages=('javascript',))
+            existing = [AnalysisLimit('earlier.js', i, 'external-or-alias', f'earlier-{i}')
+                        for i in range(250)]
+            wanted = [AnalysisLimit('app.js', i + 2, 'unresolved-call',
+                      f'Call missing{i} is outside unique unshadowed direct function bindings')
+                      for i in range(120)]
+            index.analysis_limits = existing + wanted[:1]
+            comparisons = 0
+            original_eq = AnalysisLimit.__eq__
+
+            def counted_eq(left, right):
+                nonlocal comparisons
+                comparisons += 1
+                return original_eq(left, right)
+
+            with patch.object(AnalysisLimit, '__eq__', counted_eq):
+                resolve_esm_graph(index)
+                resolve_esm_graph(index)
+            self.assertEqual(index.analysis_limits, existing + wanted)
+            self.assertEqual(index.call_edges, [])
+            self.assertLess(comparisons, 600, 'dedup must not scan the growing limits list')
+
     def test_ts_js_substitution_unique_but_not_ambiguous_or_unselected(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
