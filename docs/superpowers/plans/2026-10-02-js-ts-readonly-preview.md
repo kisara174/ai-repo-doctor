@@ -10,7 +10,7 @@
 
 **Spec:** [JS/TS 只读调查预览规格](../specs/2026-10-02-js-ts-readonly-preview-design.md)。执行者必须先读规格；接口和限制以该文档为准。
 
-**状态：** 2026-10-02 开始实施，2026-10-03 探索收尾。A0–A4 已完成，decision=no-go：六题未证明动作减少，B1–B4 未开始。使用隔离 worktree 的 codex/js-ts-readonly-preview 分支，Mac 稳定版仍为 v0.5.2。
+**状态：** 2026-10-02 开始实施。首次 A0–A4 的 no-go 保留；2026-10-03 [按需流程复核](../../evaluations/2026-10-03-js-ts-adaptive-workflow.md)独立 gate=go：两仓库结构题各省一次动作，六题从 30 降至 19，仍高于源码基线 18。B1–B4 尚未实施，下一项是 B1。使用隔离 worktree 的 codex/js-ts-readonly-preview 分支，Mac 稳定版仍为 v0.5.2。
 
 ## Global Constraints
 
@@ -37,6 +37,8 @@ A0 基线/范围 → A1 样本/参考 → A2 解析选择 → A3 隔离原型 �
 ~~~
 
 A4 是主代理依据实际证据作出的继续条件，不是自动勾选，也不要求用户为已授权的常规步骤重复确认。缺少证据就保持 B 阶段未开始；发现规格之外的新需求，由主代理形成具体方案，不能由执行模型猜测。
+
+用户授权重新探索时，允许以独立 follow-up 的同题、同基线和五项门槛结果决定是否继续；原 A4 gate 和收据不覆盖。本轮 follow-up 已通过，其局部收益和非盲试验限制见报告。B1/B4 的 go 前置可使用该独立 gate；正式交付门槛不变。
 
 完成终点只有两种：
 
@@ -340,7 +342,7 @@ main 是搜索词，不是假定存在的 ID；不存在时按真实 candidates 
 
 ## A4｜按收益作 go / no-go
 
-**本轮结果：** gate.json=nno-go，四项门槛通过、调查动作收益未通过；六题从 18 次动作增至 30 次，未弱化门槛。receipts/A4.json 记录完成的 no-go 探索；后续 B 阶段保持条件未启动。
+**首次结果（保留）：** gate.json=no-go，四项门槛通过、调查动作收益未通过；六题从 18 次动作增至 30 次，未弱化门槛。receipts/A4.json 记录完成的 no-go 探索；后续 B 阶段保持条件未启动。
 
 **责任：** 主代理。**允许改动：** 探索文档、gate.json、计划状态。**禁止：** 为了得到 go 修改 oracle、弱化负例或先做 B。
 
@@ -368,7 +370,7 @@ python -m tools.js_ts_trial check-gate --evidence-root "$JST_EVIDENCE"
 
 ## B1｜正式接入五个只读命令
 
-**前置：** A4 go。**责任：** 主代理。**范围：** 文件表中 B1 所列文件与对应聚焦测试。
+**前置：** A4 go 或已通过的独立按需流程 follow-up gate。**责任：** 主代理。**范围：** 文件表中 B1 所列文件与对应聚焦测试。
 **输出接口：** 规格 §6 的 typed records / build_index / parse_js_ts_file / resolve_esm_graph、五个 --languages 输出。
 
 ### B1.1 语言、读取和可选依赖
@@ -576,7 +578,7 @@ node tests/test_map_viewer.js
 ## B4｜预览包、独立安装和完整交付
 
 **责任：** 主代理；依赖、CI、Git、发布、部署不委派。
-**范围：** B4文件表、JST_EVIDENCE、独立 preview目录。**前置：** A4 go、B1–B3明确通过。
+**范围：** B4文件表、JST_EVIDENCE、独立 preview目录。**前置：** A4 go 或已通过的独立 follow-up gate，且 B1–B3明确通过。
 
 ### B4.1 用户文档与安装 validator
 
@@ -876,10 +878,10 @@ python -m tools.js_ts_trial check-fixtures --root tests/fixtures/js_ts_contract
 继续 AI Repo Doctor 的 JS/TS 只读预览，先读用户 AGENTS、
 GraphFlow context、docs/superpowers/specs/2026-10-02-js-ts-readonly-preview-design.md
 与 docs/superpowers/plans/2026-10-02-js-ts-readonly-preview.md。
-从第一项未完成任务按 A0–A4执行，保持 v0.5.2稳定安装。
+首次 A0–A4 和按需流程 follow-up 已完成；从 B1 第一项未完成任务继续，保持 v0.5.2稳定安装。
 本计划写出不代表实施完成；先核对worktree、receipt和实际输出，避免重复。
 固定np与ts-extras源码，目标仓库只静态分析；Key/Skill/旧报告/用户四文档保留。
-A4由主代理按真实收益作go/no-go，no-go归档结束；go才执行B1–B4。
+主代理按真实收益作 go/no-go；原 A4 no-go 保留，本轮独立 follow-up go 为 B1–B4 提供继续依据。不得重做 A 阶段或据此标记产品阶段已完成。
 后续预览独立安装，不替换稳定CLI/Skill，不扩大为JS issue闭环或跨语言调用。
 主代理负责设计/debug/参考答案/审查/发布，执行者仅领取合格机械包。
 测试对应具体风险与现有CI门槛；最终交付中文报告、实际CLI、固定来源和HTML/SVG。
