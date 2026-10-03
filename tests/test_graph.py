@@ -1,11 +1,45 @@
 import tempfile
 import unittest
+from collections import Counter
 from pathlib import Path
+from unittest.mock import patch
 
 from repo_doctor.index import build_index
+from repo_doctor import graph
 
 
 class GraphTests(unittest.TestCase):
+    def test_module_name_scans_are_bounded_and_do_not_leak(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); (root/'pkg').mkdir()
+            (root/'unused.py').write_text('# no bindings\n')
+            (root/'pkg/impl.py').write_text('def first():\n    return 1\ndef second():\n    return 2\n')
+            (root/'pkg/__init__.py').write_text('from .impl import first as public\n')
+            for number in range(12):
+                (root/f'app{number}.py').write_text('from pkg import public\ndef run():\n    return public()\n')
+            original=graph._module_names
+            for target in ('first','second'):
+                (root/'pkg/__init__.py').write_text(f'from .impl import {target} as public\n')
+                calls=Counter()
+                def counted(path):
+                    calls[path]+=1
+                    return original(path)
+                with patch.object(graph,'_module_names',side_effect=counted):
+                    index=build_index(root)
+                # One ordinary-resolution scan plus the Click availability scan.
+                self.assertEqual(calls['unused.py'],2)
+                self.assertEqual({(e.caller,e.callee) for e in index.call_edges},
+                                 {(f'app{n}.py::run',f'pkg/impl.py::{target}') for n in range(12)})
+                self.assertIsNone(graph._RESOLUTION_LOOKUPS.get())
+
+    def test_resolution_lookup_scope_is_reset_on_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); (root/'app.py').write_text('def f():\n    return 1\n')
+            with patch.object(graph,'_resolve_graph',side_effect=RuntimeError('controlled failure')):
+                with self.assertRaises(RuntimeError):build_index(root)
+            self.assertIsNone(graph._RESOLUTION_LOOKUPS.get())
+            self.assertIn('app.py::f',build_index(root).symbols)
+
     def test_resolves_method_call_on_locally_constructed_instance(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
