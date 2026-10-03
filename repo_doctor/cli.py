@@ -191,6 +191,8 @@ def _print_impact(payload: dict) -> None:
                 print(f"      via re-export {hop['name']} at {hop['file']}:{hop['line']}")
     if payload.get("status") == "not-supported":
         print("  Ordinary JS/TS call impact is not supported; empty results do not prove no impact.")
+    elif payload.get("status") == "bounded":
+        print("  Limited direct JS/TS call coverage; empty results do not prove no impact.")
     elif not payload["affected_symbols"]:
         print("  No resolved callers found; this is not complete runtime coverage.")
     print("Module importers:")

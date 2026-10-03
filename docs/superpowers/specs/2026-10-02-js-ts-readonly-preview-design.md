@@ -105,6 +105,8 @@ esm_exports: list[ESMExportRef] = field(default_factory=list)
 identifier_uses: list[IdentifierUse] = field(default_factory=list)
 unsafe_js_bindings: dict[str, set[str]] = field(default_factory=dict)
 class_header_spans: dict[str, tuple[int, int]] = field(default_factory=dict)
+js_top_level_symbols: set[str] = field(default_factory=set)
+js_calls_resolved: bool = False
 ~~~
 
 记录字段：
@@ -113,6 +115,7 @@ class_header_spans: dict[str, tuple[int, int]] = field(default_factory=dict)
 - ESMImportRef(file: str, specifier: str, imported: str | None, alias: str | None, start_line: int, end_line: int, type_only: bool = False, resolved_file: str | None = None, resolution_kind: str | None = None)。imported="*" 表示 namespace，None 表示 side-effect；默认导入用 "default"。
 - ESMExportRef(file: str, exported: str, local_name: str | None, specifier: str | None, imported: str | None, start_line: int, end_line: int, type_only: bool = False)。
 - IdentifierUse(file: str, name: str, line: int)；用于选择上下文导入，不证明调用目标。
+- B2 增加 JSParsedFile.top_level_symbols（默认空集合）、RepoIndex.js_top_level_symbols 与 js_calls_resolved（默认 False）。依据 AST 的实际 program/export/const 声明祖先标记顶层函数，避免块级函数因 parent=None 被误认；该标记仅用于有限调用与能力说明，不改变旧 Symbol。
 - JSParsedFile(parsed: ParsedFile, esm_imports: list[ESMImportRef], esm_exports: list[ESMExportRef], identifier_uses: list[IdentifierUse], unsafe_bindings: set[str], class_header_spans: dict[str, tuple[int, int]], limits: list[AnalysisLimit])。
 
 符号 ID 仍为相对路径::qualname，例如 src/core.ts::inc、src/core.js::Box.get。使用路径区分语言，不给 Python ID 加前缀。块级同名冲突和多个具体实现标 ambiguous，不靠行号生成看似唯一的假目标。

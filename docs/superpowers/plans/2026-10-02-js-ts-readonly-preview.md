@@ -485,7 +485,7 @@ with TemporaryDirectory() as temp:
 **范围：** repo_doctor/esm.py、repo_doctor/js_ts.py、repo_doctor/index.py 中启用 resolve_calls 的调用点，tests/test_esm.py、tests/test_context.py；必要的 model.py 元数据须先解释并更新规格。
 **输入：** B1 记录、附件正负例。**输出：** 已确认 CallEdge与同源 impact，capabilities 在通过后加 calls。
 
-- [ ] 先写以下测试方法内的正/负断言，不先扩白名单。全套夹具中 core.js 与 core.ts 同时存在，consumer 的 ./core.js 必须保留歧义；TS 唯一候选正例在另一个只含两份源码的目录验证：
+- [x] 先写以下测试方法内的正/负断言，不先扩白名单。全套夹具中 core.js 与 core.ts 同时存在，consumer 的 ./core.js 必须保留歧义；TS 唯一候选正例在另一个只含两份源码的目录验证：
 
 ~~~python
 import shutil
@@ -514,8 +514,8 @@ with TemporaryDirectory() as temp:
     }
 ~~~
 
-- [ ] type_only 单独在唯一候选目录追加该静态文件后验证没有 bad→inc，确保拒绝原因是类型导入，不能被双文件歧义掩盖。
-- [ ] 在一个新受控目录写入以下文本为 rewritten.js，断言不存在 rewritten.js::entry→rewritten.js::target；赋值必须让候选绑定进入 unsafe_js_bindings，而不只处理参数遮蔽：
+- [x] type_only 单独在唯一候选目录追加该静态文件后验证没有 bad→inc，确保拒绝原因是类型导入，不能被双文件歧义掩盖。
+- [x] 在一个新受控目录写入以下文本为 rewritten.js，断言不存在 rewritten.js::entry→rewritten.js::target；赋值必须让候选绑定进入 unsafe_js_bindings，而不只处理参数遮蔽：
 
 ~~~javascript
 export function target() { return 1; }
@@ -523,16 +523,16 @@ target = () => 2;
 export function entry() { return target(); }
 ~~~
 
-- [ ] 同文件仅解析顶层具名函数与 const 绑定函数；候选唯一、非歧义、未写入/更新、caller 参数/局部/捕获作用域没有遮蔽才连接。
-- [ ] 嵌套/块级函数调用全部保留未知；无法确认绑定作用域的 caller不解析，不按最近同名猜。
-- [ ] 直达 named/default ESM import：仅导出文件内一个具体实现，import非 type_only/namespace，alias 未被遮蔽，目标未改写。多跳 re-export未知。
-- [ ] TS ./x.js 的候选包括实际 x.ts/x.tsx/x.d.ts/x.js/x.jsx；只有一个且为选中的 .ts/.js 实现时连接。双文件冲突和声明-only拒绝；保存 resolution_kind 和 specifier来源。
-- [ ] 不解析 receiver.method、this、computed、新对象实例、外部包、dynamic import、CommonJS；保留理由。
-- [ ] 没有合法 caller符号的顶层调用不编造 module 函数；保存限制供源码补读。
-- [ ] 每条 CallEdge 的 line 来自 CallSite。import_binding 保留来源行，target文件与导出依据能在原始元数据重查。
-- [ ] resolve_esm_graph 默认 resolve_calls=True。build_index 在 B2 通过后启用；不修改 Python graph.py。
-- [ ] build_impact 沿统一的真实 call_edges 反向遍历，保留每跳 call_path_evidence；不把文件导入当作函数调用影响。
-- [ ] 针对遮蔽/改写/类型导入/同名双文件运行负例；再复查六题原有输出，不增加新仓库。
+- [x] 同文件仅解析顶层具名函数与 const 绑定函数；候选唯一、非歧义、未写入/更新、caller 参数/局部/捕获作用域没有遮蔽才连接。
+- [x] 嵌套/块级函数调用全部保留未知；无法确认绑定作用域的 caller不解析，不按最近同名猜。
+- [x] 直达 named/default ESM import：仅导出文件内一个具体实现，import非 type_only/namespace，alias 未被遮蔽，目标未改写。多跳 re-export未知。
+- [x] TS ./x.js 的候选包括实际 x.ts/x.tsx/x.d.ts/x.js/x.jsx；只有一个且为选中的 .ts/.js 实现时连接。双文件冲突和声明-only拒绝；保存 resolution_kind 和 specifier来源。
+- [x] 不解析 receiver.method、this、computed、新对象实例、外部包、dynamic import、CommonJS；保留理由。
+- [x] 没有合法 caller符号的顶层调用不编造 module 函数；保存限制供源码补读。
+- [x] 每条 CallEdge 的 line 来自 CallSite。import_binding 保留来源行，target文件与导出依据能在原始元数据重查。
+- [x] resolve_esm_graph 默认 resolve_calls=True。build_index 在 B2 通过后启用；不修改 Python graph.py。
+- [x] build_impact 沿统一的真实 call_edges 反向遍历，保留每跳 call_path_evidence；不把文件导入当作函数调用影响。
+- [x] 针对遮蔽/改写/类型导入/同名双文件运行负例；再复查六题原有输出，不增加新仓库。
 
 ~~~sh
 "$JST_EVIDENCE/parser-venv/bin/python" -m unittest tests.test_esm tests.test_context -v
@@ -546,9 +546,9 @@ python -m tools.js_ts_trial check-trial --evidence-root "$JST_EVIDENCE"
 
 **范围：** repo_doctor/repo_map.py、repo_doctor/resources/map/viewer.js、对应图测试。**不改：** 布局、缩放/拖动架构、图输出数量与目录覆写规则。
 
-- [ ] 先在 tests/test_repo_map.py 的 TemporaryDirectory 复制附件 12 个文件，并用 UTF-8 写 app.py 的两行正文 "def entry():\n    return 42\n"；build_index 选择 python,javascript,typescript。图包含三个语言的文件/符号，只有同语言有依据边，无悬空 endpoint。consumer→core.ts 在此双文件目录必须保持未解析，不挪用 B2 唯一候选正例。
-- [ ] 文件节点新增 language 与 analyzed；python仅表示被选中的 .py。analyzed 表示参与所选语言分析，解析错误另在 coverage中显示。
-- [ ] Python/SVG 关系投影以 analyzed 为入口；HTML selector以同样规则回退旧数据：
+- [x] 先在 tests/test_repo_map.py 的 TemporaryDirectory 复制附件 12 个文件，并用 UTF-8 写 app.py 的两行正文 "def entry():\n    return 42\n"；build_index 选择 python,javascript,typescript。图包含三个语言的文件/符号，只有同语言有依据边，无悬空 endpoint。consumer→core.ts 在此双文件目录必须保持未解析，不挪用 B2 唯一候选正例。
+- [x] 文件节点新增 language 与 analyzed；python仅表示被选中的 .py。analyzed 表示参与所选语言分析，解析错误另在 coverage中显示。
+- [x] Python/SVG 关系投影以 analyzed 为入口；HTML selector以同样规则回退旧数据：
 
 ~~~python
 is_analyzed = node.get("analyzed", node.get("python", False))
@@ -558,12 +558,12 @@ is_analyzed = node.get("analyzed", node.get("python", False))
 const isAnalyzedFile = n => n.kind === 'file' && (n.analyzed ?? n.python);
 ~~~
 
-- [ ] 默认关系视图、文件聚焦和指定符号图使用相同节点筛选，不允许 SVG有 JS但 HTML没有。
-- [ ] 保留 contains/import/call/reexport/command_registration 类型；缺来源就没有边，跨语言只展示组成。
-- [ ] coverage.python_files仍只计 Python，新analysis列出所选语言与限制。图的人类说明仅增加语言/静态边界，不嵌入源码或调查正文。
-- [ ] 生成八份 SVG（两仓库总览/聚焦各两份）及相应 HTML/JSON新目录；核对 fixed commit、指纹、选定节点/边、隐藏数。
-- [ ] 使用现有 Node DOM 工具核对搜索 JS/TS ID、展开祖先、聚焦文件、SVG导出节点与页面一致。Node仅用于测试，不成为产品运行要求。
-- [ ] 核对新 viewer能读取原 v0.5.2无 analyzed字段的地图。必要时创建旧结构的受控 fixture，不改真实旧 map。
+- [x] 默认关系视图、文件聚焦和指定符号图使用相同节点筛选，不允许 SVG有 JS但 HTML没有。
+- [x] 保留 contains/import/call/reexport/command_registration 类型；缺来源就没有边，跨语言只展示组成。
+- [x] coverage.python_files仍只计 Python，新analysis列出所选语言与限制。图的人类说明仅增加语言/静态边界，不嵌入源码或调查正文。
+- [x] 生成八份 SVG（两仓库总览/聚焦各两份）及相应 HTML/JSON新目录；核对 fixed commit、指纹、选定节点/边、隐藏数。
+- [x] 使用现有 Node DOM 工具核对搜索 JS/TS ID、展开祖先、聚焦文件、SVG导出节点与页面一致。Node仅用于测试，不成为产品运行要求。
+- [x] 核对新 viewer能读取原 v0.5.2无 analyzed字段的地图。必要时创建旧结构的受控 fixture，不改真实旧 map。
 
 ~~~sh
 "$JST_EVIDENCE/parser-venv/bin/python" -m unittest tests.test_repo_map -v

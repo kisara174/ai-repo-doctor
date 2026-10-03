@@ -30,7 +30,7 @@ def analysis_metadata(index: RepoIndex) -> dict:
         "files_by_language": {name: sum(index.file_languages.get(row.path, "python") == name
                                        for row in index.files) for name in SUPPORTED_LANGUAGES},
         "capabilities": {name: (["symbols", "imports", "context", "calls"] if name == "python"
-                               else ["symbols", "esm-file-imports", "context"])
+                               else ["symbols", "esm-file-imports", "context"] + (["calls"] if index.js_calls_resolved else []))
                          for name in index.analysis_languages},
         "limits": [asdict(row) for row in limits[:50]],
         "limits_omitted": max(0, len(limits) - 50),

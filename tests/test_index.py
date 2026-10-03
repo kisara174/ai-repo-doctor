@@ -20,8 +20,9 @@ class MixedIndexTests(unittest.TestCase):
             (root / 'app.py').write_text('from core import inc\ndef entry():\n    return inc()\n')
             idx = build_index(root, languages=('python', 'javascript', 'typescript'))
             self.assertTrue({'app.py::entry', 'core.js::add', 'core.ts::inc'} <= set(idx.symbols))
-            self.assertEqual([(e.caller, e.callee, e.line) for e in idx.call_edges],
+            self.assertEqual([(e.caller, e.callee, e.line) for e in idx.call_edges if e.caller.startswith('app.py::')],
                              [('app.py::entry', 'core.py::inc', 3)])
+            self.assertFalse(any(e.caller.endswith('.js::entry') and e.callee.endswith('.py::inc') for e in idx.call_edges))
             self.assertIn('duplicate.ts::same', idx.ambiguous_symbols)
             self.assertNotIn('duplicate.ts::same', idx.symbols)
             before = source_fingerprint(idx)

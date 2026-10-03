@@ -41,6 +41,7 @@ def build_map(index: RepoIndex, *, symbol: str | None = None, depth: int = 1) ->
         record = records.get(path)
         nodes[f'file:{path}'] = {'id': f'file:{path}', 'kind': 'file', 'label': parts[-1],
                                 'file': path, 'parent': parent, 'is_test': bool(record and record.is_test),
+                                'language': index.file_languages.get(path), 'analyzed': record is not None,
                                 'python': record is not None and index.file_languages.get(path, 'python') == 'python'}
     for item in sorted(index.symbols.values(), key=lambda value: value.id):
         nodes[f'symbol:{item.id}'] = {
@@ -98,12 +99,6 @@ def build_map(index: RepoIndex, *, symbol: str | None = None, depth: int = 1) ->
         'initial': {'symbol': symbol, 'depth': depth},
         'analysis': analysis_metadata(index),
     }
-    if index.analysis_languages != ("python",):
-        data["analysis"]["limits"].insert(0, {"file": ".", "line": None, "reason": "map-projection-pending",
-            "message": "B1: relation views still select Python files; JS/TS projection is scheduled for B3"})
-        if len(data["analysis"]["limits"]) > 50:
-            data["analysis"]["limits"].pop()
-            data["analysis"]["limits_omitted"] += 1
     data['views'] = {mode: project_view(data, mode, symbol=symbol, depth=depth) for mode in ('structure', 'relations')}
     if source_fingerprint(index) != fingerprint:
         raise ValueError('source changed during map generation; rerun map')
@@ -136,7 +131,7 @@ def project_view(data: dict, mode: str, *, symbol: str | None = None, depth: int
                         queue.append((neighbor, distance + 1))
         selected = [node for node in nodes if node['id'] in seen]
     else:
-        selected = [node for node in nodes if node['kind'] == 'file' and node.get('python')]
+        selected = [node for node in nodes if node['kind'] == 'file' and node.get('analyzed', node.get('python', False))]
         edges = data['file_edges']
     selected = [node for node in selected if include_tests or not node['is_test']
                 or (symbol is not None and node.get('symbol') == symbol)]

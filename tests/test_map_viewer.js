@@ -78,3 +78,15 @@ for(const required of ['dir:.','dir:pkg','dir:pkg/deep','file:pkg/deep/README.md
 const crowdedIds=new Set(ids(crowded));
 assert.ok(crowded.edges.every(edge=>crowdedIds.has(edge.source)&&crowdedIds.has(edge.target)),'Capped views must not contain dangling edges');
 console.log('Map viewer: collapsed descendants, hierarchy order, test filtering, and file/symbol call focus passed');
+const mixed={...data,nodes:[
+  {id:'file:app.js',kind:'file',file:'app.js',is_test:false,python:false,analyzed:true},
+  {id:'file:core.js',kind:'file',file:'core.js',is_test:false,python:false,analyzed:true},
+  {id:'file:core.ts',kind:'file',file:'core.ts',is_test:false,python:false,analyzed:true},
+  {id:'file:excluded.py',kind:'file',file:'excluded.py',is_test:false,python:true,analyzed:false},
+],edges:[],file_edges:[{id:'js-import',kind:'import',source:'file:app.js',target:'file:core.js'}]};
+assert.deepEqual(ids(scope.RepoMap.project(mixed,{mode:'relations',tests:false,kinds:['import'],depth:1})),
+  ['file:app.js','file:core.js','file:core.ts']);
+const jsFocus=scope.RepoMap.project(mixed,{mode:'relations',tests:false,kinds:['import'],target:'file:core.js',depth:1});
+assert.deepEqual(ids(jsFocus),['file:core.js','file:app.js']);
+assert.deepEqual(Array.from(jsFocus.edges,e=>e.id),['js-import']);
+console.log('Map viewer: analyzed JS/TS, explicit exclusion and legacy Python fallback passed');

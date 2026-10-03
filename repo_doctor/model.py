@@ -213,6 +213,7 @@ class JSParsedFile:
     unsafe_bindings: set[str]
     class_header_spans: dict[str, tuple[int, int]]
     limits: list[AnalysisLimit]
+    top_level_symbols: set[str] = field(default_factory=set)
 
 
 @dataclass(slots=True)
@@ -242,3 +243,5 @@ class RepoIndex:
     identifier_uses: list[IdentifierUse] = field(default_factory=list)
     unsafe_js_bindings: dict[str, set[str]] = field(default_factory=dict)
     class_header_spans: dict[str, tuple[int, int]] = field(default_factory=dict)
+    js_top_level_symbols: set[str] = field(default_factory=set)
+    js_calls_resolved: bool = False

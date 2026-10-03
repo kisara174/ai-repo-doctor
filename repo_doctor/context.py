@@ -372,7 +372,7 @@ def build_impact(index: RepoIndex, symbol_id: str, depth: int = 2) -> dict:
         "import_evidence": imports,
         "semantic_relations": semantic_relations,
         **({"analysis": analysis_metadata(index)} if index.analysis_languages != ("python",) else {}),
-        **({"status": "not-supported",
-            "scope": "Ordinary JS/TS call impact is not supported; empty results do not prove no impact"}
+        **({"status": "bounded" if index.js_calls_resolved else "not-supported",
+            "scope": "Unique unshadowed direct JS/TS calls only; empty results do not prove no impact"}
            if index.file_languages.get(target.file, "python") != "python" else {}),
     }

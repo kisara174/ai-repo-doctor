@@ -50,7 +50,7 @@ def extract(source: str, *, file: str, language: str) -> dict:
         return start, max(start, end)
     data = {key: [] for key in ('symbols', 'esm_imports', 'esm_exports', 'calls',
                                 'identifier_uses', 'limits')}
-    data.update(unsafe_bindings=[], class_header_spans={}, error=None)
+    data.update(unsafe_bindings=[], class_header_spans={}, top_level_symbols=[], error=None)
 
     def text(node):
         return raw[node.start_byte:node.end_byte].decode('utf-8') if node else ''
@@ -92,11 +92,21 @@ def extract(source: str, *, file: str, language: str) -> dict:
     signatures = {}
     unsafe = set()
 
+    def module_level(node):
+        current = node.parent
+        if current is not None and current.type == "lexical_declaration":
+            current = current.parent
+        if current is not None and current.type == "export_statement":
+            current = current.parent
+        return current is not None and current.type == "program"
+
     def symbol(node, name, kind, parent, span_node=None):
         qualname = name if parent is None else parent.split('::', 1)[1] + '.' + name
         sid = file + '::' + qualname
         start, end = span(span_node or node)
         local = binding_names(node.child_by_field_name('parameters') or node.child_by_field_name('parameter'))
+        if node.type in ('function_expression', 'generator_function'):
+            local.update(binding_names(node.child_by_field_name('name')))
         body = node.child_by_field_name('body')
         if body:
             for inner in descendants(body):
@@ -104,11 +114,15 @@ def extract(source: str, *, file: str, language: str) -> dict:
                     local.update(binding_names(inner.child_by_field_name('name') or inner.child_by_field_name('parameter')))
                 elif inner.type in ('function_declaration', 'class_declaration'):
                     local.update(binding_names(inner.child_by_field_name('name')))
+                elif inner.type == 'for_in_statement':
+                    local.update(binding_names(inner.child_by_field_name('left')))
         item = {'id': sid, 'file': file, 'name': name, 'qualname': qualname,
                 'kind': kind, 'start_line': start, 'end_line': end, 'parent': parent,
                 'local_bindings': sorted(local), 'is_async': any(c.type == 'async' for c in node.children),
                 'overloads': []}
         data['symbols'].append(item)
+        if kind == "function" and parent is None and module_level(span_node or node):
+            data["top_level_symbols"].append(sid)
         if kind == 'class' and body:
             data['class_header_spans'][sid] = (span(node)[0], span(body)[0])
         return sid
@@ -166,7 +180,7 @@ def extract(source: str, *, file: str, language: str) -> dict:
                     if decl.type == 'lexical_declaration':
                         names = [text(n.child_by_field_name('name')) for n in decl.named_children
                                  if n.type == 'variable_declarator' and n.child_by_field_name('name').type == 'identifier']
-                    elif decl.type in ('function_declaration', 'generator_function_declaration', 'function_expression', 'class_declaration', 'function_signature'):
+                    elif decl.type in ('function_declaration', 'generator_function_declaration', 'function_expression', 'arrow_function', 'generator_function', 'class_declaration', 'function_signature'):
                         names = [text(decl.child_by_field_name('name')) or '<default>']
                     elif default and decl.type == 'identifier':
                         names = [text(decl)]
@@ -204,6 +218,13 @@ def extract(source: str, *, file: str, language: str) -> dict:
                 return
         if node.type == 'variable_declarator':
             name_node, value = node.child_by_field_name('name'), node.child_by_field_name('value')
+            if module_level(node):
+                is_const_function = (node.parent.type == "lexical_declaration"
+                    and any(c.type == "const" for c in node.parent.children)
+                    and name_node.type == "identifier" and value
+                    and value.type in ("arrow_function", "function_expression", "generator_function"))
+                if not is_const_function:
+                    unsafe.update(binding_names(name_node))
             const = node.parent and node.parent.type == 'lexical_declaration' and any(c.type == 'const' for c in node.parent.children)
             if const and name_node.type == 'identifier' and value and value.type in ('arrow_function', 'function_expression', 'generator_function'):
                 sid = symbol(value, text(name_node), 'function', parent, node.parent)
@@ -239,7 +260,8 @@ def extract(source: str, *, file: str, language: str) -> dict:
             data['calls'].append({'file': file, 'caller': owner, 'expression': name, 'name': name,
                                   'receiver': receiver, 'line': span(node)[0],
                                   'column': node.start_byte - line_starts[bisect_right(line_starts, node.start_byte) - 1]})
-            limit(node, 'calls-not-supported', 'Ordinary JS/TS call targets are not resolved at this stage')
+            if owner is None:
+                limit(node, "ownerless-call", "Module or anonymous callback call has no named caller")
         for child in node.named_children:
             walk(child, owner, parent)
 
@@ -285,4 +307,4 @@ def parse_js_ts_file(root: Path, relative_path: str, *,
                         [ESMExportRef(**row) for row in data["esm_exports"]],
                         [IdentifierUse(**row) for row in data["identifier_uses"]],
                         set(data["unsafe_bindings"]), data["class_header_spans"],
-                        [AnalysisLimit(**row) for row in data["limits"]])
+                        [AnalysisLimit(**row) for row in data["limits"]], set(data["top_level_symbols"]))

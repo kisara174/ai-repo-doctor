@@ -578,7 +578,7 @@ class LanguageCliTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 data = json.loads(result.stdout)
                 self.assertEqual(data['analysis']['files_by_language'], {'python': 1, 'javascript': 0, 'typescript': 1})
-                self.assertNotIn('calls', data['analysis']['capabilities']['typescript'])
+                self.assertIn('calls', data['analysis']['capabilities']['typescript'])
                 if command[0] == 'overview':
                     self.assertEqual(data['stats']['python_files'], 1)
                     self.assertIn('--languages', data['next_commands']['symbols'])
@@ -587,9 +587,10 @@ class LanguageCliTests(unittest.TestCase):
                     self.assertEqual(saved['coverage']['python_files'], 1)
                     self.assertFalse(next(n for n in saved['nodes'] if n['id'] == 'file:a.ts')['python'])
                     self.assertEqual(data['analysis'], saved['analysis'])
-                    self.assertTrue(any(r['reason'] == 'map-projection-pending' for r in data['analysis']['limits']))
+                    self.assertTrue(next(n for n in saved['nodes'] if n['id'] == 'file:a.ts')['analyzed'])
+                    self.assertFalse(any(r['reason'] == 'map-projection-pending' for r in data['analysis']['limits']))
                 elif command[0] == 'impact':
-                    self.assertEqual(data['status'], 'not-supported')
+                    self.assertEqual(data['status'], 'bounded')
             terminal = self.run_cli('impact', root, 'a.ts::entry', '--languages', 'typescript')
-            self.assertIn('not supported', terminal.stdout)
+            self.assertIn('Limited direct', terminal.stdout)
             self.assertIn('typescript', terminal.stdout)

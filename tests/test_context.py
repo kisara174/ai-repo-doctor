@@ -525,13 +525,14 @@ class JSContextTests(unittest.TestCase):
             (root / 'helper.ts').write_text('export function helper() { return 1; }\n')
             index = build_index(root, languages=('typescript',))
             full = build_context(index, 'app.ts::run', include_symbols=('app.ts::extra',))
-            self.assertEqual([b['relation'] for b in full['blocks']], ['target', 'user_selected', 'import_binding'])
+            self.assertEqual([b['relation'] for b in full['blocks']], ['target', 'user_selected', 'callee', 'import_binding'])
             self.assertEqual([line['line'] for line in full['blocks'][-1]['lines']], [1, 2, 3])
             small = build_context(index, 'app.ts::run', 5, include_symbols=('app.ts::extra',))
             self.assertEqual(sum(len(b['lines']) for b in small['blocks']), 5)
-            self.assertTrue(small['blocks'][-1]['truncated'])
+            self.assertEqual([b['relation'] for b in small['blocks']], ['target', 'user_selected', 'callee'])
+            self.assertFalse(small['blocks'][-1]['truncated'])
             self.assertTrue(small['budget_exhausted'])
-            self.assertNotIn('calls', small['analysis']['capabilities']['typescript'])
+            self.assertIn('calls', small['analysis']['capabilities']['typescript'])
 
     def test_method_owner_adds_header_instead_of_consuming_entire_class(self):
         from tests.test_js_ts import HAS_EXTRA, FIXTURES

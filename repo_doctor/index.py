@@ -92,6 +92,7 @@ def build_index(root: Path, *, languages: tuple[str, ...] = ("python",)) -> Repo
             index.unsafe_js_bindings[path] = data.unsafe_bindings
             index.class_header_spans.update(data.class_header_spans)
             index.analysis_limits.extend(data.limits)
+            index.js_top_level_symbols.update(data.top_level_symbols)
         for sid, candidates in js_candidates.items():
             if len(candidates) == 1:
                 index.symbols[sid] = candidates[0]
@@ -103,6 +104,6 @@ def build_index(root: Path, *, languages: tuple[str, ...] = ("python",)) -> Repo
                 del index.symbols[sid]
                 index.ambiguous_symbols.add(sid)
         from .esm import resolve_esm_graph
-        resolve_esm_graph(index, resolve_calls=False)
+        resolve_esm_graph(index)
     index.files.sort(key=lambda item: item.path)
     return index

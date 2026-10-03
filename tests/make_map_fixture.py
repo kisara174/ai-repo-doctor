@@ -13,3 +13,9 @@ for directory in ('pkg/deep', 'other'):
     folder = root / directory
     folder.mkdir(parents=True)
     (folder / 'README.md').write_text('Structure navigation fixture.\n', encoding='utf-8')
+if '--mixed' in sys.argv[2:]:
+    folder = root / 'web'
+    folder.mkdir()
+    (folder / 'core.js').write_text('export function target() { return 1; }\n', encoding='utf-8')
+    (folder / 'app.js').write_text("import {target} from './core.js';\nexport function run() { return target(); }\n", encoding='utf-8')
+    (folder / 'core.ts').write_text('export function target(value: number) { return value; }\n', encoding='utf-8')

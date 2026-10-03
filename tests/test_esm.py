@@ -34,4 +34,60 @@ class ESMTests(unittest.TestCase):
             self.assertEqual(index.call_edges, [])
             self.assertNotIn(('app.ts', 'core.ts', 3), [(e.source, e.target, e.line) for e in index.import_edges])
             self.assertTrue(any(l.reason == 'external-or-alias' for l in index.analysis_limits))
-            self.assertTrue(any(l.reason == 'calls-not-supported' for l in index.analysis_limits))
+            self.assertTrue(any(l.reason == 'unresolved-call' for l in index.analysis_limits))
+@unittest.skipUnless(HAS_EXTRA, 'requires optional js extra')
+class DirectCallTests(unittest.TestCase):
+    def test_fixture_calls_and_unique_ts_type_only_negative(self):
+        import shutil
+        from tests.test_js_ts import FIXTURES
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'mixed'
+            shutil.copytree(FIXTURES, root)
+            index = build_index(root, languages=('javascript', 'typescript'))
+            pairs = {(e.caller, e.callee) for e in index.call_edges}
+            self.assertIn(('core.js::twice', 'core.js::add'), pairs)
+            self.assertIn(('core.js::main', 'core.js::twice'), pairs)
+            self.assertNotIn(('consumer.ts::run', 'core.ts::inc'), pairs)
+            self.assertFalse(any(c.startswith(('shadow.js::', 'dynamic.js::', 'type_only.ts::')) for c, _ in pairs))
+            unique = Path(directory) / 'unique'
+            unique.mkdir()
+            for name in ('core.ts', 'consumer.ts', 'type_only.ts'):
+                shutil.copyfile(FIXTURES / name, unique / name)
+            index = build_index(unique, languages=('typescript',))
+            self.assertIn(('consumer.ts::run', 'core.ts::inc', 3),
+                          {(e.caller, e.callee, e.line) for e in index.call_edges})
+            self.assertFalse(any(e.caller == 'type_only.ts::bad' for e in index.call_edges))
+            from repo_doctor.context import build_impact
+            impact = build_impact(index, 'core.ts::inc')
+            self.assertTrue(any(a['symbol'] == 'consumer.ts::run' and
+                                a['call_path_evidence'][0]['line'] == 3 for a in impact['affected_symbols']))
+
+    def test_rewrites_locals_blocks_methods_and_callbacks_do_not_get_false_edges(self):
+        cases = [
+            'export function target() { return 1; }\ntarget = () => 2;\nexport function entry() { return target(); }',
+            'function target() {}\nfunction entry(target) { return target(); }',
+            'function target() {}\nfunction entry() { let target = () => 1; return target(); }',
+            'function target() {}\nfunction entry() { for (let target of values) target(); }',
+            'function target() {}\nconst entry = function target() { return target(); };',
+            'if (true) { function target() {} }\nfunction entry() { return target(); }',
+            'function target() {}\nif (true) { function entry() { return target(); } }',
+            'function target() {}\nfunction outer() { function entry() { return target(); } }',
+            'function target() {}\nclass Box { entry() { return target(); } }',
+            'function target() {}\nfunction entry() { items.map(() => target()); return obj.target(); }',
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for source in cases:
+                (root / 'a.js').write_text(source)
+                with self.subTest(source=source):
+                    self.assertEqual(build_index(root, languages=('javascript',)).call_edges, [])
+
+    def test_named_default_direct_export_and_import_alias_without_multihop(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'core.js').write_text('export function add() { return 1; }\nexport default () => 2;\n')
+            (root / 'barrel.js').write_text("export {add} from './core.js';\n")
+            (root / 'app.js').write_text("import main, {add as inc} from './core.js';\nimport {add as hop} from './barrel.js';\nexport function entry() { return inc() + main() + hop(); }\n")
+            index = build_index(root, languages=('javascript',))
+            self.assertEqual({(e.caller, e.callee, e.line) for e in index.call_edges},
+                             {('app.js::entry', 'core.js::add', 3), ('app.js::entry', 'core.js::<default>', 3)})
