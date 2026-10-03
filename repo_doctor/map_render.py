@@ -29,7 +29,7 @@ def render_svg(data: dict, view: dict) -> str:
     element(root, 'text', {'x': 30, 'y': 32, 'font-family': 'system-ui, sans-serif', 'font-size': 20, 'fill': '#0f172a'},
             f"{data['repository']['name']} · {'文件结构' if view['mode'] == 'structure' else '静态关系'}")
     element(root, 'text', {'x': 30, 'y': 58, 'font-family': 'system-ui, sans-serif', 'font-size': 12, 'fill': '#475569'},
-            f"静态分析 · 未解析调用 {data['coverage']['unresolved_calls']} · 解析失败 {data['coverage']['parse_errors']} · 未显示节点 {view['hidden_nodes']} / 连线 {view['hidden_edges']}")
+            f"静态分析 {' / '.join(data.get('analysis', {}).get('requested_languages', []))} · 未解析调用 {data['coverage']['unresolved_calls']} · 解析失败 {data['coverage']['parse_errors']} · 未显示节点 {view['hidden_nodes']} / 连线 {view['hidden_edges']}")
     element(root, 'text', {'x': 30, 'y': 80, 'font-family': 'system-ui, sans-serif', 'font-size': 12, 'fill': '#64748b'},
             f"源码 {data['repository']['source_fingerprint'][:16]} · 修订 {(data['repository']['revision'] or '无 Git 修订')[:16]} · 箭头：调用者/导入者 → 目标")
     labels = {'contains': '包含', 'import': '导入', 'call': '调用', 'reexport': '重导出', 'command_registration': '注册'}

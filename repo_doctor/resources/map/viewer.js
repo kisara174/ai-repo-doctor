@@ -48,7 +48,7 @@
       nodes=data.nodes.filter(n=>seen.has(n.id));
       nodes.sort((a,b)=>a.id===state.target?-1:b.id===state.target?1:a.id<b.id?-1:a.id>b.id?1:0);
     } else {
-      nodes=data.nodes.filter(n=>n.kind==='file'&&n.python);edges=data.file_edges;
+      nodes=data.nodes.filter(n=>n.kind==='file'&&(n.analyzed??n.python));edges=data.file_edges;
     }
     nodes=nodes.filter(n=>state.tests||!n.is_test||n.id===state.target);
     if(state.mode==='structure'&&state.selected){
@@ -82,7 +82,7 @@
     const defs=el(svg,'defs');
     for(const[kind,color]of Object.entries(data.colors)){const marker=el(defs,'marker',{id:'arrow-'+kind,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:6,markerHeight:6,orient:'auto-start-reverse'});el(marker,'path',{d:'M 0 0 L 10 5 L 0 10 z',fill:color});}
     text(svg,30,32,20,'#0f172a',data.repository.name+' · '+(state.mode==='structure'?'文件结构':'静态关系'));
-    text(svg,30,58,12,'#475569',`静态分析 · 未解析调用 ${data.coverage.unresolved_calls} · 解析失败 ${data.coverage.parse_errors} · 未显示节点 ${view.hidden_nodes} / 连线 ${view.hidden_edges}`);
+    text(svg,30,58,12,'#475569',`静态分析${data.analysis?' '+data.analysis.requested_languages.join(', '):''} · 未解析调用 ${data.coverage.unresolved_calls} · 解析失败 ${data.coverage.parse_errors} · 未显示节点 ${view.hidden_nodes} / 连线 ${view.hidden_edges}`);
     text(svg,30,80,12,'#64748b',`源码 ${data.repository.source_fingerprint.slice(0,16)} · 修订 ${(data.repository.revision||'无 Git 修订').slice(0,16)} · 箭头：调用者/导入者 → 目标`);
     Object.entries(data.colors).forEach(([k,c],i)=>text(svg,30+i*140,102,12,c,'● '+labels[k]));
     const visible=new Map(view.nodes.map(n=>[n.id,n])), l=data.layout;
@@ -119,13 +119,19 @@
     else state.expanded=state.expanded.includes(id)?state.expanded.filter(x=>x!==id):[...state.expanded,id];}
   function list(){
     const query=$('search').value.toLowerCase().trim();let nodes;
-    if(query)nodes=data.nodes.filter(n=>(n.label+' '+n.file).toLowerCase().includes(query)&&(state.tests||!n.is_test));
+    if(query)nodes=data.nodes.filter(n=>(n.label+' '+n.file+' '+n.id).toLowerCase().includes(query)&&(state.tests||!n.is_test));
     else nodes=view.nodes;
     const fragment=document.createDocumentFragment();
     for(const n of nodes.slice(0,100)){const row=document.createElement('div');row.className='node-row';
       if(state.mode==='structure'&&parents.has(n.id)){const button=document.createElement('button');button.className='toggle';button.textContent=n.kind==='directory'?(state.closed.includes(n.id)?'▸':'▾'):(state.expanded.includes(n.id)?'▾':'▸');button.setAttribute('aria-label','展开或收起 '+n.label);button.onclick=()=>{toggle(n.id);render();};row.appendChild(button);}
       const button=document.createElement('button');button.className='choose';button.textContent=n.label;button.title=n.file;button.onclick=()=>{
-        if(query){if(n.kind!=='directory'){state.mode='relations';state.target=n.id;$('mode').value=state.mode;}else{
+        if(query){if(n.kind!=='directory'){
+          for(let p=n.parent;lookup.has(p);p=lookup.get(p).parent){
+            if(lookup.get(p).kind==='directory')state.closed=state.closed.filter(id=>id!==p);
+            else if(!state.expanded.includes(p))state.expanded.push(p);
+          }
+          state.mode='relations';state.target=n.id;$('mode').value=state.mode;
+        }else{
           Object.assign(state,reveal(data,state,n.id));$('mode').value=state.mode;
           $('selection').textContent=n.label+'\n'+n.file;render();return;
         }}
@@ -135,7 +141,7 @@
     $('node-list').replaceChildren(fragment);
   }
   $('repo-name').textContent=data.repository.name;$('depth').value=String(state.depth);$('mode').value=state.mode;
-  $('source').textContent='源码 '+data.repository.source_fingerprint.slice(0,16)+' · 静态 Python 关系，未覆盖全部运行时调用';
+  $('source').textContent='源码 '+data.repository.source_fingerprint.slice(0,16)+' · 静态 '+(data.analysis?data.analysis.requested_languages.join(', '):'Python')+' 关系，未覆盖全部运行时调用';
   for(const kind of kinds){const label=document.createElement('label'), input=document.createElement('input');input.type='checkbox';input.checked=true;input.setAttribute('aria-label',labels[kind]);input.onchange=()=>{state.kinds=Array.from($('filters').querySelectorAll('input')).filter(x=>x.checked).map(x=>x.value);render();};input.value=kind;label.style.color=data.colors[kind];label.append(input,document.createTextNode(labels[kind]));$('filters').appendChild(label);}
   $('mode').onchange=()=>{state.mode=$('mode').value;render();};$('depth').onchange=()=>{state.depth=Number($('depth').value);render();};$('tests').onchange=()=>{state.tests=$('tests').checked;render();};$('search').oninput=list;
   $('reset').onclick=()=>{state.target=null;state.selected=null;state.closed=data.nodes.filter(n=>n.kind==='directory'&&n.id!=='dir:.').map(n=>n.id);state.expanded=[];$('search').value='';$('selection').textContent='选择一个节点查看其结构位置。';render();};$('fit').onclick=()=>fit();$('zoom-in').onclick=()=>zoom(.8);$('zoom-out').onclick=()=>zoom(1.25);

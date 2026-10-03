@@ -40,6 +40,7 @@ from .diagnosis import (
 )
 from .evidence import validate_findings
 from .index import build_index
+from .languages import analysis_metadata, normalize_languages
 from .model import RepoIndex, Symbol
 from .source import read_source
 from .symbols import search_symbols
@@ -170,6 +171,16 @@ def _print_context(payload: dict) -> None:
         print(f"{payload['omitted_imports']} import bindings omitted by the source-line budget.")
 
 
+def _print_analysis(analysis: dict) -> None:
+    print("Languages: " + ", ".join(analysis["requested_languages"]))
+    print("Analyzed files: " + ", ".join(f"{name}={count}" for name, count in analysis["files_by_language"].items()))
+    print("Scope: " + analysis["scope"])
+    for row in analysis["limits"]:
+        print(f"  Limit: {row['file']}:{row['line'] or '-'} [{row['reason']}] {row['message']}")
+    if analysis["limits_omitted"]:
+        print(f"  {analysis['limits_omitted']} additional limits omitted")
+
+
 def _print_impact(payload: dict) -> None:
     print(f"Static impact for {payload['symbol']} (depth {payload['depth']})")
     for item in payload["affected_symbols"]:
@@ -178,8 +189,12 @@ def _print_impact(payload: dict) -> None:
             print(f"    {edge['caller']} -> {edge['callee']} at {edge['file']}:{edge['line']}")
             for hop in edge.get("via_reexports", []):
                 print(f"      via re-export {hop['name']} at {hop['file']}:{hop['line']}")
-    if not payload["affected_symbols"]:
-        print("  No resolved callers found.")
+    if payload.get("status") == "not-supported":
+        print("  Ordinary JS/TS call impact is not supported; empty results do not prove no impact.")
+    elif payload.get("status") == "bounded":
+        print("  Limited direct JS/TS call coverage; empty results do not prove no impact.")
+    elif not payload["affected_symbols"]:
+        print("  No resolved callers found; this is not complete runtime coverage.")
     print("Module importers:")
     for path in payload["module_importers"]:
         print(f"  {path}")
@@ -400,7 +415,8 @@ def _parser() -> argparse.ArgumentParser:
     reproduce.add_argument("--timeout", type=int, default=120,
                            help=f"Timeout in seconds (1..{MAX_TIMEOUT_SECONDS})")
     reproduce.add_argument("--json", action="store_true")
-    symbols = subcommands.add_parser("symbols", help="Search symbol IDs and names in a Python repository")
+    symbols = subcommands.add_parser("symbols", help="Search symbol IDs and names in selected source languages")
+    symbols.add_argument("--languages", default="python", help="Explicit CSV: python,javascript,typescript")
     symbols.add_argument("path", type=Path)
     symbols.add_argument("--query", required=True)
     symbols.add_argument("--limit", type=int, default=20)
@@ -414,9 +430,11 @@ def _parser() -> argparse.ArgumentParser:
     scan.add_argument("path", type=Path)
     scan.add_argument("--json", action="store_true", help="Print the complete machine-readable result")
     overview = subcommands.add_parser('overview', help='Bounded offline overview for agents')
+    overview.add_argument("--languages", default="python", help="Explicit CSV: python,javascript,typescript")
     overview.add_argument('path', type=Path)
     overview.add_argument('--json', action='store_true')
     repo_map = subcommands.add_parser('map', help='Generate an offline repository structure map')
+    repo_map.add_argument("--languages", default="python", help="Explicit CSV: python,javascript,typescript")
     repo_map.add_argument('path', type=Path)
     repo_map.add_argument('--out', type=Path, required=True)
     repo_map.add_argument('--symbol')
@@ -432,6 +450,7 @@ def _parser() -> argparse.ArgumentParser:
     finding_import.add_argument('--reproduction', metavar='R-ID')
     finding_import.add_argument('--json', action='store_true')
     context = subcommands.add_parser("context", help="Retrieve source context for one symbol")
+    context.add_argument("--languages", default="python", help="Explicit CSV: python,javascript,typescript")
     context.add_argument("path", type=Path)
     context.add_argument("symbol")
     context.add_argument("--max-lines", type=int, default=120)
@@ -442,6 +461,7 @@ def _parser() -> argparse.ArgumentParser:
     context.add_argument("--json", action="store_true")
     context.add_argument('--snapshot-out', type=Path, help='Save a new source-bound context snapshot offline')
     impact = subcommands.add_parser("impact", help="Follow reverse static dependencies for one symbol")
+    impact.add_argument("--languages", default="python", help="Explicit CSV: python,javascript,typescript")
     impact.add_argument("path", type=Path)
     impact.add_argument("symbol")
     impact.add_argument("--depth", type=int, default=2)
@@ -612,13 +632,18 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if result["status"] == "passed" else 1
         if args.command == "diagnose" and not 1 <= args.max_lines <= MAX_CONTEXT_LINES:
             raise ValueError(f"--max-lines must be from 1 through {MAX_CONTEXT_LINES}")
-        index = build_index(args.path)
+        selected = normalize_languages(getattr(args, "languages", "python"))
+        if args.command == "context" and args.snapshot_out is not None and selected != ("python",):
+            raise ValueError("JS/TS readonly preview does not support context snapshots; use --json")
+        index = build_index(args.path, languages=selected)
+
         if args.command == 'map':
             result = write_map(index, args.out, symbol=args.symbol, depth=args.depth)
             if args.json:
                 _print_json(result)
             else:
                 print(f"Map generated: {result['directory']}")
+                _print_analysis(result["analysis"])
             return 0
         if args.command == "report":
             if args.symbol:
@@ -642,10 +667,11 @@ def main(argv: list[str] | None = None) -> int:
                 for item in matches for value in (item["id"], item["name"], item["qualname"])
             )
             payload = {"schema_version": 1, "query": args.query, "candidates": candidates,
-                       "matches": matches}
+                       "matches": matches, "analysis": analysis_metadata(index)}
             if args.json:
                 _print_json(payload)
             else:
+                _print_analysis(payload["analysis"])
                 print("Candidates (choose an ID explicitly):" if candidates else "Matching symbol IDs:")
                 for item in matches:
                     print(f"  {item['id']} ({item['kind']}, line {item['start_line']})")
@@ -777,9 +803,13 @@ def main(argv: list[str] | None = None) -> int:
                                  reproduction_id=args.reproduction)
                 save_case(args.case, case)
             printer = _print_diagnosis
+        if args.command in {"overview", "context", "impact"}:
+            payload["analysis"] = analysis_metadata(index)
         if args.json:
             _print_json(payload)
         else:
+            if "analysis" in payload:
+                _print_analysis(payload["analysis"])
             printer(payload)
         if args.command == "doctor":
             return 0 if (

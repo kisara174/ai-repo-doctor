@@ -16,9 +16,10 @@ assert.equal(scripts.length, 1);
 w.eval(scripts[0].textContent);
 const ids = () => Array.from(d.querySelectorAll('#drawing g[data-node-id]'), n=>n.dataset.nodeId);
 const event = id => d.getElementById(id).dispatchEvent(new w.Event('change'));
+const mixed=process.argv.includes('--mixed');
 assert.equal(d.getElementById('mode').value, 'structure');
 d.getElementById('mode').value='relations';event('mode');
-assert.deepEqual(ids(), ['file:a.py','file:b.py']);
+assert.deepEqual(ids(), mixed ? ['file:a.py','file:b.py','file:web/app.js','file:web/core.js','file:web/core.ts'] : ['file:a.py','file:b.py']);
 const mapData=JSON.parse(d.getElementById('map-data').textContent);
 const fileCall=mapData.file_edges.find(e=>e.kind==='call'&&e.source==='file:b.py'&&e.target==='file:a.py');
 assert.ok(fileCall);
@@ -66,6 +67,25 @@ const camera=d.querySelector('#drawing svg').getAttribute('viewBox').split(' ').
 const selectedY=Number(selectedDirectory.getAttribute('transform').match(/translate\([^,]+,([^\)]+)\)/)[1]);
 assert.ok(camera[1]>0,'Directory search must move the camera to a distant target');
 assert.ok(selectedY>=camera[1]&&selectedY+mapData.layout.node_height<=camera[1]+camera[3],'Selected directory must be in the camera viewport');
+if(mixed){
+  d.getElementById('search').value='web/core.ts::target';
+  d.getElementById('search').dispatchEvent(new w.Event('input'));
+  const ts=Array.from(d.querySelectorAll('#node-list .choose')).find(n=>n.textContent==='target');
+  assert.ok(ts);ts.click();
+  assert.ok(ids().includes('symbol:web/core.ts::target'));
+  d.getElementById('mode').value='structure';event('mode');
+  assert.ok(ids().includes('dir:web'),'Selecting a TS symbol must expand its ancestors');
+  assert.ok(ids().includes('file:web/core.ts'));
+  d.getElementById('reset').click();
+  d.getElementById('search').value='web/core.js';
+  d.getElementById('search').dispatchEvent(new w.Event('input'));
+  const js=Array.from(d.querySelectorAll('#node-list .choose')).find(n=>n.textContent==='core.js');
+  assert.ok(js);js.click();
+  d.getElementById('mode').value='relations';event('mode');
+  assert.deepEqual(ids(),['file:web/core.js','file:web/app.js']);
+  const jsCall=mapData.file_edges.find(e=>e.kind==='call'&&e.source==='file:web/app.js');
+  assert.ok(jsCall&&d.querySelector(`#drawing path[data-edge-id="${jsCall.id}"]`));
+}
 let exported;
 w.URL.createObjectURL = blob => {exported=blob;return 'blob:controlled-test';};
 w.URL.revokeObjectURL = () => {};

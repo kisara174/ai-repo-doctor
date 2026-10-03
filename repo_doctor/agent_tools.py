@@ -11,6 +11,7 @@ from .context import build_context
 from .diagnosis import MAX_CONTEXT_LINES, validate_context_budget, validate_diagnosis_payload
 from .leads import build_review_leads
 from .model import RepoIndex
+from .languages import analysis_metadata
 
 
 def build_overview(index: RepoIndex) -> dict:
@@ -22,7 +23,7 @@ def build_overview(index: RepoIndex) -> dict:
         'scan_mode': index.scan_mode,
         'source_fingerprint': source_fingerprint(index),
         'stats': {
-            'python_files': len(index.files), 'symbols': len(symbols),
+            'python_files': sum(index.file_languages.get(row.path, 'python') == 'python' for row in index.files), 'symbols': len(symbols),
             'resolved_calls': len(index.call_edges),
             'unresolved_calls': len(index.calls) - len(index.call_edges),
             'parse_errors': len(index.parse_errors), 'ambiguous_symbols': len(index.ambiguous_symbols),
@@ -39,11 +40,12 @@ def build_overview(index: RepoIndex) -> dict:
         'parse_errors': [asdict(item) for item in index.parse_errors[:5]],
         'parse_errors_omitted': max(0, len(index.parse_errors) - 5),
         'next_commands': {
-            'symbols': ['repo-doctor', 'symbols', str(index.root), '--query', 'QUERY', '--json'],
-            'context': ['repo-doctor', 'context', str(index.root), 'SYMBOL', '--json'],
-            'impact': ['repo-doctor', 'impact', str(index.root), 'SYMBOL', '--json'],
+            'symbols': ['repo-doctor', 'symbols', str(index.root), '--query', 'QUERY', '--languages', ','.join(index.analysis_languages), '--json'],
+            'context': ['repo-doctor', 'context', str(index.root), 'SYMBOL', '--languages', ','.join(index.analysis_languages), '--json'],
+            'impact': ['repo-doctor', 'impact', str(index.root), 'SYMBOL', '--languages', ','.join(index.analysis_languages), '--json'],
         },
-        'limitations': ['Static Python analysis only; unresolved calls are coverage limits, not defects.'],
+        'limitations': ['Static selected source languages only; unresolved calls are coverage limits, not defects.'],
+        'analysis': analysis_metadata(index),
     }
 
 
@@ -67,6 +69,8 @@ def read_json(path: Path) -> object:
 
 
 def build_snapshot(index: RepoIndex, context: dict, include_symbols: tuple[str, ...]) -> dict:
+    if index.analysis_languages != ("python",):
+        raise ValueError("JS/TS context snapshots are not supported; use context --json")
     request = {'symbol': context['symbol'], 'max_lines': context['max_lines'],
                'include_symbols': list(include_symbols)}
     _validate_snapshot_request(request)
@@ -93,6 +97,8 @@ def _validate_snapshot_request(request: dict) -> None:
 
 
 def validate_snapshot(index: RepoIndex, snapshot: object) -> dict:
+    if index.analysis_languages != ("python",):
+        raise ValueError("JS/TS context snapshots are not supported; use context --json")
     try:
         if not isinstance(snapshot, dict) or snapshot.get('schema_version') != 1:
             raise ValueError('invalid context snapshot schema')

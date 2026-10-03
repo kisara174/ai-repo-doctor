@@ -155,5 +155,19 @@ class AgentToolsTests(unittest.TestCase):
         self.assertEqual((destination / 'SKILL.md').read_bytes(), original)
 
 
+class JSSnapshotTests(unittest.TestCase):
+    def test_native_api_rejects_js_snapshot_before_source_collection(self):
+        from repo_doctor.agent_tools import build_snapshot
+        from repo_doctor.index import build_index
+        from repo_doctor.context import build_context
+        from tests.test_js_ts import HAS_EXTRA, FIXTURES
+        if not HAS_EXTRA:
+            self.skipTest('requires optional js extra')
+        index = build_index(FIXTURES, languages=('typescript',))
+        context = build_context(index, 'core.ts::inc')
+        with self.assertRaisesRegex(ValueError, 'snapshot'):
+            build_snapshot(index, context, ())
+
+
 if __name__ == '__main__':
     unittest.main()

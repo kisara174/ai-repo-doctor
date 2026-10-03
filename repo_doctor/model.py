@@ -164,6 +164,58 @@ class CallEdge:
     via_reexports: tuple[ExportHop, ...] = ()
 
 
+@dataclass(frozen=True, slots=True)
+class AnalysisLimit:
+    file: str
+    line: int | None
+    reason: str
+    message: str
+
+
+@dataclass(frozen=True, slots=True)
+class ESMImportRef:
+    file: str
+    specifier: str
+    imported: str | None
+    alias: str | None
+    start_line: int
+    end_line: int
+    type_only: bool = False
+    resolved_file: str | None = None
+    resolution_kind: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ESMExportRef:
+    file: str
+    exported: str
+    local_name: str | None
+    specifier: str | None
+    imported: str | None
+    start_line: int
+    end_line: int
+    type_only: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class IdentifierUse:
+    file: str
+    name: str
+    line: int
+
+
+@dataclass(slots=True)
+class JSParsedFile:
+    parsed: ParsedFile
+    esm_imports: list[ESMImportRef]
+    esm_exports: list[ESMExportRef]
+    identifier_uses: list[IdentifierUse]
+    unsafe_bindings: set[str]
+    class_header_spans: dict[str, tuple[int, int]]
+    limits: list[AnalysisLimit]
+    top_level_symbols: set[str] = field(default_factory=set)
+
+
 @dataclass(slots=True)
 class RepoIndex:
     root: Path
@@ -183,3 +235,13 @@ class RepoIndex:
     attribute_rebindings: list[AttributeRebinding] = field(default_factory=list)
     import_cycles: list[list[str]] = field(default_factory=list)
     module_instances: dict[str, dict[str, ModuleInstanceBinding]] = field(default_factory=dict)
+    analysis_languages: tuple[str, ...] = ("python",)
+    file_languages: dict[str, str] = field(default_factory=dict)
+    analysis_limits: list[AnalysisLimit] = field(default_factory=list)
+    esm_imports: list[ESMImportRef] = field(default_factory=list)
+    esm_exports: list[ESMExportRef] = field(default_factory=list)
+    identifier_uses: list[IdentifierUse] = field(default_factory=list)
+    unsafe_js_bindings: dict[str, set[str]] = field(default_factory=dict)
+    class_header_spans: dict[str, tuple[int, int]] = field(default_factory=dict)
+    js_top_level_symbols: set[str] = field(default_factory=set)
+    js_calls_resolved: bool = False

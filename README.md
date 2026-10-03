@@ -51,3 +51,20 @@ repo-doctor report show CASE
 - [产品目标与指导书](docs/PRODUCT_GUIDE.md)
 - [v0.5.2 执行计划 D0–D8](docs/superpowers/plans/2026-10-02-v0-5-2-reliability-and-delivery.md)
 - [历史与可选接口：scan、validate、DeepSeek、开发验证](docs/LEGACY_USAGE.md)
+
+## JS/TS 独立预览：v0.6.0a1
+
+稳定入口仍为 v0.5.2。预览发布后的独立安装路径与真实收据见交付记录；当前分支包含预览代码。Python 3.11+，可选 `[js]` 安装三个固定版本的 Tree-sitter 包，无 Node 分析运行时。
+
+```sh
+python3 -m venv .venv-preview
+.venv-preview/bin/python -m pip install 'ai-repo-doctor[js] @ https://github.com/kisara174/ai-repo-doctor/releases/download/v0.6.0a1/ai_repo_doctor-0.6.0a1-py3-none-any.whl'
+.venv-preview/bin/repo-doctor overview REPO --languages javascript,typescript --json
+.venv-preview/bin/repo-doctor symbols REPO --languages javascript,typescript --query NAME --json
+# ID 必须来自上一命令；替换 REAL_ID
+.venv-preview/bin/repo-doctor context REPO REAL_ID --languages javascript,typescript --max-lines 120 --json
+.venv-preview/bin/repo-doctor impact REPO REAL_ID --languages javascript,typescript --depth 2 --json
+.venv-preview/bin/repo-doctor map REPO --languages javascript,typescript --out NEW_MAP
+```
+
+支持 `.js`、`.mjs`、`.ts` 的实现符号、有限本地 ESM 文件依赖、未遮蔽和未改写的直接函数调用及反向影响。动态调用、对象方法、匿名回调、多跳重导出、别名路径、CommonJS、JSX/TSX 和声明文件不承诺解析。未知关系不等于没有影响。默认仍只分析 Python；显式混合选择可用 `--languages python,javascript,typescript`。JS/TS 不支持 context snapshot、case/findings、诊断或自动修复流程。HTML/SVG 仅呈现结构关系，详细判断交给 Codex。

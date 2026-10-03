@@ -11,6 +11,35 @@ from repo_doctor.cli import main
 
 
 class RepoMapTests(unittest.TestCase):
+    def test_mixed_relation_projection_uses_analyzed_and_preserves_legacy(self):
+        from tests.test_js_ts import HAS_EXTRA, FIXTURES
+        if not HAS_EXTRA:
+            self.skipTest('requires optional js extra')
+        import shutil
+        from repo_doctor.index import build_index
+        from repo_doctor.repo_map import build_map, project_view
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'repo'
+            shutil.copytree(FIXTURES, root)
+            (root / 'app.py').write_text('def entry():\n    return 42\n', encoding='utf-8')
+            data = build_map(build_index(root, languages=('python', 'javascript', 'typescript')))
+            files = {n['file']: n for n in data['nodes'] if n['kind'] == 'file'}
+            for name, language in [('app.py', 'python'), ('core.js', 'javascript'), ('core.ts', 'typescript')]:
+                self.assertTrue(files[name]['analyzed'])
+                self.assertEqual(files[name]['language'], language)
+                self.assertEqual(files[name]['python'], language == 'python')
+                self.assertIn('file:' + name, {n['id'] for n in data['views']['relations']['nodes']})
+            for view in data['views'].values():
+                ids = {n['id'] for n in view['nodes']}
+                self.assertTrue(all(e['source'] in ids and e['target'] in ids for e in view['edges']))
+            self.assertFalse(any(e['source'] == 'symbol:consumer.ts::run' and e['target'] == 'symbol:core.ts::inc' for e in data['edges']))
+            self.assertEqual(data['coverage']['python_files'], 1)
+            self.assertFalse(any(l['reason'] == 'map-projection-pending' for l in data['analysis']['limits']))
+            for node in data['nodes']:
+                node.pop('analyzed', None)
+            legacy = project_view(data, 'relations')
+            self.assertEqual({n['id'] for n in legacy['nodes']}, {'file:app.py'})
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

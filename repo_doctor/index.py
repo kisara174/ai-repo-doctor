@@ -1,23 +1,31 @@
-"""Build an in-memory snapshot of the current Python working tree."""
+"""Build selected source indexes, resolving Python before adding ESM data."""
 
 from dataclasses import replace
 from pathlib import Path
 
 from .graph import resolve_graph
-from .model import RepoIndex
+from .model import AnalysisLimit, RepoIndex
 from .parser import parse_python_file
-from .scanner import discover_python_files
+from .scanner import discover_files
+from .languages import language_for_path, normalize_languages
 from .semantics import resolve_semantic_edges
 
 
-def build_index(root: Path) -> RepoIndex:
+def build_index(root: Path, *, languages: tuple[str, ...] = ("python",)) -> RepoIndex:
+    if not isinstance(languages, tuple) or not all(isinstance(name, str) for name in languages):
+        raise ValueError("languages must be a tuple of source language names")
+    languages = normalize_languages(",".join(languages))
     root = Path(root).resolve()
     root_stat = root.stat()
     root_identity = (root_stat.st_dev, root_stat.st_ino)
-    paths, scan_mode = discover_python_files(root)
+    paths, scan_mode = discover_files(root)
+    selected = [path for path in paths if language_for_path(path) in languages]
     index = RepoIndex(root=root, scan_mode=scan_mode, root_identity=root_identity)
     candidates_by_id = {}
-    for path in paths:
+    for path in selected:
+        if language_for_path(path) != "python":
+            continue
+        index.file_languages[path] = "python"
         parsed = parse_python_file(root, path, root_identity=root_identity)
         index.files.append(parsed.file)
         for symbol in parsed.symbols:
@@ -55,4 +63,47 @@ def build_index(root: Path) -> RepoIndex:
             index.ambiguous_symbols.add(symbol_id)
     resolve_graph(index)
     resolve_semantic_edges(index)
+    index.analysis_languages = languages
+    js_candidates = {}
+    if any(language != "python" for language in languages):
+        from .js_ts import parse_js_ts_file, _parser
+        for language in languages:
+            if language != "python":
+                _parser(language)
+        for path in paths:
+            if path.endswith((".jsx", ".tsx", ".cjs", ".mts", ".cts", ".d.ts")):
+                index.analysis_limits.append(AnalysisLimit(path, None, "unsupported-source-kind",
+                    "Path is displayed but this source kind is not analyzed"))
+        for path in selected:
+            if language_for_path(path) == "python":
+                continue
+            data = parse_js_ts_file(root, path, root_identity=root_identity)
+            parsed = data.parsed
+            index.files.append(parsed.file)
+            index.file_languages[path] = language_for_path(path)
+            index.calls.extend(parsed.calls)
+            if parsed.error:
+                index.parse_errors.append(parsed.error)
+            for symbol in parsed.symbols:
+                js_candidates.setdefault(symbol.id, []).append(symbol)
+            index.esm_imports.extend(data.esm_imports)
+            index.esm_exports.extend(data.esm_exports)
+            index.identifier_uses.extend(data.identifier_uses)
+            index.unsafe_js_bindings[path] = data.unsafe_bindings
+            index.class_header_spans.update(data.class_header_spans)
+            index.analysis_limits.extend(data.limits)
+            index.js_top_level_symbols.update(data.top_level_symbols)
+        for sid, candidates in js_candidates.items():
+            if len(candidates) == 1:
+                index.symbols[sid] = candidates[0]
+            else:
+                index.ambiguous_symbols.add(sid)
+        for sid, symbol in list(index.symbols.items()):
+            if any(f"{symbol.file}::{'.'.join(symbol.qualname.split('.')[:part])}" in index.ambiguous_symbols
+                   for part in range(1, len(symbol.qualname.split('.')))):
+                del index.symbols[sid]
+                index.ambiguous_symbols.add(sid)
+        from .esm import resolve_esm_graph
+        resolve_esm_graph(index)
+    index.files.sort(key=lambda item: item.path)
     return index

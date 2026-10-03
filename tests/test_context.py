@@ -513,3 +513,32 @@ class ContextTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "Unsafe"):
                 build_context(index, "service.py::process", max_lines=1)
+
+class JSContextTests(unittest.TestCase):
+    def test_selected_symbols_precede_multiline_import_and_share_budget(self):
+        from tests.test_js_ts import HAS_EXTRA
+        if not HAS_EXTRA:
+            self.skipTest('requires optional js extra')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / 'app.ts').write_text("import {\n helper,\n} from './helper.js';\nexport function run() {\n return helper();\n}\nexport function extra() { return 1; }\n")
+            (root / 'helper.ts').write_text('export function helper() { return 1; }\n')
+            index = build_index(root, languages=('typescript',))
+            full = build_context(index, 'app.ts::run', include_symbols=('app.ts::extra',))
+            self.assertEqual([b['relation'] for b in full['blocks']], ['target', 'user_selected', 'callee', 'import_binding'])
+            self.assertEqual([line['line'] for line in full['blocks'][-1]['lines']], [1, 2, 3])
+            small = build_context(index, 'app.ts::run', 5, include_symbols=('app.ts::extra',))
+            self.assertEqual(sum(len(b['lines']) for b in small['blocks']), 5)
+            self.assertEqual([b['relation'] for b in small['blocks']], ['target', 'user_selected', 'callee'])
+            self.assertFalse(small['blocks'][-1]['truncated'])
+            self.assertTrue(small['budget_exhausted'])
+            self.assertIn('calls', small['analysis']['capabilities']['typescript'])
+
+    def test_method_owner_adds_header_instead_of_consuming_entire_class(self):
+        from tests.test_js_ts import HAS_EXTRA, FIXTURES
+        if not HAS_EXTRA:
+            self.skipTest('requires optional js extra')
+        index = build_index(FIXTURES, languages=('javascript',))
+        data = build_context(index, 'core.js::Box.get', 5)
+        self.assertEqual([(b['relation'], b['start_line'], b['end_line']) for b in data['blocks']],
+                         [('target', 6, 6), ('owner_class', 5, 5)])
