@@ -11,7 +11,7 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 
-EXPECTED_VERSION = '0.5.2'
+EXPECTED_VERSION = '0.6.0a1'
 
 
 def require(condition: bool, message: str) -> None:
@@ -74,7 +74,9 @@ class InstalledValidation:
             "'requires_dist': metadata('ai-repo-doctor').get_all('Requires-Dist') or []}))"]))
         require(metadata['version'] == EXPECTED_VERSION, 'wrong installed distribution version')
         require('site-packages' in Path(metadata['import_path']).parts, 'source checkout imported')
-        require(metadata['requires_dist'] == [], 'unexpected runtime dependencies')
+        dependencies = metadata['requires_dist']
+        require(len(dependencies) == 3 and all('extra == "js"' in row or "extra == 'js'" in row for row in dependencies),
+                'unexpected unconditional runtime dependencies')
         version = self.rd('version', '--version').strip()
         require(version == f'repo-doctor {EXPECTED_VERSION}', 'CLI version mismatch')
 

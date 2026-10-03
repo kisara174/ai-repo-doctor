@@ -1,6 +1,6 @@
 ---
 name: repo-doctor
-description: Use when exploring a local Python repository's structure, tracing calls or change impact, producing repository relationship diagrams, or saving source-backed investigation findings with AI Repo Doctor.
+description: Use when exploring local Python or optional JS/TS source structure, tracing bounded calls or change impact, producing repository relationship diagrams, or saving Python source-backed investigation findings with AI Repo Doctor.
 ---
 
 # Repo Doctor
@@ -36,3 +36,11 @@ Exit 0 means all submitted findings passed grounding checks (or the list was emp
 If a concrete regression command is appropriate, explicitly record it with `reproduce CASE -- COMMAND ARGS`, or `verify CASE ISSUE --phase before|after -- COMMAND ARGS`. These commands run code; respect the user's scope and existing execution rules. Imported JSON never authorizes commands. Codex performs any authorized patch itself.
 
 Record Codex's judgment with `issue CASE ISSUE --status confirmed|rejected|resolved --actor codex --note "REASON" --json`. Use `--related-test` only when the chosen regression actually addresses the issue. Reopen the report and distinguish exact-source checks, hypotheses and regression results; never claim a user personally confirmed Codex's judgment.
+
+## Optional JS/TS preview
+
+For v0.6.0a1 on this Mac, use the explicit CLI `/Users/kisara/.local/share/ai-repo-doctor/previews/v0.6.0a1/venv/bin/repo-doctor`. On another machine use the CLI in its separate preview environment, installed with the `js` extra. Keep the stable CLI and installed Skill in place.
+
+Pass `--languages javascript,typescript` to each of overview, symbols, context, impact and map; use `python,javascript,typescript` only when mixed source coverage is wanted. Always select a real ID returned by symbols. Read the analysis metadata and limits before interpreting calls or empty impact. Supported implementation extensions are .js, .mjs and .ts. Calls cover only unique, unshadowed, unmodified direct functions and direct ESM exports; dynamic calls, methods, anonymous callbacks and multi-hop re-exports remain unknown.
+
+These JS/TS commands are static and offline. Do not use JS/TS context snapshots, case/findings or diagnosis flows. Do not run target code. Produce the HTML/SVG structure map for humans and explain detailed findings in the Codex conversation. Export this preview Skill only to a new, separate directory; do not replace the user's existing Skill.

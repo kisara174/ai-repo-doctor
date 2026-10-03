@@ -94,7 +94,7 @@ def extract(source: str, *, file: str, language: str) -> dict:
 
     def module_level(node):
         current = node.parent
-        if current is not None and current.type == "lexical_declaration":
+        if current is not None and current.type in ("lexical_declaration", "variable_declaration"):
             current = current.parent
         if current is not None and current.type == "export_statement":
             current = current.parent
@@ -251,6 +251,9 @@ def extract(source: str, *, file: str, language: str) -> dict:
             if not names and target and target.type not in ('member_expression', 'subscript_expression'):
                 unsafe.add('*')
                 limit(node, 'unknown-binding', 'Unrecognized assignment blocks call resolution for this file')
+        if node.type == 'for_in_statement' and (module_level(node) or
+                not any(c.type in ('var', 'let', 'const') for c in node.children)):
+            unsafe.update(binding_names(node.child_by_field_name('left')))
         if node.type == 'identifier':
             data['identifier_uses'].append({'file': file, 'name': text(node), 'line': span(node)[0]})
         if node.type == 'call_expression':

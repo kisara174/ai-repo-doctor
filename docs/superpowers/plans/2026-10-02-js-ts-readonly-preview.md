@@ -582,21 +582,21 @@ node tests/test_map_viewer.js
 
 ### B4.1 用户文档与安装 validator
 
-- [ ] 编写 tools/validate_js_ts_install.py，stdlib-only，参数与原 validator对齐：
+- [x] 编写 tools/validate_js_ts_install.py，stdlib-only，参数与原 validator对齐：
 
 ~~~text
 python tools/validate_js_ts_install.py --mode base|js --python INSTALLED_PYTHON --cli INSTALLED_CLI --out NEW_EVIDENCE_DIR
 ~~~
 
-- [ ] --mode 是 required argparse choices=("base", "js")；上面的 base|js 是二选一的参数契约，不能当 shell 管道执行。base 校验 Python 与显式 JS 缺依赖错误，js 校验完整新语言能力；每个环境写自己的新输出目录。
-- [ ] validator 从包目录外运行，移除 PYTHONPATH / DeepSeek Key；确认 repo_doctor导入自该 installed Python 的 site-packages。
-- [ ] 内嵌或复制附件夹具到 validator的新证据目录，只运行安装后五个静态命令，不执行夹具函数。
-- [ ] 验证 symbols真实 ID、context行/预算、已确认 impact路径、metadata、map四文件和SVGXML；拒绝覆盖已有目录。
-- [ ] base 模式验证显式 JS 缺包时退出2且有安装提示；js 模式验证非法语言/禁用JS snapshot均不产生文件，空影响有边界说明。不能在已安装 extra 的环境假称验证了缺包。
-- [ ] 保存每条 argv/exit/timing、CLI/version、源码指纹与地图哈希；validator失败不得发版。
-- [ ] README/CODEX_AND_MAP 增加一条完整路径：可选安装→显式 languages→选返回ID→context/impact→HTML/SVG。写清只读、不支持的语法与JS快照限制。
-- [ ] 更新包内 Skill给出显式语言参数，指向独立 preview CLI；不自动覆盖用户 ~/.agents/skills/repo-doctor。
-- [ ] 将实际状态写回 PRODUCT_GUIDE，旧云端/修复章节保持历史定位。
+- [x] --mode 是 required argparse choices=("base", "js")；上面的 base|js 是二选一的参数契约，不能当 shell 管道执行。base 校验 Python 与显式 JS 缺依赖错误，js 校验完整新语言能力；每个环境写自己的新输出目录。
+- [x] validator 从包目录外运行，移除 PYTHONPATH / DeepSeek Key；确认 repo_doctor导入自该 installed Python 的 site-packages。
+- [x] 内嵌或复制附件夹具到 validator的新证据目录，只运行安装后五个静态命令，不执行夹具函数。
+- [x] 验证 symbols真实 ID、context行/预算、已确认 impact路径、metadata、map四文件和SVGXML；拒绝覆盖已有目录。
+- [x] base 模式验证显式 JS 缺包时退出2且有安装提示；js 模式验证非法语言/禁用JS snapshot均不产生文件，空影响有边界说明。不能在已安装 extra 的环境假称验证了缺包。
+- [x] 保存每条 argv/exit/timing、CLI/version、源码指纹与地图哈希；validator失败不得发版。
+- [x] README/CODEX_AND_MAP 增加一条完整路径：可选安装→显式 languages→选返回ID→context/impact→HTML/SVG。写清只读、不支持的语法与JS快照限制。
+- [x] 更新包内 Skill给出显式语言参数，指向独立 preview CLI；不自动覆盖用户 ~/.agents/skills/repo-doctor。
+- [x] 将实际状态写回 PRODUCT_GUIDE，旧云端/修复章节保持历史定位。
 
 ### B4.2 针对性验证与 CI
 

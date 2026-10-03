@@ -69,6 +69,8 @@ class DirectCallTests(unittest.TestCase):
             'function target() {}\nfunction entry() { let target = () => 1; return target(); }',
             'function target() {}\nfunction entry() { for (let target of values) target(); }',
             'function target() {}\nconst entry = function target() { return target(); };',
+            'function target() {}\nvar target = () => 2;\nfunction entry() { return target(); }',
+            'function target() {}\nfunction mutate() { for (target of values) {} }\nfunction entry() { return target(); }',
             'if (true) { function target() {} }\nfunction entry() { return target(); }',
             'function target() {}\nif (true) { function entry() { return target(); } }',
             'function target() {}\nfunction outer() { function entry() { return target(); } }',

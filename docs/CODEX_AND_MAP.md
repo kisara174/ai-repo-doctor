@@ -173,3 +173,13 @@ verify/reproduce 只运行显式参数数组，不经隐式 shell；默认 120 �
 两条命令择一。输出目录必须不存在且在源任务外；工具保留原件，生成 original-case.json（完整原字节）、recovered-report.md 和 recovery.json（来源和产物哈希）。完整成功才有 recovery.json；出错返回 2，并可能留下部分产物供人工查看。
 
 档案可直接阅读，不能作为可续写 case。旧 tool_version 和历史原样保留，当前导出器版本单独记录；后续调查另建普通 case 和新快照。
+
+## JS/TS 预览的 Codex 调用路径
+
+v0.6.0a1 是独立预览，Python 稳定入口保留 v0.5.2。安装方式见 README 的 JS/TS 章节。Mac 上预览 CLI 为 `/Users/kisara/.local/share/ai-repo-doctor/previews/v0.6.0a1/venv/bin/repo-doctor`，发布和安装完成后可用；无需改 PATH 或稳定 Skill。
+
+使用该绝对 CLI 依次调用 `overview REPO --languages javascript,typescript --json`、`symbols REPO --languages javascript,typescript --query NAME --json`。从本轮返回结果选择真实 ID，再调用 `context REPO REAL_ID --languages javascript,typescript --max-lines 120 --json` 和 `impact REPO REAL_ID --languages javascript,typescript --depth 2 --json`。缺少证据时补读源码，明确区分源码可见关系和工具已解析关系。
+
+`map REPO --languages javascript,typescript --out NEW_MAP` 生成离线交互 HTML、JSON 与两份 SVG。人类只看结构关系，页面不承担问题诊断。默认关系视图及文件/符号聚焦包含所选语言；旧 Python 地图仍可读取。每个输出目录必须尚不存在，单视图上限 200 节点、500 边。
+
+支持范围仅为 `.js/.mjs/.ts` 与有限直接 ESM 关系；类型导入不产生运行时调用，双候选路径保留未知。JS/TS 无 snapshot/case/findings 闭环，不执行目标代码，不调用云端 API。影响列表为有界静态结果，空结果不能解释为无影响。独立 preview Skill 可导出到新目录，勿覆盖现有 `~/.agents/skills/repo-doctor`。
