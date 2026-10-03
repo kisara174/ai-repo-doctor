@@ -600,11 +600,11 @@ python tools/validate_js_ts_install.py --mode base|js --python INSTALLED_PYTHON 
 
 ### B4.2 针对性验证与 CI
 
-- [ ] 在无 extra环境验证普通 Python工作、不导入Tree-sitter、现有 Python安装validator通过。
-- [ ] 新CI任务安装 .[js]，先明确断言三个候选包可导入；不允许整套JS测试因 skip变绿。
-- [ ] JS聚焦测试覆盖Python 3.11–3.13；保留原Python与地图CI gate，不改GitHub权限和既有 action pin。
-- [ ] extra的 missing依赖测试单独在base环境运行；编码/路径/负例与相应任务一起验证。
-- [ ] B阶段代码冻结后仅跑一次完整现有项目套件；失败按第一个具体问题定位，不扩成无目标压力测试。
+- [x] 在无 extra环境验证普通 Python工作、不导入Tree-sitter、现有 Python安装validator通过。
+- [x] 新CI任务安装 .[js]，先明确断言三个候选包可导入；不允许整套JS测试因 skip变绿。
+- [x] JS聚焦测试覆盖Python 3.11–3.13；保留原Python与地图CI gate，不改GitHub权限和既有 action pin。
+- [x] extra的 missing依赖测试单独在base环境运行；编码/路径/负例与相应任务一起验证。
+- [x] B阶段代码冻结后仅跑一次完整现有项目套件；失败按第一个具体问题定位，不扩成无目标压力测试。
 
 ~~~sh
 "$JST_EVIDENCE/parser-venv/bin/python" -m unittest discover -s tests -q
@@ -615,11 +615,11 @@ python -m compileall -q repo_doctor tools
 
 ### B4.3 固定来源、干净安装与独立部署
 
-- [ ] 验证完成后版本改为 0.6.0a1，更新version/文档；不修改正式 v0.5.2 tag。
-- [ ] 主代理审查实际 diff、独立 oracle和正确/未知边界；创建PR时附加当前任务，等当前head CI通过再合并。最终合并提交也须有同 SHA 的成功 CI，不把旧 PR head 当交付来源。
-- [ ] 保存 JST_EVIDENCE/release/source.json：source_sha、ci_source_sha、ci_url、pr_url、recorded_at 全部取真实合并/CI记录；前两者必须相等。禁止猜 source_sha 或复用稳定版来源。
-- [ ] 从该 SHA 的干净 Git archive 构建 wheel，写 JST_EVIDENCE/release/build-receipt.json：source_sha、wheel（绝对路径）、wheel_sha256、requires_python、requires_dist、runtime_hashes、ci_url、build_argv、recorded_at。Requires-Python 为 >=3.11；Requires-Dist 只能是已验证的三个 extra 条件依赖，普通安装不能需要它们。
-- [ ] 下面是构建与保存收据的实际调用结构。source.json 必须已由上一步写出，任何目录冲突停止核对，不覆盖旧构建：
+- [x] 验证完成后版本改为 0.6.0a1，更新version/文档；不修改正式 v0.5.2 tag。
+- [x] 主代理审查实际 diff、独立 oracle和正确/未知边界；创建PR时附加当前任务，等当前head CI通过再合并。最终合并提交也须有同 SHA 的成功 CI，不把旧 PR head 当交付来源。
+- [x] 保存 JST_EVIDENCE/release/source.json：source_sha、ci_source_sha、ci_url、pr_url、recorded_at 全部取真实合并/CI记录；前两者必须相等。禁止猜 source_sha 或复用稳定版来源。
+- [x] 从该 SHA 的干净 Git archive 构建 wheel，写 JST_EVIDENCE/release/build-receipt.json：source_sha、wheel（绝对路径）、wheel_sha256、requires_python、requires_dist、runtime_hashes、ci_url、build_argv、recorded_at。Requires-Python 为 >=3.11；Requires-Dist 只能是已验证的三个 extra 条件依赖，普通安装不能需要它们。
+- [x] 下面是构建与保存收据的实际调用结构。source.json 必须已由上一步写出，任何目录冲突停止核对，不覆盖旧构建：
 
 ~~~python
 import hashlib, json, subprocess, sys, zipfile
@@ -673,7 +673,7 @@ with (release / "build-receipt.json").open("x", encoding="utf-8") as stream:
     json.dump(receipt, stream, ensure_ascii=False, indent=2)
 ~~~
 
-- [ ] 在两个干净环境安装同一wheel：base 不带js，preview带js；从仓库外运行validator。
+- [x] 在两个干净环境安装同一wheel：base 不带js，preview带js；从仓库外运行validator。
 
 ~~~python
 import hashlib, json, os, subprocess, sys, venv
@@ -709,19 +709,19 @@ for mode in ("base", "js"):
     ], cwd=directory, env=child_env, check=True)
 ~~~
 
-这两段是 B4 未来执行代码，本轮不运行。所有路径来自固定收据或本计划的证据目录；不依赖 worktree 的 dist 中恰好存在的包。validator 的输出和调用状态纳入 B4.json，不能只留下安装日志。
-- [ ] 再用安装后的CLI复查两个固定仓库的六题，保存实际结果/补读/地图；不重跑目标代码。
-- [ ] 若门槛全过，发布 v0.6.0a1为 prerelease；先核对同名远端tag/release不存在，不覆盖。附wheel、SHA256SUMS和中文范围说明。
-- [ ] 匿名下载公开wheel核对hash，不能把gh上传成功当公开安装完成。
-- [ ] 在 ~/.local/share/ai-repo-doctor/previews/v0.6.0a1/venv 安装已核对包；用绝对CLI验证一次真实四步与map，稳定入口仍是0.5.2。
-- [ ] 新 preview receipt.json 写version/source/wheel/CI/六题/安装/地图/限制/回退方式；不改稳定 deployment.json。
-- [ ] 预览Skill导出到 previews/v0.6.0a1/skill，给出Codex可复制指令；不自动注册或覆盖已安装Skill。
-- [ ] 中文交付文档记录真实执行日期、支持层级、CLI路径、安装命令、六题、公开包与已知限制。
-- [ ] 再核对A0保留项hash、稳定CLI版本与入口link。失败由主代理定位，不能以覆盖旧文件解决。
+这些是 B4 构建与安装的调用模板。2026-10-03 已按此结构实际完成，真实命令与结果见 receipts/B4.json 和交付记录。所有路径来自固定收据或本计划的证据目录；不依赖 worktree 的 dist 中恰好存在的包。validator 的输出和调用状态纳入 B4.json，不能只留下安装日志。
+- [x] 再用安装后的CLI复查两个固定仓库的六题，保存实际结果/补读/地图；不重跑目标代码。
+- [x] 若门槛全过，发布 v0.6.0a1为 prerelease；先核对同名远端tag/release不存在，不覆盖。附wheel、SHA256SUMS和中文范围说明。
+- [x] 匿名下载公开wheel核对hash，不能把gh上传成功当公开安装完成。
+- [x] 在 ~/.local/share/ai-repo-doctor/previews/v0.6.0a1/venv 安装已核对包；用绝对CLI验证一次真实四步与map，稳定入口仍是0.5.2。
+- [x] 新 preview receipt.json 写version/source/wheel/CI/六题/安装/地图/限制/回退方式；不改稳定 deployment.json。
+- [x] 预览Skill导出到 previews/v0.6.0a1/skill，给出Codex可复制指令；不自动注册或覆盖已安装Skill。
+- [x] 中文交付文档记录真实执行日期、支持层级、CLI路径、安装命令、六题、公开包与已知限制。
+- [x] 再核对A0保留项hash、稳定CLI版本与入口link。失败由主代理定位，不能以覆盖旧文件解决。
 
 预览环境已经存在时先核对receipt；不覆盖未知安装。回退是继续使用原稳定入口，不删除旧环境/报告。
 
-**完成：** 固定来源、公开包、base/extra干净安装、独立Mac预览和六题闭环均有实际证据。
+**完成（2026-10-03）：** 固定来源、公开包、base/extra干净安装、独立Mac预览和六题闭环均有实际证据。代码 PR #36 已合并；合并 SHA ad40f3311ba3684ef11d633a39e33d498d5c22f4 的七项 CI 通过。v0.6.0a1 已公开 prerelease；公开下载 hash、34 个 Mac 运行文件、稳定入口与保护项核对通过。见 [中文交付记录](../../delivery/2026-10-03-v0.6.0a1-js-ts-preview.md)，原始 A 阶段 no-go 与 follow-up go 保留。
 **停止：** 同名发布冲突、CI与HEAD不一致、无extra安装受影响、缺包静默退回、稳定Skill/Key/入口变化；先处理具体风险。
 
 ## 附件 1｜固定静态夹具

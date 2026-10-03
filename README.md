@@ -54,7 +54,7 @@ repo-doctor report show CASE
 
 ## JS/TS 独立预览：v0.6.0a1
 
-稳定入口仍为 v0.5.2。预览发布后的独立安装路径与真实收据见交付记录；当前分支包含预览代码。Python 3.11+，可选 `[js]` 安装三个固定版本的 Tree-sitter 包，无 Node 分析运行时。
+稳定入口仍为 v0.5.2。预览已公开发布并独立部署到 Mac，实际路径与收据见 [交付记录](docs/delivery/2026-10-03-v0.6.0a1-js-ts-preview.md)。Python 3.11+，可选 `[js]` 安装三个固定版本的 Tree-sitter 包，无 Node 分析运行时。
 
 ```sh
 python3 -m venv .venv-preview
