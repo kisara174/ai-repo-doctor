@@ -176,7 +176,7 @@ verify/reproduce 只运行显式参数数组，不经隐式 shell；默认 120 �
 
 ## JS/TS 预览的 Codex 调用路径
 
-v0.6.0a1 是独立预览，Python 稳定入口保留 v0.5.2。安装方式见 README 的 JS/TS 章节。Mac 上预览 CLI 为 `/Users/kisara/.local/share/ai-repo-doctor/previews/v0.6.0a1/venv/bin/repo-doctor`，发布和安装完成后可用；无需改 PATH 或稳定 Skill。
+v0.6.0a1 是独立预览，Python 稳定入口保留 v0.5.2。安装方式见 README 的 JS/TS 章节。Mac 上预览 CLI 为 `/Users/kisara/.local/share/ai-repo-doctor/previews/v0.6.0a1/venv/bin/repo-doctor`，已完成安装验收；无需改 PATH 或稳定 Skill。详见 [预览交付记录](delivery/2026-10-03-v0.6.0a1-js-ts-preview.md)。
 
 使用该绝对 CLI 依次调用 `overview REPO --languages javascript,typescript --json`、`symbols REPO --languages javascript,typescript --query NAME --json`。从本轮返回结果选择真实 ID，再调用 `context REPO REAL_ID --languages javascript,typescript --max-lines 120 --json` 和 `impact REPO REAL_ID --languages javascript,typescript --depth 2 --json`。缺少证据时补读源码，明确区分源码可见关系和工具已解析关系。
 
