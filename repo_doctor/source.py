@@ -1,4 +1,4 @@
-"""Read scanned Python source without following repository path symlinks."""
+"""Read scanned source without following repository path symlinks."""
 
 import os
 import stat
@@ -51,9 +51,12 @@ def _open_checked_fallback(
 
 
 def read_source(
-    root: Path, relative_path: str, root_identity: tuple[int, int] | None = None
+    root: Path, relative_path: str, root_identity: tuple[int, int] | None = None,
+    *, language: str = "python",
 ) -> str:
-    """Read Python source with encoding-cookie support and path containment."""
+    """Read selected source with path containment; Python retains encoding cookies."""
+    if language not in ("python", "javascript", "typescript"):
+        raise ValueError(f"Unsupported source language: {language}")
     relative = PurePosixPath(relative_path)
     parts = relative.parts
     if not parts or relative.is_absolute() or ".." in parts or "\\" in relative_path:
@@ -69,6 +72,8 @@ def read_source(
     with os.fdopen(descriptor, "rb") as stream:
         if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
             raise ValueError(f"Unsafe source path: {relative_path}")
-        encoding, _ = tokenize.detect_encoding(stream.readline)
-        stream.seek(0)
+        encoding = "utf-8-sig"
+        if language == "python":
+            encoding, _ = tokenize.detect_encoding(stream.readline)
+            stream.seek(0)
         return stream.read().decode(encoding)

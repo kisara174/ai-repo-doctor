@@ -6,6 +6,7 @@ from dataclasses import asdict
 
 from .model import RepoIndex, SemanticEdge, Symbol
 from .source import read_source
+from .languages import analysis_metadata
 
 
 def _require_symbol(index: RepoIndex, symbol_id: str) -> Symbol:
@@ -18,7 +19,8 @@ def _require_symbol(index: RepoIndex, symbol_id: str) -> Symbol:
 
 
 def _read_lines(index: RepoIndex, path: str) -> list[str]:
-    return read_source(index.root, path, index.root_identity).splitlines()
+    return read_source(index.root, path, index.root_identity,
+                       language=index.file_languages.get(path, "python")).splitlines()
 
 
 def _semantic_edge_data(edge: SemanticEdge, symbol_id: str) -> dict:
@@ -77,7 +79,9 @@ def build_context(
     if target.kind == "method" and target.parent not in index.ambiguous_symbols:
         candidate_owner = index.symbols.get(target.parent or "")
         if candidate_owner is not None and candidate_owner.kind == "class":
-            header_span = _class_header_span(source_lines(candidate_owner.file), candidate_owner)
+            header_span = (index.class_header_spans.get(candidate_owner.id)
+                           if index.file_languages.get(candidate_owner.file, "python") != "python"
+                           else _class_header_span(source_lines(candidate_owner.file), candidate_owner))
             if header_span is not None:
                 seen.add(candidate_owner.id)
                 candidates.append((candidate_owner.id, "owner_class"))
@@ -94,6 +98,10 @@ def build_context(
         elif requested.id not in seen:
             seen.add(requested.id)
             candidates.append((requested.id, "user_selected"))
+
+    if index.file_languages.get(target.file, "python") != "python":
+        # Explicit includes retain priority over automatically added class headers.
+        candidates.sort(key=lambda row: row[1] == "owner_class")
 
     def add(symbols: set[str], relation: str) -> None:
         for neighbor_id in sorted(
@@ -178,6 +186,10 @@ def build_context(
     for neighbor_id, _relation in candidates:
         symbol = index.symbols[neighbor_id]
         start, end = candidate_spans.get(neighbor_id, (symbol.start_line, symbol.end_line))
+        if index.file_languages.get(symbol.file, "python") != "python":
+            module_names[symbol.file].update(use.name for use in index.identifier_uses
+                                            if use.file == symbol.file and start <= use.line <= end)
+            continue
         module = parsed_modules.get(symbol.file)
         if symbol.file not in parsed_modules:
             try:
@@ -206,6 +218,12 @@ def build_context(
                 if isinstance(node, (ast.Import, ast.ImportFrom)) and node.lineno == line:
                     import_nodes[(file, line)] = node
                     break
+
+    esm_spans = {}
+    for ref in index.esm_imports:
+        if ref.alias is not None and ref.alias in module_names.get(ref.file, set()):
+            import_rows[(ref.file, ref.start_line)].add(ref.alias)
+            esm_spans[(ref.file, ref.start_line)] = ref.end_line
 
     remaining = max_lines
     blocks: list[dict] = []
@@ -242,7 +260,7 @@ def build_context(
             break
         source = source_lines(file)
         node = import_nodes.get((file, line))
-        end = min(getattr(node, "end_lineno", line), len(source)) if node is not None else line
+        end = min(esm_spans.get((file, line), getattr(node, "end_lineno", line)), len(source))
         start = line
         selected_end = min(end, start + remaining - 1)
         lines = [
@@ -293,6 +311,7 @@ def build_context(
         ),
         "omitted_symbols": len(candidates) - included_symbols,
         "omitted_imports": len(import_rows) - included_imports,
+        **({"analysis": analysis_metadata(index)} if index.analysis_languages != ("python",) else {}),
     }
 
 
@@ -352,4 +371,8 @@ def build_impact(index: RepoIndex, symbol_id: str, depth: int = 2) -> dict:
         "module_importers": sorted({item["source"] for item in imports}),
         "import_evidence": imports,
         "semantic_relations": semantic_relations,
+        **({"analysis": analysis_metadata(index)} if index.analysis_languages != ("python",) else {}),
+        **({"status": "not-supported",
+            "scope": "Ordinary JS/TS call impact is not supported; empty results do not prove no impact"}
+           if index.file_languages.get(target.file, "python") != "python" else {}),
     }

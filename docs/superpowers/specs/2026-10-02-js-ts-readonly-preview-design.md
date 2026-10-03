@@ -1,7 +1,7 @@
 # JS/TS 只读调查预览规格
 
 日期：2026-10-02。依据：用户认可的 A0–A4 探索与 B1–B4 产品化清单。
-状态：**首次 A0–A4 于 2026-10-03 完成，decision=no-go，原结果保留。随后[按需流程复核](../../evaluations/2026-10-03-js-ts-adaptive-workflow.md)观察到两仓库结构题各减少一次动作，独立 follow-up gate=go，符合 B 阶段继续条件。六题总计 19 次仍高于源码基线 18 次；B1–B4 尚未实施，正式产品仍是 Python v0.5.2。**
+状态：**首次 A0–A4 于 2026-10-03 完成，decision=no-go，原结果保留。随后[按需流程复核](../../evaluations/2026-10-03-js-ts-adaptive-workflow.md)观察到两仓库结构题各减少一次动作，独立 follow-up gate=go，符合 B 阶段继续条件。六题总计 19 次仍高于源码基线 18 次；[B1 源码接入](../../evaluations/2026-10-03-js-ts-B1.md)已核对完成；B2–B4 尚未实施，已部署产品仍是 Python v0.5.2。**
 
 ## 1. 目标与完成形态
 

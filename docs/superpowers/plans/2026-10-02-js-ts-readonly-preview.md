@@ -10,7 +10,7 @@
 
 **Spec:** [JS/TS 只读调查预览规格](../specs/2026-10-02-js-ts-readonly-preview-design.md)。执行者必须先读规格；接口和限制以该文档为准。
 
-**状态：** 2026-10-02 开始实施。首次 A0–A4 的 no-go 保留；2026-10-03 [按需流程复核](../../evaluations/2026-10-03-js-ts-adaptive-workflow.md)独立 gate=go：两仓库结构题各省一次动作，六题从 30 降至 19，仍高于源码基线 18。B1–B4 尚未实施，下一项是 B1。使用隔离 worktree 的 codex/js-ts-readonly-preview 分支，Mac 稳定版仍为 v0.5.2。
+**状态：** 2026-10-02 开始实施。首次 A0–A4 的 no-go 保留；2026-10-03 [按需流程复核](../../evaluations/2026-10-03-js-ts-adaptive-workflow.md)独立 gate=go：两仓库结构题各省一次动作，六题从 30 降至 19，仍高于源码基线 18。B1 已完成源码接入与聚焦核对，B2–B4 尚未实施，下一项是 B2。使用隔离 worktree 的 codex/js-ts-readonly-preview 分支，Mac 稳定版仍为 v0.5.2。
 
 ## Global Constraints
 
@@ -375,7 +375,7 @@ python -m tools.js_ts_trial check-gate --evidence-root "$JST_EVIDENCE"
 
 ### B1.1 语言、读取和可选依赖
 
-- [ ] 先写 tests/test_languages.py 的路径/CSV断言：
+- [x] 先写 tests/test_languages.py 的路径/CSV断言：
 
 ~~~python
 from repo_doctor.languages import language_for_path, normalize_languages
@@ -392,11 +392,11 @@ for value in ["", "python,", "go", "auto", "python,,typescript"]:
         raise AssertionError(value)
 ~~~
 
-- [ ] 实现 languages.py 三个规格接口；不引入用户配置/插件注册。
-- [ ] 在 model.py 加带默认值的规格记录，保留原 FileRecord/Symbol/ImportRef/CallEdge 字段。已有 RepoIndex(root, scan_mode, root_identity) 仍能构造。
-- [ ] read_source 只添加 keyword-only language 默认 python。使用相同安全 FD 打开；JS/TS decode utf-8-sig，Python保留 tokenize encoding-cookie。
-- [ ] source_fingerprint 取 index.file_languages.get(path, "python") 传读取语言；纯 Python digest 顺序/字节不变。
-- [ ] pyproject 增加下段，仅 A2 验证的版本：
+- [x] 实现 languages.py 三个规格接口；不引入用户配置/插件注册。
+- [x] 在 model.py 加带默认值的规格记录，保留原 FileRecord/Symbol/ImportRef/CallEdge 字段。已有 RepoIndex(root, scan_mode, root_identity) 仍能构造。
+- [x] read_source 只添加 keyword-only language 默认 python。使用相同安全 FD 打开；JS/TS decode utf-8-sig，Python保留 tokenize encoding-cookie。
+- [x] source_fingerprint 取 index.file_languages.get(path, "python") 传读取语言；纯 Python digest 顺序/字节不变。
+- [x] pyproject 增加下段，仅 A2 验证的版本：
 
 ~~~toml
 [project.optional-dependencies]
@@ -407,8 +407,8 @@ js = [
 ]
 ~~~
 
-- [ ] 缺包/不兼容转换为清楚的 ValueError 安装提示；仅导入 JS backend 时加载原生包，Python-only 不检查它。
-- [ ] 聚焦验证：
+- [x] 缺包/不兼容转换为清楚的 ValueError 安装提示；仅导入 JS backend 时加载原生包，Python-only 不检查它。
+- [x] 聚焦验证：
 
 ~~~sh
 python -m unittest tests.test_languages -v
@@ -419,14 +419,14 @@ python -m unittest tests.test_parser tests.test_context -q
 
 ### B1.2 提取与索引合并
 
-- [ ] 将 A3 已验证 walker 迁到 js_ts.py，转换成 JSParsedFile；实验工具改为调用正式后端，不保留两份 parser。
-- [ ] 添加 parse_js_ts_file 的 exact-span、重载、歧义、错误、异步和绑定负例测试；同时核对 public IDs来自文件/qualname。
-- [ ] build_index 添加 keyword-only languages，先 normalize/validate，再用 discover_files 选择现有忽略/安全范围内的文件。
-- [ ] 分别构造 Python 子索引与 JS/TS 元数据。Python 的 resolve_graph/resolve_semantic_edges 只接收 .py 子索引，避免 m.js、m.ts 与 m.py 的点号模块名冲突。
-- [ ] 只对 Python保留已有 overload/Click/module-instance 规则；JS/TS 歧义与唯一实现按规格处理。
-- [ ] ESM resolver 此阶段使用 resolve_calls=False，只产生有依据的本地文件 ImportEdge与原始导出数据；能力 metadata 不含 calls。
-- [ ] 聚合子索引的原记录/边，排序去重；file_languages 只标真实选择的实现文件。
-- [ ] 将下面代码放进 tests/test_index.py 的 unittest 测试方法。它自己建立混合目录、补上 Python 文件，并验证两个方向都没有跨语言调用：
+- [x] 将 A3 已验证 walker 迁到 js_ts.py，转换成 JSParsedFile；实验工具改为调用正式后端，不保留两份 parser。
+- [x] 添加 parse_js_ts_file 的 exact-span、重载、歧义、错误、异步和绑定负例测试；同时核对 public IDs来自文件/qualname。
+- [x] build_index 添加 keyword-only languages，先 normalize/validate，再用 discover_files 选择现有忽略/安全范围内的文件。
+- [x] 分别构造 Python 子索引与 JS/TS 元数据。Python 的 resolve_graph/resolve_semantic_edges 只接收 .py 子索引，避免 m.js、m.ts 与 m.py 的点号模块名冲突。
+- [x] 只对 Python保留已有 overload/Click/module-instance 规则；JS/TS 歧义与唯一实现按规格处理。
+- [x] ESM resolver 此阶段使用 resolve_calls=False，只产生有依据的本地文件 ImportEdge与原始导出数据；能力 metadata 不含 calls。
+- [x] 聚合子索引的原记录/边，排序去重；file_languages 只标真实选择的实现文件。
+- [x] 将下面代码放进 tests/test_index.py 的 unittest 测试方法。它自己建立混合目录、补上 Python 文件，并验证两个方向都没有跨语言调用：
 
 ~~~python
 import shutil
@@ -461,23 +461,23 @@ with TemporaryDirectory() as temp:
 
 ### B1.3 上下文、命令和范围
 
-- [ ] context 的 _source_lines 保留 root_identity 的既有位置参数，再传 language=index.file_languages.get(path, "python")；不能把 JS 编码交给 Python encoding-cookie 规则。
-- [ ] context 中对 Python保留 AST 类头、基类、导入。JS/TS 使用 class_header_spans 和 identifier_uses / ESMImportRef 的整条 import start/end。
-- [ ] 所有新 block 继续包含 symbol/relation/file/start_line/end_line/truncated/lines，import 的 relation 为 import_binding；计入同一个 max_lines。
-- [ ] targets/includes 在自动邻居前；JS 构造类正文不自动抢占整个预算。未知引入可显式 include 真实 ID。
-- [ ] 在五个 argparse 子命令添加 --languages CSV，默认 python；其他命令不添加这个参数。分析五命令的 build_index 调用传选择语言，旧 case/diagnose 路径继续默认。
-- [ ] context 非纯 Python选择且有 --snapshot-out 时，索引/写文件前返回 2，说明只读预览限制；不生成无效快照。
-- [ ] overview 的 python_files 严格计 .py；新增 analysis 字段通过 analysis_metadata 统一生成。context/impact/symbols/map 同步给范围。
-- [ ] 保持旧 schema 与字段含义，仅附加 analysis。symbols matches 内原字段保留；语言可由 analysis 或 file path 获取。
-- [ ] terminal 输出同时说明选择语言、各语言文件数、错误/限制；empty影响不写“无影响”。
-- [ ] 首期 snapshot/case/findings 的 Python接口保持；不为了 JS context 改 report 或 findings schema。
-- [ ] 在 tests/test_cli.py 增加缺后端、无效 CSV、显式混合语言、空 JS影响有界说明、快照禁用且不写文件的用例；在 context 测试核对 multiline import 和 5/120 行预算。
+- [x] context 的 _source_lines 保留 root_identity 的既有位置参数，再传 language=index.file_languages.get(path, "python")；不能把 JS 编码交给 Python encoding-cookie 规则。
+- [x] context 中对 Python保留 AST 类头、基类、导入。JS/TS 使用 class_header_spans 和 identifier_uses / ESMImportRef 的整条 import start/end。
+- [x] 所有新 block 继续包含 symbol/relation/file/start_line/end_line/truncated/lines，import 的 relation 为 import_binding；计入同一个 max_lines。
+- [x] targets/includes 在自动邻居前；JS 构造类正文不自动抢占整个预算。未知引入可显式 include 真实 ID。
+- [x] 在五个 argparse 子命令添加 --languages CSV，默认 python；其他命令不添加这个参数。分析五命令的 build_index 调用传选择语言，旧 case/diagnose 路径继续默认。
+- [x] context 非纯 Python选择且有 --snapshot-out 时，索引/写文件前返回 2，说明只读预览限制；不生成无效快照。
+- [x] overview 的 python_files 严格计 .py；新增 analysis 字段通过 analysis_metadata 统一生成。context/impact/symbols/map 同步给范围。
+- [x] 保持旧 schema 与字段含义，仅附加 analysis。symbols matches 内原字段保留；语言可由 analysis 或 file path 获取。
+- [x] terminal 输出同时说明选择语言、各语言文件数、错误/限制；empty影响不写“无影响”。
+- [x] 首期 snapshot/case/findings 的 Python接口保持；不为了 JS context 改 report 或 findings schema。
+- [x] 在 tests/test_cli.py 增加缺后端、无效 CSV、显式混合语言、空 JS影响有界说明、快照禁用且不写文件的用例；在 context 测试核对 multiline import 和 5/120 行预算。
 
 ~~~sh
 "$JST_EVIDENCE/parser-venv/bin/python" -m unittest tests.test_languages tests.test_js_ts tests.test_esm tests.test_index tests.test_context tests.test_cli tests.test_agent_tools -q
 ~~~
 
-**B1完成：** 五命令能给真实 ID/上下文/范围；纯 Python 与旧快照保留，JS尚无普通调用承诺。
+**B1完成（2026-10-03）：** 五命令能给真实 ID/上下文/范围；纯 Python 与旧快照保留，JS尚无普通调用承诺。87 项聚焦测试与 6 项地图兼容测试通过；固定样本十次命令、110 行引文与正负文件边核对通过。与已安装稳定运行时独立比较默认 Python 索引一致。见[B1 实施记录](../../evaluations/2026-10-03-js-ts-B1.md)。地图 JS/TS 关系投影仍在 B3；未部署或发布。
 **停止：** 新字段污染 Python module解析、指纹忽略新语言、旧案例读取改变、假装支持 JS快照。主代理定位并修正，不扩 case 接口来绕过错误。
 
 ## B2｜有限普通调用与影响
@@ -878,7 +878,7 @@ python -m tools.js_ts_trial check-fixtures --root tests/fixtures/js_ts_contract
 继续 AI Repo Doctor 的 JS/TS 只读预览，先读用户 AGENTS、
 GraphFlow context、docs/superpowers/specs/2026-10-02-js-ts-readonly-preview-design.md
 与 docs/superpowers/plans/2026-10-02-js-ts-readonly-preview.md。
-首次 A0–A4 和按需流程 follow-up 已完成；从 B1 第一项未完成任务继续，保持 v0.5.2稳定安装。
+首次 A0–A4 和按需流程 follow-up 已完成；B1 已完成，从 B2 第一项未完成任务继续，保持 v0.5.2稳定安装。
 本计划写出不代表实施完成；先核对worktree、receipt和实际输出，避免重复。
 固定np与ts-extras源码，目标仓库只静态分析；Key/Skill/旧报告/用户四文档保留。
 主代理按真实收益作 go/no-go；原 A4 no-go 保留，本轮独立 follow-up go 为 B1–B4 提供继续依据。不得重做 A 阶段或据此标记产品阶段已完成。

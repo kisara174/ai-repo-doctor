@@ -33,7 +33,8 @@ def source_fingerprint(index: RepoIndex) -> str:
         digest.update(item.path.encode("utf-8"))
         digest.update(b"\0")
         try:
-            content = read_source(index.root, item.path, index.root_identity)
+            content = read_source(index.root, item.path, index.root_identity,
+                                  language=index.file_languages.get(item.path, "python"))
         except (OSError, ValueError, UnicodeError, SyntaxError):
             content = "<unreadable>"
         digest.update(content.encode("utf-8"))

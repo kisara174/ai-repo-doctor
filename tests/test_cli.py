@@ -530,3 +530,66 @@ class CliTests(unittest.TestCase):
         self.assertEqual(status, 1, stderr)
         self.assertEqual(json.loads(stdout)["accepted"], [])
         self.assertEqual(len(json.loads(stdout)["rejected"]), 1)
+
+class LanguageCliTests(unittest.TestCase):
+    def run_cli(self, *args, no_site=False):
+        return subprocess.run([sys.executable, *(['-S'] if no_site else []), '-m', 'repo_doctor',
+                               *map(str, args)], cwd=PROJECT_ROOT, capture_output=True, text=True, timeout=30)
+
+    def test_missing_extra_errors_but_default_python_does_not_import_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / 'a.py').write_text('def entry():\n return 1\n')
+            (root / 'a.js').write_text('export function entry() {}')
+            normal = self.run_cli('overview', root, '--json', no_site=True)
+            missing = self.run_cli('overview', root, '--languages', 'javascript', '--json', no_site=True)
+            self.assertEqual(normal.returncode, 0, normal.stderr)
+            self.assertEqual(json.loads(normal.stdout)['stats']['python_files'], 1)
+            self.assertEqual(missing.returncode, 2)
+            self.assertIn('ai-repo-doctor[js]', missing.stderr)
+
+    def test_invalid_languages_and_js_snapshot_reject_before_index_or_write(self):
+        with tempfile.TemporaryDirectory() as directory:
+            missing_root = Path(directory) / 'does-not-exist'
+            out = Path(directory) / 'artifact' / 'snapshot.json'
+            for value in ('auto', 'python,', ''):
+                result = self.run_cli('overview', missing_root, '--languages', value)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn('languages', result.stderr)
+            result = self.run_cli('context', missing_root, 'a.js::entry', '--languages', 'javascript', '--snapshot-out', out)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn('--json', result.stderr)
+            self.assertIn('snapshot', result.stderr.lower())
+            self.assertFalse(out.parent.exists())
+
+    def test_all_five_commands_expose_scope_and_keep_python_counts(self):
+        from tests.test_js_ts import HAS_EXTRA
+        if not HAS_EXTRA:
+            self.skipTest('requires optional js extra')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / 'a.py').write_text('def entry():\n return 1\n')
+            (root / 'a.ts').write_text('export function entry() { return 1; }')
+            commands = [('overview',), ('symbols', '--query', 'entry'),
+                        ('context', 'a.ts::entry'), ('impact', 'a.ts::entry'),
+                        ('map', '--out', root / 'map-output')]
+            for command in commands:
+                result = self.run_cli(command[0], root, *command[1:], '--languages', 'python,typescript', '--json')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                data = json.loads(result.stdout)
+                self.assertEqual(data['analysis']['files_by_language'], {'python': 1, 'javascript': 0, 'typescript': 1})
+                self.assertNotIn('calls', data['analysis']['capabilities']['typescript'])
+                if command[0] == 'overview':
+                    self.assertEqual(data['stats']['python_files'], 1)
+                    self.assertIn('--languages', data['next_commands']['symbols'])
+                elif command[0] == 'map':
+                    saved = json.loads(Path(data['map_json']).read_text())
+                    self.assertEqual(saved['coverage']['python_files'], 1)
+                    self.assertFalse(next(n for n in saved['nodes'] if n['id'] == 'file:a.ts')['python'])
+                    self.assertEqual(data['analysis'], saved['analysis'])
+                    self.assertTrue(any(r['reason'] == 'map-projection-pending' for r in data['analysis']['limits']))
+                elif command[0] == 'impact':
+                    self.assertEqual(data['status'], 'not-supported')
+            terminal = self.run_cli('impact', root, 'a.ts::entry', '--languages', 'typescript')
+            self.assertIn('not supported', terminal.stdout)
+            self.assertIn('typescript', terminal.stdout)

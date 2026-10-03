@@ -9,6 +9,7 @@ from .case import _revision, source_fingerprint
 from .model import RepoIndex
 from .scanner import discover_files
 from .map_render import render_html, render_svg
+from .languages import analysis_metadata
 
 
 LAYOUT = {'node_width': 260, 'node_height': 54, 'column_gap': 320,
@@ -40,7 +41,7 @@ def build_map(index: RepoIndex, *, symbol: str | None = None, depth: int = 1) ->
         record = records.get(path)
         nodes[f'file:{path}'] = {'id': f'file:{path}', 'kind': 'file', 'label': parts[-1],
                                 'file': path, 'parent': parent, 'is_test': bool(record and record.is_test),
-                                'python': record is not None}
+                                'python': record is not None and index.file_languages.get(path, 'python') == 'python'}
     for item in sorted(index.symbols.values(), key=lambda value: value.id):
         nodes[f'symbol:{item.id}'] = {
             'id': f'symbol:{item.id}', 'kind': item.kind, 'label': item.qualname,
@@ -88,14 +89,21 @@ def build_map(index: RepoIndex, *, symbol: str | None = None, depth: int = 1) ->
     data = {
         'schema_version': 1, 'repository': {'name': index.root.name, 'revision': _revision(index.root),
                                            'source_fingerprint': fingerprint, 'scan_mode': mode},
-        'coverage': {'python_files': len(index.files), 'parse_errors': len(index.parse_errors),
+        'coverage': {'python_files': sum(index.file_languages.get(row.path, 'python') == 'python' for row in index.files), 'parse_errors': len(index.parse_errors),
                      'resolved_calls': len(index.call_edges), 'unresolved_calls': len(index.calls) - len(index.call_edges),
-                     'ambiguous_symbols': len(index.ambiguous_symbols), 'scope': 'static Python; no runtime completeness'},
+                     'ambiguous_symbols': len(index.ambiguous_symbols), 'scope': 'static selected source languages; no runtime completeness'},
         'nodes': sorted(nodes.values(), key=lambda node: node['id']), 'edges': edges,
         'file_edges': sorted(file_edges.values(), key=lambda edge: (edge['kind'], edge['source'], edge['target'])),
         'layout': LAYOUT, 'limits': {'nodes': 200, 'edges': 500}, 'colors': COLORS,
         'initial': {'symbol': symbol, 'depth': depth},
+        'analysis': analysis_metadata(index),
     }
+    if index.analysis_languages != ("python",):
+        data["analysis"]["limits"].insert(0, {"file": ".", "line": None, "reason": "map-projection-pending",
+            "message": "B1: relation views still select Python files; JS/TS projection is scheduled for B3"})
+        if len(data["analysis"]["limits"]) > 50:
+            data["analysis"]["limits"].pop()
+            data["analysis"]["limits_omitted"] += 1
     data['views'] = {mode: project_view(data, mode, symbol=symbol, depth=depth) for mode in ('structure', 'relations')}
     if source_fingerprint(index) != fingerprint:
         raise ValueError('source changed during map generation; rerun map')
@@ -180,4 +188,4 @@ def write_map(index: RepoIndex, destination: Path, *, symbol: str | None = None,
             'html': str((destination / 'map.html').resolve()),
             'structure_svg': str((destination / 'structure.svg').resolve()),
             'relations_svg': str((destination / 'relations.svg').resolve()),
-            'coverage': data['coverage']}
+            'coverage': data['coverage'], 'analysis': data['analysis']}
