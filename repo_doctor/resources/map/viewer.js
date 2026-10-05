@@ -111,7 +111,7 @@
   function zoom(factor){camera.x+=camera.w*(1-factor)/2;camera.y+=camera.h*(1-factor)/2;camera.w*=factor;camera.h*=factor;applyCamera();}
   function select(node){
     $('selection').textContent=node.label+'\n'+node.file+(node.start_line?':'+node.start_line:'');
-    if(state.mode==='relations'&&node.kind!=='directory'){state.target=node.id;state.selected=null;}
+    if(state.mode==='relations'&&node.kind!=='directory'){state.target=node.id;state.selected=node.id;}
     if(state.mode==='structure'){state.selected=node.id;if(parents.has(node.id))toggle(node.id);}
     render();
   }
