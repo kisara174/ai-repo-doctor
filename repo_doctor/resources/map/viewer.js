@@ -104,7 +104,7 @@
       if(selected){camera.y=Math.max(0,selected.y+l.node_height/2-camera.h/2);applyCamera();}
     }
     list();
-    $('summary').textContent=`${view.nodes.length} 个可见节点 · ${view.edges.length} 条连线 · ${view.hidden_nodes} 个节点未显示（筛选、层级或上限）`;
+    $('summary').textContent=`${view.nodes.length} 个可见节点 · ${view.edges.length} 条连线 · ${view.hidden_nodes} 个节点未显示 · ${view.hidden_edges} 条连线未显示（筛选、层级或上限）`;
   }
   function applyCamera(){svg.setAttribute('viewBox',`${camera.x} ${camera.y} ${camera.w} ${camera.h}`);}
   function fit(widthOnly=false){const box=$('canvas').getBoundingClientRect();camera={x:0,y:0,w:view.width,h:widthOnly?view.width*(box.height||600)/(box.width||960):view.height};applyCamera();}
@@ -119,13 +119,19 @@
     else state.expanded=state.expanded.includes(id)?state.expanded.filter(x=>x!==id):[...state.expanded,id];}
   function list(){
     const query=$('search').value.toLowerCase().trim();let nodes;
-    if(query)nodes=data.nodes.filter(n=>(n.label+' '+n.file).toLowerCase().includes(query)&&(state.tests||!n.is_test));
+    if(query)nodes=data.nodes.filter(n=>(n.label+' '+n.file+' '+n.id).toLowerCase().includes(query)&&(state.tests||!n.is_test));
     else nodes=view.nodes;
     const fragment=document.createDocumentFragment();
     for(const n of nodes.slice(0,100)){const row=document.createElement('div');row.className='node-row';
       if(state.mode==='structure'&&parents.has(n.id)){const button=document.createElement('button');button.className='toggle';button.textContent=n.kind==='directory'?(state.closed.includes(n.id)?'▸':'▾'):(state.expanded.includes(n.id)?'▾':'▸');button.setAttribute('aria-label','展开或收起 '+n.label);button.onclick=()=>{toggle(n.id);render();};row.appendChild(button);}
       const button=document.createElement('button');button.className='choose';button.textContent=n.label;button.title=n.file;button.onclick=()=>{
-        if(query){if(n.kind!=='directory'){state.mode='relations';state.target=n.id;$('mode').value=state.mode;}else{
+        if(query){if(n.kind!=='directory'){
+          for(let p=n.parent;lookup.has(p);p=lookup.get(p).parent){
+            if(lookup.get(p).kind==='directory')state.closed=state.closed.filter(id=>id!==p);
+            else if(!state.expanded.includes(p))state.expanded.push(p);
+          }
+          state.mode='relations';state.target=n.id;$('mode').value=state.mode;
+        }else{
           Object.assign(state,reveal(data,state,n.id));$('mode').value=state.mode;
           $('selection').textContent=n.label+'\n'+n.file;render();return;
         }}
