@@ -104,7 +104,7 @@
       if(selected){camera.y=Math.max(0,selected.y+l.node_height/2-camera.h/2);applyCamera();}
     }
     list();
-    $('summary').textContent=`${view.nodes.length} 个可见节点 · ${view.edges.length} 条连线 · ${view.hidden_nodes} 个节点未显示（筛选、层级或上限）`;
+    $('summary').textContent=`${view.nodes.length} 个可见节点 · ${view.edges.length} 条连线 · ${view.hidden_nodes} 个节点未显示 · ${view.hidden_edges} 条连线未显示（筛选、层级或上限）`;
   }
   function applyCamera(){svg.setAttribute('viewBox',`${camera.x} ${camera.y} ${camera.w} ${camera.h}`);}
   function fit(widthOnly=false){const box=$('canvas').getBoundingClientRect();camera={x:0,y:0,w:view.width,h:widthOnly?view.width*(box.height||600)/(box.width||960):view.height};applyCamera();}
