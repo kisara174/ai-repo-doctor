@@ -10,7 +10,7 @@
 
 **Spec:** 第 2 节为自包含设计合同，实施者先读第 1–4 节。审计原始证据位于 `/Users/kisara/.local/share/ai-repo-doctor/audits/2026-10-02-v0.5.1/`；其他机器没有该目录时，仍可按本文件复现和实施。
 
-**状态：** 2026-10-02 编写。执行已开始；D0–D5 已完成，D6 本地验收完成，PR/CI 门槛进行中。以下示例需结合交付记录中的实际证据理解。
+**状态：** 2026-10-02：v0.5.2 已公开发布并部署。D0–D8 的功能交付门槛均通过；最终文档整合提交和 CI 以 deployment-v0.5.2.json 为准。下方步骤保留可追溯的执行记录。
 
 ## Global Constraints
 
@@ -199,9 +199,9 @@ D0 现场 → D1 回归轮 → D2 保存 → D3 救援 → D4 版本
 | D3 | 超大历史完整可查阅 | 完成 |
 | D4 | 包、CLI、新报告版本一致 | 完成 |
 | D5 | 一条当前产品教程 | 完成 |
-| D6 | 安装后真实流程及冻结证据 | 待执行 |
-| D7 | 公开 wheel 与正式来源一致 | 待执行 |
-| D8 | 普通终端可用及中文交付 | 待执行 |
+| D6 | 安装后真实流程及冻结证据 | 完成 |
+| D7 | 公开 wheel 与正式来源一致 | 完成 |
+| D8 | 普通终端可用及中文交付 | 验收通过 |
 
 ---
 ## D0：核对现场和确定隔离位置
@@ -538,8 +538,8 @@ python3 -B -m unittest discover -s tests -q
 ```
 
 - [x] 主代理审查最终 diff：允许文件、边界、旧兼容、无新网络依赖、没有把失败证据改成成功；记录 freeze SHA 和源码 hash。
-- [ ] 用临时 body 文件创建正式 PR，附 F1–F3 前后结果、旧关联变化、救援定位和安装 receipt。创建后必须 Codex attach_artifact。
-- [ ] 等 PR 当前 head 的完整 CI。旧 SHA 的绿色不能验收最新代码；源码改变重跑相关门槛。
+- [x] 用临时 body 文件创建正式 PR，附 F1–F3 前后结果、旧关联变化、救援定位和安装 receipt。创建后必须 Codex attach_artifact。
+- [x] 等 PR 当前 head 的完整 CI。旧 SHA 的绿色不能验收最新代码；源码改变重跑相关门槛。
 
 **Acceptance:** 同一候选 wheel 在仓库外通过全部 receipt 项，全套离线门槛和当前 head CI 通过，冻结与审查证据已保存。
 
@@ -551,14 +551,14 @@ python3 -B -m unittest discover -s tests -q
 
 **Artifacts:** 正式来源 SHA、tag、wheel、SHA256SUMS、release-notes、build/publication receipt，目录 `/Users/kisara/.local/share/ai-repo-doctor/releases/v0.5.2/`。
 
-- [ ] 确认执行时的发布授权仍适用。用户仅授权写计划的本轮不得执行此阶段；后续明确开始完整计划且历史发布授权仍有效时，继续已授权工作，不反复索要相同确认。
-- [ ] 合并已审查且当前 head CI 通过的 PR，查询合并后真实 SHA 和 CI，设为 formal source。不得把 0.5.1 来源构建成 0.5.2。
-- [ ] 从 formal source 的 Git archive 构建正式 wheel；build-receipt 记录源码 SHA、全部 repo_doctor 模块和资源 hash、版本、Requires-Python/Dist、wheel SHA256。
-- [ ] 正式 wheel 在干净 venv 跑 D6。任何失败先解决并形成新来源提交，不能先发布后补证据。
-- [ ] release-notes 明确三项修复、旧多命令关联变化、只读救援、安装方法、静态边界；不承诺整仓无缺陷。
-- [ ] 创建 v0.5.2 tag 指向 formal source，正常稳定 release 附 wheel、SHA256SUMS。若已有 tag/release，查询实际来源，绝不覆盖。
-- [ ] 从公开资产重新下载到新目录，比较 SHA256、wheel metadata、tag SHA；公开包在仓库外安装后再过 D6。
-- [ ] 写 publication.json。公开下载、来源和安装均验证后，才记录已发布。保留 0.5.1 与全部旧收据。
+- [x] 确认执行时的发布授权仍适用。用户仅授权写计划的本轮不得执行此阶段；后续明确开始完整计划且历史发布授权仍有效时，继续已授权工作，不反复索要相同确认。
+- [x] 合并已审查且当前 head CI 通过的 PR，查询合并后真实 SHA 和 CI，设为 formal source。不得把 0.5.1 来源构建成 0.5.2。
+- [x] 从 formal source 的 Git archive 构建正式 wheel；build-receipt 记录源码 SHA、全部 repo_doctor 模块和资源 hash、版本、Requires-Python/Dist、wheel SHA256。
+- [x] 正式 wheel 在干净 venv 跑 D6。任何失败先解决并形成新来源提交，不能先发布后补证据。
+- [x] release-notes 明确三项修复、旧多命令关联变化、只读救援、安装方法、静态边界；不承诺整仓无缺陷。
+- [x] 创建 v0.5.2 tag 指向 formal source，正常稳定 release 附 wheel、SHA256SUMS。若已有 tag/release，查询实际来源，绝不覆盖。
+- [x] 从公开资产重新下载到新目录，比较 SHA256、wheel metadata、tag SHA；公开包在仓库外安装后再过 D6。
+- [x] 写 publication.json。公开下载、来源和安装均验证后，才记录已发布。保留 0.5.1 与全部旧收据。
 
 **Acceptance:** 用户可从公开 URL pip 安装 0.5.2；formal source、tag、包 metadata、新报告版本一致；公开下载校验成功。
 
@@ -566,17 +566,17 @@ python3 -B -m unittest discover -s tests -q
 
 **Owner:** 主代理。**Consumes:** D7 验证后的公开 wheel 与正式 hash 清单。
 
-- [ ] 保存旧 deployment.json/INSTALLATION.md 副本和旧 wheel 路径。用同一已验证 wheel 升级持久 venv，不从可变分支安装。
-- [ ] 保留现有 CLI 入口、Skill 和 Key，使用持久 Python -m pip 安装；失败则从保留的 0.5.1 wheel 恢复，不先删环境再重建。
-- [ ] 从 /private/tmp 查询 metadata、site-packages 导入、--version，逐文件比对正式运行 hash。
-- [ ] 新登录 zsh 执行 command -v repo-doctor 与 --version，不能仅靠激活的临时 shell 验收。
-- [ ] 持久 CLI 执行 D6。重开已有 schedule 报告并核对原字节；schedule 仅作 overview/context/impact/map 静态调查，不执行其代码。
-- [ ] 用持久救援模块导出原审计超大受控 case 到新目录，保存完整报告和档案链接，原 audit 不变。
-- [ ] fast-forward 主目录；之前之后核对四份用户改动 hash。未知变更阻止快进时由主代理保留并解决，不能 reset。
-- [ ] 单独文档提交记录交付；不移动正式 tag。清楚区分 formal source SHA 和后续 documentation HEAD。
-- [ ] 更新 deployment-v0.5.2.json、deployment.json、INSTALLATION.md：真实来源、包 hash、CLI、安装 receipt、旧数据保留、D0–D8 状态与 pending。必需事项全部完成才 pending=[]。
-- [ ] 项目更新后 GraphFlow incremental index，最终对齐产品目标；历史 workbench 自动状态不代替正式交付状态。
-- [ ] 中文交付包含版本、公开安装链接、普通终端入口、正常报告、地图、救援档案、三个缺陷的结果与静态边界。
+- [x] 保存旧 deployment.json/INSTALLATION.md 副本和旧 wheel 路径。用同一已验证 wheel 升级持久 venv，不从可变分支安装。
+- [x] 保留现有 CLI 入口、Skill 和 Key，使用持久 Python -m pip 安装；失败则从保留的 0.5.1 wheel 恢复，不先删环境再重建。
+- [x] 从 /private/tmp 查询 metadata、site-packages 导入、--version，逐文件比对正式运行 hash。
+- [x] 新登录 zsh 执行 command -v repo-doctor 与 --version，不能仅靠激活的临时 shell 验收。
+- [x] 持久 CLI 执行 D6。重开已有 schedule 报告并核对原字节；schedule 仅作 overview/context/impact/map 静态调查，不执行其代码。
+- [x] 用持久救援模块导出原审计超大受控 case 到新目录，保存完整报告和档案链接，原 audit 不变。
+- [x] fast-forward 主目录；之前之后核对四份用户改动 hash。未知变更阻止快进时由主代理保留并解决，不能 reset。
+- [x] 单独文档提交记录交付；不移动正式 tag。清楚区分 formal source SHA 和后续 documentation HEAD。
+- [x] 更新 deployment-v0.5.2.json、deployment.json、INSTALLATION.md：真实来源、包 hash、CLI、安装 receipt、旧数据保留、D0–D8 状态与 pending。必需事项全部完成才 pending=[]。
+- [x] 项目更新后 GraphFlow incremental index，最终对齐产品目标；历史 workbench 自动状态不代替正式交付状态。
+- [x] 中文交付包含版本、公开安装链接、普通终端入口、正常报告、地图、救援档案、三个缺陷的结果与静态边界。
 
 **Acceptance:** 普通终端使用 0.5.2，正常调查/图/记录/复查成立，三个审计缺陷不再重现，旧数据和用户改动保留，公开包与安装匹配，必需待办归零。
 
@@ -603,12 +603,14 @@ python3 -B -m unittest discover -s tests -q
 
 **启动条件：** D8 完成。先写问题，再选符合问题的公开 Python 仓库；一类多模块库、一类带命令注册的 CLI。实施时查询官方源码、固定 commit/本地路径，不执行其代码，不调用诊断 API。
 
-- [ ] 每仓库三个问题：真实入口如何到核心逻辑、修改某实际函数影响谁、图如何定位相关文件/局部关系。
-- [ ] 每题保存四步真实命令、真实 symbol ID、源码行证据、Codex 补读。需要图时生成新目录 HTML/SVG。
-- [ ] 记录工具已回答、需补读、误边/漏边、完成步骤与耗时；未解析调用数量不作为准确率。
-- [ ] 有具体阻断才做最小源码夹具，限定一种可保守解析的关系。没有缺口就结束，不造新特性。
+- [x] 每仓库三个问题：真实入口如何到核心逻辑、修改某实际函数影响谁、图如何定位相关文件/局部关系。
+- [x] 每题保存四步真实命令、真实 symbol ID、源码行证据、Codex 补读。需要图时生成新目录 HTML/SVG。
+- [x] 记录工具已回答、需补读、误边/漏边、完成步骤与耗时；未解析调用数量不作为准确率。
+- [x] 有具体阻断才做最小源码夹具，限定一种可保守解析的关系。没有缺口就结束，不造新特性。
 
 **产物：** `docs/evaluations/2026-10-02-v0.5.2-investigation-value.md`，正文记录真实执行日期，六题逐条“回答完整/边界明确/阻断”并附来源。选出最多一个收益明确的继续点，或建议保持当前版本。
+
+**实际执行：** 2026-10-02 的 JMESPath / sqlite-utils 六题已完成，24 条基础命令、6 条补充命令与 4 条出图命令成功。2 题回答完整、4 题边界明确，无产品阻断；本轮浏览器 file URL 被策略拒绝，交互动作未验收。见 [中文调查报告](../../evaluations/2026-10-02-v0.5.2-investigation-value.md)。保持 v0.5.2，不启动 V2。
 
 ### V2：只做证据最强的一项优化
 
@@ -621,17 +623,16 @@ python3 -B -m unittest discover -s tests -q
 
 ## 7. 下一会话可直接复制
 
-```text
-请继续 AI Repo Doctor，先读用户 AGENTS.md 规则、GraphFlow context 和
- docs/superpowers/plans/2026-10-02-v0-5-2-reliability-and-delivery.md。
-目标完成 D0–D8，交付并部署可 pip 安装的 v0.5.2 稳定 Python CLI。
-从首个未完成阶段推进，先核对源码、worktree 和证据，不重复已完成项。
-按计划修复回归轮、容量与版本，提供完整只读救援，收拢教程，完成干净安装、公开发布核对、Mac 部署和中文交付。
-主代理承担设计、debug、审查和发布；Luna 仅用于合格机械任务。
-保留四份用户文档改动、Skill、Key、旧报告和旧发行包。主要流程离线，不执行外部仓库代码。
-测试只对应实际风险和已有门槛。新阻塞由主代理定位并更新计划，保持产品精简。
-本段供用户决定开始实施后使用；当前写计划本身不代表代码、发布或部署已完成。
-```
+~~~text
+请继续 AI Repo Doctor，先读用户 AGENTS.md、GraphFlow context 和
+docs/PRODUCT_GUIDE.md、docs/evaluations/2026-10-02-v0.5.2-investigation-value.md。
+D0–D8 和后续 V1 六题调查已完成；正式发布及 Mac 安装保持 v0.5.2。
+不要重复修复、重跑完整测试或搬动正式 tag。
+先以我的真实仓库调查问题使用 overview/symbols/context/impact/map；
+明确区分已解析调用、注册、文件聚合与源码补读，不执行外部仓库代码。
+若存在具体阻断，再由主代理制定一项有来源证据和明确收益的小计划；
+没有阻断就保持当前稳定版。保留四份用户文档、Skill、Key、旧报告和发行包。
+~~~
 
 ## 8. 计划编写自审
 
