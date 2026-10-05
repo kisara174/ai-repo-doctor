@@ -17,6 +17,7 @@ class Element {
   querySelectorAll(name) { return this.children.flatMap(child=>[...(child.name===name?[child]:[]),...child.querySelectorAll(name)]); }
 }
 const node=(id,kind,file,parent,label,start_line,is_test=false)=>({id,kind,file,parent,label,start_line,is_test,python:kind==='file'});
+for (const capped of [false, true]) {
 const data={
   nodes:[node('dir:.','directory','.',null,'repo'), node('dir:pkg','directory','pkg','dir:.','pkg'),
     node('file:pkg/a.py','file','pkg/a.py','dir:pkg','a.py'),
@@ -31,6 +32,10 @@ const data={
   colors:{contains:'#aaa',call:'#00f',import:'#0a0',reexport:'#f00',command_registration:'#ff0'},
   repository:{name:'fixture',source_fingerprint:'0'.repeat(64),revision:'fixture'},coverage:{unresolved_calls:0,parse_errors:0},
 };
+if(capped) for(let i=0;i<220;i++) {
+  const file='a'+String(i).padStart(3,'0')+'.py';
+  data.nodes.push(node('file:'+file,'file',file,'dir:.',file));
+}
 for(const n of data.nodes.filter(n=>n.parent)) data.edges.push({id:'contains:'+n.id,kind:'contains',source:n.parent,target:n.id});
 data.edges.push({id:'call',kind:'call',source:'symbol:b.py::run',target:'symbol:pkg/a.py::C.run'});
 const elements=new Map();
@@ -55,13 +60,15 @@ if(process.env.MAP_TEST_SECTION!=='counts') {
   assert.equal($('selection').textContent,'run\npkg/a.py:7','Selection must preserve physical source line');
   $('search').value='';$('mode').value='structure';$('mode').onchange();
   const drawn=$('drawing').children[0].children.filter(n=>n.attributes['data-node-id']).map(n=>n.attributes['data-node-id']);
+  assert.ok(drawn.length<=200,'Selection must retain the configured node cap');
+  if(capped) assert.equal(drawn.length,200,'Large fixture must exercise truncation');
   for(const id of ['dir:pkg','file:pkg/a.py','symbol:pkg/a.py::C','symbol:pkg/a.py::C.run']) assert.ok(drawn.includes(id),'Search must reveal ancestor path: '+id);
   assert.equal(search('symbol:test_a.py::run').length,0,'Tests remain excluded by default');
   $('tests').checked=true;$('tests').onchange();
   assert.equal(search('symbol:test_a.py::run').length,1,'Explicit test filter enables ID search');
   console.log('Map search: full/prefixed ID, duplicate names, source lines, ancestors and test filtering passed');
 }
-if(process.env.MAP_TEST_SECTION!=='search') {
+if(!capped && process.env.MAP_TEST_SECTION!=='search') {
   $('reset').onclick();$('tests').checked=false;$('tests').onchange();
   assert.match($('summary').textContent,/6 个节点未显示/);
   assert.match($('summary').textContent,/6 条连线未显示/,'HTML status must expose hidden structure edges');
@@ -69,4 +76,5 @@ if(process.env.MAP_TEST_SECTION!=='search') {
   assert.match($('summary').textContent,/7 个节点未显示/);
   assert.match($('summary').textContent,/0 条连线未显示/,'HTML status must expose hidden relation edges');
   console.log('Map status: hidden node and edge counts follow the active projection');
+}
 }
