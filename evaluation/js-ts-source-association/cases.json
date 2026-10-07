@@ -1,0 +1,323 @@
+{
+  "schema_version": 1,
+  "status": "prepared-not-run",
+  "positive_file_imports": [
+    {
+      "schema_version": 1,
+      "repo_id": "mxmvshnvsk__i18n-unused",
+      "repo_commit": "5e37e4d72079155393ec5c1bdc77ed8a025e7e88",
+      "source_file": "src/core/action.ts",
+      "source_sha256": "96ebaa882c8cc0f1ae12651819801cf03a7db2bdfc5d6456afb8ec93d15bace0",
+      "start_line": 1,
+      "end_line": 1,
+      "quote": "import { ApplyFlat, RecursiveStruct } from \"../types\";",
+      "statement_kind": "import_statement",
+      "specifier": "../types",
+      "normalized_stem": "src/types",
+      "candidate_paths": [
+        "src/types/index.ts"
+      ],
+      "directory_package_json_present": false,
+      "source_language": "typescript",
+      "candidate_parse_status": {
+        "src/types/index.ts": "parsed"
+      },
+      "research_classification": "unique-supported-parsed",
+      "association_kind": "directory-index",
+      "expected_classification": "associated",
+      "expected_file": "src/types/index.ts",
+      "target_sha256": "44f01ea0fdcbfe8000b185927546b6ac784d37fd136c877e9ac90f2ef1ae3db8"
+    },
+    {
+      "schema_version": 1,
+      "repo_id": "sunanakgo__nais3",
+      "repo_commit": "7788ad3eabe3eed8c8ede4b67c97dc63fc6cc2d3",
+      "source_file": "src/main/backup/repo.ts",
+      "source_sha256": "0cdde90fcf2b160b991d77ff410d6bb6bfc8a8b3751f8dd907404ce5aa30a7c7",
+      "start_line": 3,
+      "end_line": 3,
+      "quote": "import { getDb } from '../db'",
+      "statement_kind": "import_statement",
+      "specifier": "../db",
+      "normalized_stem": "src/main/db",
+      "candidate_paths": [
+        "src/main/db/index.ts"
+      ],
+      "directory_package_json_present": false,
+      "source_language": "typescript",
+      "candidate_parse_status": {
+        "src/main/db/index.ts": "parsed"
+      },
+      "research_classification": "unique-supported-parsed",
+      "association_kind": "directory-index",
+      "expected_classification": "associated",
+      "expected_file": "src/main/db/index.ts",
+      "target_sha256": "5d21cb0cd974431d9fdee9ed3067b75d116678c0d3577c4b319e1b43381ae583"
+    },
+    {
+      "schema_version": 1,
+      "repo_id": "roseforljh__qoneagent",
+      "repo_commit": "0e8b7775550ae3e0ea3fc41212e021b7afbc19bf",
+      "source_file": "apps/desktop/src/components/assistant-ui/tool-timeline-state.ts",
+      "source_sha256": "9ddae147a1409b708cb25ec364dacbf2e24aeca9eb0a5a1f7d2cced6ae316959",
+      "start_line": 2,
+      "end_line": 2,
+      "quote": "import { toolActivity } from \"./tool-call-display\";",
+      "statement_kind": "import_statement",
+      "specifier": "./tool-call-display",
+      "normalized_stem": "apps/desktop/src/components/assistant-ui/tool-call-display",
+      "candidate_paths": [
+        "apps/desktop/src/components/assistant-ui/tool-call-display.ts"
+      ],
+      "directory_package_json_present": false,
+      "source_language": "typescript",
+      "candidate_parse_status": {
+        "apps/desktop/src/components/assistant-ui/tool-call-display.ts": "parsed"
+      },
+      "research_classification": "unique-supported-parsed",
+      "association_kind": "extensionless-file",
+      "expected_classification": "associated",
+      "expected_file": "apps/desktop/src/components/assistant-ui/tool-call-display.ts",
+      "target_sha256": "4057b98602efeef32bb2c49abc3fc820c0bad1c4d1acd119ced6c0ebc4f01a59"
+    },
+    {
+      "schema_version": 1,
+      "repo_id": "smp46__pingvin-share-x",
+      "repo_commit": "8801a5aaa6719eb70782e90e883b275fea1ccb7e",
+      "source_file": "backend/src/main.ts",
+      "source_sha256": "5abd16b232a1dbd9dfcfcdb41995ab48ce572694fef1feb3dbdc7e8a688018b5",
+      "start_line": 12,
+      "end_line": 17,
+      "quote": "import {\n  DATA_DIRECTORY,\n  LOG_LEVEL_AVAILABLE,\n  LOG_LEVEL_DEFAULT,\n  LOG_LEVEL_ENV,\n} from \"./constants\";",
+      "statement_kind": "import_statement",
+      "specifier": "./constants",
+      "normalized_stem": "backend/src/constants",
+      "candidate_paths": [
+        "backend/src/constants.ts"
+      ],
+      "directory_package_json_present": false,
+      "source_language": "typescript",
+      "candidate_parse_status": {
+        "backend/src/constants.ts": "parsed"
+      },
+      "research_classification": "unique-supported-parsed",
+      "association_kind": "extensionless-file",
+      "expected_classification": "associated",
+      "expected_file": "backend/src/constants.ts",
+      "target_sha256": "b27d6a648a0f9d868b97d68abe0411ff4f5b86f72908dc30a51cd92646af24f2"
+    },
+    {
+      "schema_version": 1,
+      "repo_id": "duplicati__ngclient",
+      "repo_commit": "5e90115febf5ef206dd5a8bace11c65515fb1a82",
+      "source_file": "projects/ngclient/src/app/backup/general/general.component.ts",
+      "source_sha256": "9a01bf4ba95ec6abc10a9aa3079c6b0e74206281e1a356c65c6a2cbdad3eb4d7",
+      "start_line": 21,
+      "end_line": 21,
+      "quote": "import { OperationType } from '../../core/openapi';",
+      "statement_kind": "import_statement",
+      "specifier": "../../core/openapi",
+      "normalized_stem": "projects/ngclient/src/app/core/openapi",
+      "candidate_paths": [
+        "projects/ngclient/src/app/core/openapi/index.ts"
+      ],
+      "directory_package_json_present": false,
+      "source_language": "typescript",
+      "candidate_parse_status": {
+        "projects/ngclient/src/app/core/openapi/index.ts": "parsed"
+      },
+      "research_classification": "unique-supported-parsed",
+      "association_kind": "directory-index",
+      "expected_classification": "associated",
+      "expected_file": "projects/ngclient/src/app/core/openapi/index.ts",
+      "target_sha256": "8bb5aec2cf559b25053557cc3a6dc6a170228b2510ec7c28a09148e6bbd0aee6"
+    },
+    {
+      "schema_version": 1,
+      "repo_id": "emircanagac__voxpery",
+      "repo_commit": "e5933d1e16cd4f6a5c59a0bfa8913973b96034b0",
+      "source_file": "apps/web/src/stores/toast.ts",
+      "source_sha256": "268e82f88d0084198a55d30d15fed2cdab5593665e782e6301cdc32210a6d80f",
+      "start_line": 2,
+      "end_line": 2,
+      "quote": "import { createSecureId } from '../secureId'",
+      "statement_kind": "import_statement",
+      "specifier": "../secureId",
+      "normalized_stem": "apps/web/src/secureId",
+      "candidate_paths": [
+        "apps/web/src/secureId.ts"
+      ],
+      "directory_package_json_present": false,
+      "source_language": "typescript",
+      "candidate_parse_status": {
+        "apps/web/src/secureId.ts": "parsed"
+      },
+      "research_classification": "unique-supported-parsed",
+      "association_kind": "extensionless-file",
+      "expected_classification": "associated",
+      "expected_file": "apps/web/src/secureId.ts",
+      "target_sha256": "2fcc6df1a0937d234f2af591c7fa0c41e6c602bc633dd3c41fb8340d0161942c"
+    },
+    {
+      "schema_version": 1,
+      "repo_id": "yu000jp__logseq-plugin-weekdays-and-weekends",
+      "repo_commit": "1dfe24a7c350ad6d8d7ebc64beb71391c5c2baee",
+      "source_file": "src/rendering.ts",
+      "source_sha256": "1b931445c608576ba1178cd3ecb3916254e9927a1ebb8dab1b392ec979e1af46",
+      "start_line": 3,
+      "end_line": 3,
+      "quote": "import { checkJournalsOrJournalSingle, checkMatchDay, checkWeekday, insertTemplateBlock } from './lib'",
+      "statement_kind": "import_statement",
+      "specifier": "./lib",
+      "normalized_stem": "src/lib",
+      "candidate_paths": [
+        "src/lib.ts"
+      ],
+      "directory_package_json_present": false,
+      "source_language": "typescript",
+      "candidate_parse_status": {
+        "src/lib.ts": "parsed"
+      },
+      "research_classification": "unique-supported-parsed",
+      "association_kind": "extensionless-file",
+      "expected_classification": "associated",
+      "expected_file": "src/lib.ts",
+      "target_sha256": "beb1fea0801ba60f38edf0ddf9819272329ffa8cea684250c74a6c9b04a2ecd8"
+    }
+  ],
+  "ambiguous_imports": [
+    {
+      "schema_version": 1,
+      "repo_id": "sunanakgo__nais3",
+      "repo_commit": "7788ad3eabe3eed8c8ede4b67c97dc63fc6cc2d3",
+      "source_file": "src/renderer/src/browser/install-browser-api.ts",
+      "source_sha256": "4bdd9ba4d55a992c057f1f8f3b9c5d4219d8a3277800bfc30f32fdbb0fe12b1a",
+      "start_line": 1,
+      "end_line": 1,
+      "quote": "import type { NaisApi } from '../../../preload/index'",
+      "statement_kind": "import_statement",
+      "specifier": "../../../preload/index",
+      "normalized_stem": "src/preload/index",
+      "candidate_paths": [
+        "src/preload/index.d.ts",
+        "src/preload/index.ts"
+      ],
+      "directory_package_json_present": false,
+      "source_language": "typescript",
+      "candidate_parse_status": {
+        "src/preload/index.d.ts": "unsupported-source-kind",
+        "src/preload/index.ts": "parsed"
+      },
+      "research_classification": "ambiguous",
+      "association_kind": null,
+      "expected_classification": "ambiguous-refused"
+    },
+    {
+      "schema_version": 1,
+      "repo_id": "sunanakgo__nais3",
+      "repo_commit": "7788ad3eabe3eed8c8ede4b67c97dc63fc6cc2d3",
+      "source_file": "tests/i18n-renderer.test.ts",
+      "source_sha256": "35de8ab0b841526f1593b8bfb8c941b9672f3541c731670319af45e6a57f6d52",
+      "start_line": 9,
+      "end_line": 9,
+      "quote": "import type { NaisApi } from '../src/preload/index'",
+      "statement_kind": "import_statement",
+      "specifier": "../src/preload/index",
+      "normalized_stem": "src/preload/index",
+      "candidate_paths": [
+        "src/preload/index.d.ts",
+        "src/preload/index.ts"
+      ],
+      "directory_package_json_present": false,
+      "source_language": "typescript",
+      "candidate_parse_status": {
+        "src/preload/index.d.ts": "unsupported-source-kind",
+        "src/preload/index.ts": "parsed"
+      },
+      "research_classification": "ambiguous",
+      "association_kind": null,
+      "expected_classification": "ambiguous-refused"
+    },
+    {
+      "schema_version": 1,
+      "repo_id": "sunanakgo__nais3",
+      "repo_commit": "7788ad3eabe3eed8c8ede4b67c97dc63fc6cc2d3",
+      "source_file": "tests/layout-store.test.ts",
+      "source_sha256": "d6e5869d1550822ab444b2b83f9fd8da3201aa51b5aab8912b56ae4e8d6f0be9",
+      "start_line": 3,
+      "end_line": 3,
+      "quote": "import type { NaisApi } from '../src/preload/index'",
+      "statement_kind": "import_statement",
+      "specifier": "../src/preload/index",
+      "normalized_stem": "src/preload/index",
+      "candidate_paths": [
+        "src/preload/index.d.ts",
+        "src/preload/index.ts"
+      ],
+      "directory_package_json_present": false,
+      "source_language": "typescript",
+      "candidate_parse_status": {
+        "src/preload/index.d.ts": "unsupported-source-kind",
+        "src/preload/index.ts": "parsed"
+      },
+      "research_classification": "ambiguous",
+      "association_kind": null,
+      "expected_classification": "ambiguous-refused"
+    },
+    {
+      "schema_version": 1,
+      "repo_id": "sunanakgo__nais3",
+      "repo_commit": "7788ad3eabe3eed8c8ede4b67c97dc63fc6cc2d3",
+      "source_file": "tests/quick-generation-controls.test.ts",
+      "source_sha256": "276b22ef46e0555eb97615debcee8fd453732444b211e9a6c03539ec65eae2ca",
+      "start_line": 5,
+      "end_line": 5,
+      "quote": "import type { NaisApi } from '../src/preload/index'",
+      "statement_kind": "import_statement",
+      "specifier": "../src/preload/index",
+      "normalized_stem": "src/preload/index",
+      "candidate_paths": [
+        "src/preload/index.d.ts",
+        "src/preload/index.ts"
+      ],
+      "directory_package_json_present": false,
+      "source_language": "typescript",
+      "candidate_parse_status": {
+        "src/preload/index.d.ts": "unsupported-source-kind",
+        "src/preload/index.ts": "parsed"
+      },
+      "research_classification": "ambiguous",
+      "association_kind": null,
+      "expected_classification": "ambiguous-refused"
+    }
+  ],
+  "direct_call": {
+    "schema_version": 1,
+    "repo_id": "dembrane__echo",
+    "repo_commit": "d5cb0a61cab5abac4b784c57d16a4a826cede15e",
+    "source_file": "dembrane/platform/packages/tenancy/src/usage.ts",
+    "source_sha256": "2d53abf7a7557e9dfea9c322b41122a15276ad9087ac1d82326cbf55b07474d2",
+    "start_line": 2,
+    "end_line": 2,
+    "quote": "import { pyRound } from \"./numbers\";",
+    "statement_kind": "import_statement",
+    "specifier": "./numbers",
+    "normalized_stem": "dembrane/platform/packages/tenancy/src/numbers",
+    "candidate_paths": [
+      "dembrane/platform/packages/tenancy/src/numbers.ts"
+    ],
+    "directory_package_json_present": false,
+    "source_language": "typescript",
+    "candidate_parse_status": {
+      "dembrane/platform/packages/tenancy/src/numbers.ts": "parsed"
+    },
+    "research_classification": "unique-supported-parsed",
+    "association_kind": "extensionless-file",
+    "expected_classification": "safe-direct-call",
+    "expected_call_line": 76,
+    "caller_query": "withCapSignals",
+    "callee_query": "pyRound",
+    "expected_file": "dembrane/platform/packages/tenancy/src/numbers.ts",
+    "target_sha256": "7f6c4f096ce3e7078620e74de3f4f01cd3625fd1651b40ab6362cccdb3a1f00a"
+  }
+}
