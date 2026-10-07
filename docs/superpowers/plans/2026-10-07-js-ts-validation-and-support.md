@@ -10,7 +10,7 @@
 
 **Spec:** 现有 `docs/superpowers/specs/2026-10-02-js-ts-readonly-preview-design.md` 的只读合同；预览工作树 `docs/delivery/2026-10-06-v0.6.0a5-local-candidate.md`；稳定版 `docs/delivery/2026-10-07-v0.5.3-release.md`。前两份文档中的旧日期状态为历史，不据此将本机版本判断为 0.5.2。
 
-**本计划状态：** 2026-10-07 已执行 J0–J4 准备，材料为 `prepared-not-run`。J5 产品测试/补充断言及 J6 发布尚未执行。详见 `evaluation/js-ts-support/README.md` 与本机证据根 `evaluations/js-ts-support-v1/preparation-report.md`；准备就绪不等于产品通过。
+**本计划状态：** 2026-10-07 J0–J4 准备和 J5 定向验证已完成；原准备收据仍保持 `prepared-not-run` 的历史状态，执行结果另见 [J5 报告](../../evaluations/2026-10-07-js-ts-support-validation.md)。J6 正式发布进行中。
 
 ## 1. 已核实的起点
 
@@ -195,15 +195,15 @@ git -C "$RD_PROJECT" diff --stat v0.5.3 2b786cf22eecaed29327b9d8a453a00429875782
 
 ## J5：定向测试、修复与候选冻结
 
-**本阶段后续执行。Files:** J2 登记的缺失断言与 J5 定位的最小 runtime 文件；版本/验证器同步由主代理负责。
+**本阶段已完成；条件性修复/扩展未触发，具体证据见 J5 报告。Files:** J2 登记的缺失断言与 J5 定位的最小 runtime 文件；版本/验证器同步由主代理负责。
 
-- [ ] 先运行现有 JS 契约；extra 环境不允许 skipped。新 fixture 或断言先检查引用，再运行得到真实结果，不为得到红灯人为破坏产品。
-- [ ] 已确认 bug：先保留可复现失败和独立预期，再最小修复、原场景重跑；已有通过能力的验证只做差异涉及部分。
-- [ ] 先 discovery 6 仓库调查并审阅；修复来源固定后再跑 confirmation 6 仓库。修复后的受影响 discovery 场景写新 attempt，不混计不同来源。
-- [ ] P0：错误源码引用、无根据造边、数据损坏；P1：承诺能力不可用、有效输入崩溃、版本/安装/范围误导。上述已确认问题必须关闭，不以 accepted_limitation 绕过。
-- [ ] 覆盖缺口单列。若无后缀/index 导入导致真实调查无法闭环，先提出最小来源关联设计，再写反例和实现；不得直接把它解释成完整 Node/TS 解析。
-- [ ] JS/TS runtime 相对 a5 有变化则创建新的本地 0.6.0a6 来源、wheel 与收据，同时同步 `_version.py`、`validate_release_install.py::EXPECTED_VERSION`、`validate_js_ts_install.py::VERSION`；保留 a5。仅文档变化可复用 a5 runtime，但正式 0.6.0 仍单独构建。
-- [ ] 变化涉及共享 index/context/map 时做 Python 兼容检查。只改 ESM 不重跑整套 200；需要分布性证据时扩到现有 80 个 JS/TS，使用新 run ID，不能把旧结果改挂新版本。
+- [x] 先运行现有 JS 契约；extra 环境不允许 skipped。新 fixture 或断言先检查引用，再运行得到真实结果，不为得到红灯人为破坏产品。
+- [x] 已确认 bug：先保留可复现失败和独立预期，再最小修复、原场景重跑；已有通过能力的验证只做差异涉及部分。
+- [x] 先 discovery 6 仓库调查并审阅；修复来源固定后再跑 confirmation 6 仓库。修复后的受影响 discovery 场景写新 attempt，不混计不同来源。
+- [x] P0：错误源码引用、无根据造边、数据损坏；P1：承诺能力不可用、有效输入崩溃、版本/安装/范围误导。上述已确认问题必须关闭，不以 accepted_limitation 绕过。
+- [x] 覆盖缺口单列。若无后缀/index 导入导致真实调查无法闭环，先提出最小来源关联设计，再写反例和实现；不得直接把它解释成完整 Node/TS 解析。
+- [x] JS/TS runtime 相对 a5 有变化则创建新的本地 0.6.0a6 来源、wheel 与收据，同时同步 `_version.py`、`validate_release_install.py::EXPECTED_VERSION`、`validate_js_ts_install.py::VERSION`；保留 a5。仅文档变化可复用 a5 runtime，但正式 0.6.0 仍单独构建。
+- [x] 变化涉及共享 index/context/map 时做 Python 兼容检查。只改 ESM 不重跑整套 200；需要分布性证据时扩到现有 80 个 JS/TS，使用新 run ID，不能把旧结果改挂新版本。
 
 JS 契约命令：初始复用已验证 a5 extra 环境的解释器读取新工作树代码，禁止向旧环境安装或修改依赖；它不代替新候选的独立安装 gate。构建本轮 extra venv 后，用本轮解释器再执行受改动影响的同组契约。
 
@@ -244,10 +244,10 @@ RD_JS_CLI="$RD_NEXT/venvs/js/bin/repo-doctor"
 "$RD_JS_PY" "$RD_NEXT/candidate/source/tools/validate_release_install.py" --python "$RD_JS_PY" --cli "$RD_JS_CLI" --out "$RD_NEXT/install-python-lifecycle/attempt-001"
 ```
 
-- [ ] base 9、extra 18、Python 生命周期 33 条是现有基线；若改验证器增加真实门槛，记录实际数量，不强行保持计数。预期负例退出码不能算失败。
-- [ ] 每次候选必须获得精确来源 SHA 的 7 项 CI：Python 3.11/3.12/3.13；JS preview Python 3.11/3.12/3.13；Offline map interaction and SVG。
-- [ ] JS job 必须实际安装 extra、契约无 skipped、独立 extra wheel 验证通过；地图 job 包含纯 Python 和混合地图 DOM/SVG、完整 ID 搜索。
-- [ ] viewer 字节未变可引用既有实际地图交互证据，并注明其原版本；如改变 viewer，至少核验一个 JS 和一个 TS 实际 HTML，记录展开、搜索、聚焦、过滤、计数、SVG 导出。浏览器阻断时保留 blocked，不用 jsdom 冒充真人浏览器体验，也不扩 scope 排查 Chrome。
+- [x] base 9、extra 18、Python 生命周期 33 条是现有基线；若改验证器增加真实门槛，记录实际数量，不强行保持计数。预期负例退出码不能算失败。
+- [x] 每次候选必须获得精确来源 SHA 的 7 项 CI：Python 3.11/3.12/3.13；JS preview Python 3.11/3.12/3.13；Offline map interaction and SVG。
+- [x] JS job 必须实际安装 extra、契约无 skipped、独立 extra wheel 验证通过；地图 job 包含纯 Python 和混合地图 DOM/SVG、完整 ID 搜索。
+- [x] viewer 字节未变可引用既有实际地图交互证据，并注明其原版本；如改变 viewer，至少核验一个 JS 和一个 TS 实际 HTML，记录展开、搜索、聚焦、过滤、计数、SVG 导出。浏览器阻断时保留 blocked，不用 jsdom 冒充真人浏览器体验，也不扩 scope 排查 Chrome。
 
 **Acceptance:** 24类合同中支持与负例断言均符合预期；所选正边/引用全部核验正确，负例无误边；样本调查/效益门槛达成；P0/P1 为零；安装和 7 项 CI 有精确来源记录。否则继续定位实际阻断，不开始 J6。
 
@@ -286,6 +286,6 @@ RD_JS_CLI="$RD_NEXT/venvs/js/bin/repo-doctor"
 - [x] 已定义具体案例、样本分层、源码参考、效益门槛、错误分类及停止条件。
 - [x] 已承接 Python 0.5.3 的保护和回滚要求；没有改历史评分或主产品接口。
 - [x] J0–J4 准备材料已构建并核验；补充断言任务逐项写入 cases.json，实际编写和首次运行均留在 J5。
-- [ ] J5 按冻结合同开始定向产品验证，不将准备结果计为通过。
+- [x] J5 按冻结合同完成定向产品验证，准备结果和执行结果分别记录。
 
 依据：无后缀和目录 index 的解析依赖运行时/编译配置，不能统一冒充 Node ESM 行为。参见 [TypeScript 模块引用](https://www.typescriptlang.org/docs/handbook/modules/reference.html#extensionless-relative-paths) 与 [Node ESM 扩展要求](https://nodejs.org/api/esm.html#mandatory-file-extensions)。本产品未来可单独定义保守源码关联，但要保留歧义和未知说明。

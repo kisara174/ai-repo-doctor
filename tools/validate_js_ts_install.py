@@ -11,7 +11,7 @@ import subprocess
 import time
 from xml.etree import ElementTree as ET
 
-VERSION = "0.6.0a5"
+VERSION = "0.6.0"
 FIXTURES = {'bad.js': 'export function broken( {\n', 'consumer.ts': "import {inc as step} from './core.js';\nexport function run() {\n  return step(2);\n}\n", 'core.js': 'export function add(a, b) {\n  return a + b;\n}\nexport const twice = value => add(value, value);\nexport class Box {\n  get() { return this.value; }\n}\nexport default function main() {\n  return twice(2);\n}\n', 'core.ts': 'export function inc(value: number): number {\n  return value + 1;\n}\nexport function entry(value: number): number {\n  return inc(value);\n}\nexport function overloaded(value: string): string;\nexport function overloaded(value: number): number;\nexport function overloaded(value: string | number): string | number {\n  return value;\n}\nexport class Counter {\n  next(value: number): number { return inc(value); }\n}\n', 'declarations.d.ts': 'export declare function onlyType(): void;\n', 'duplicate.ts': 'export function same() { return 1; }\nexport function same() { return 2; }\n', 'dynamic.js': 'export function entry(obj) {\n  return obj.run();\n}\nexport function later(name) {\n  return import(name);\n}\n', 'shadow.js': 'function add(value) { return value + 1; }\nexport function entry(add) {\n  return add(1);\n}\n', 'type_only.ts': "import type {inc} from './core.js';\nexport function bad() {\n  return inc(1);\n}\n", 'unicode.js': '// 中文与 emoji 😀\nexport function café(value) {\n  return value;\n}\n', 'unsupported.cjs': 'module.exports = () => 1;\n', 'unsupported.tsx': 'export const View = () => <div />;\n'}
 
 
