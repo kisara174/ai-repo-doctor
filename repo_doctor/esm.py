@@ -1,11 +1,61 @@
 """Resolve only unique local ESM source dependencies in the selected index."""
 from dataclasses import replace
 import posixpath
+from pathlib import PurePosixPath
 
 from collections import defaultdict
 
 from .model import AnalysisLimit, CallEdge, ImportEdge, RepoIndex
 from .scanner import discover_files
+from .languages import language_for_path
+
+
+SOURCE_SUFFIXES = ('.ts', '.js', '.mjs', '.tsx', '.jsx', '.d.ts',
+                   '.mts', '.cts', '.cjs', '.d.mts', '.d.cts', '.json', '.node')
+
+
+def _resolve_source(file: str, specifier: str, path_set: set[str],
+                    file_languages: dict[str, str], failed: set[str]) -> tuple[str | None, str]:
+    if not specifier.startswith(("./", "../")) or "\\" in specifier:
+        return None, "external-or-alias"
+    candidate = posixpath.normpath(posixpath.join(posixpath.dirname(file), specifier))
+    if not PurePosixPath(specifier).suffix:
+        if any(char in specifier for char in ('\x00', '?', '#', '%')) or specifier.endswith('/'):
+            return None, 'unsupported-source-specifier'
+        if candidate == '..' or candidate.startswith('../') or candidate.startswith('/'):
+            return None, 'outside-source-root'
+        if posixpath.normpath(candidate + '/package.json') in path_set:
+            return None, 'directory-package-configuration'
+        options = {candidate}
+        options.update(candidate + suffix for suffix in SOURCE_SUFFIXES)
+        index_options = {posixpath.normpath(candidate + '/index' + suffix) for suffix in SOURCE_SUFFIXES}
+        options.update(index_options)
+        matches = sorted(options.intersection(path_set))
+        if not matches:
+            return None, 'no-local-source-candidate'
+        if len(matches) != 1:
+            return None, 'ambiguous-local-source-candidates'
+        target = matches[0]
+        if (file_languages.get(target) not in ('javascript', 'typescript')
+                or language_for_path(target) not in ('javascript', 'typescript')):
+            return None, 'unselected-or-unsupported-local-source'
+        if target in failed:
+            return None, 'parse-error-local-source'
+        kind = ('unique-directory-index-source' if target in index_options
+                else 'unique-extensionless-source')
+        return target, kind
+
+    # Preserve the explicit-path and TypeScript .js substitution contract.
+    options = [candidate]
+    if file.endswith(".ts") and specifier.endswith(".js"):
+        stem = candidate[:-3]
+        options = [stem + suffix for suffix in (".ts", ".tsx", ".d.ts", ".js", ".jsx")]
+    matches = [path for path in options if path in path_set]
+    if len(matches) == 1 and matches[0] in file_languages and matches[0] not in failed:
+        target = matches[0]
+        if file_languages[target] != "python":
+            return target, "unique-local-source"
+    return None, "ambiguous-or-unsupported-local-source"
 
 
 def resolve_esm_graph(index: RepoIndex, *, resolve_calls: bool = True) -> None:
@@ -14,27 +64,17 @@ def resolve_esm_graph(index: RepoIndex, *, resolve_calls: bool = True) -> None:
     failed = {row.file for row in index.parse_errors}
     seen_limits = set(index.analysis_limits)
 
-    def target_for(file, specifier):
-        if not specifier.startswith(("./", "../")) or "\\" in specifier:
-            return None, "external-or-alias"
-        candidate = posixpath.normpath(posixpath.join(posixpath.dirname(file), specifier))
-        options = [candidate]
-        if file.endswith(".ts") and specifier.endswith(".js"):
-            stem = candidate[:-3]
-            options = [stem + suffix for suffix in (".ts", ".tsx", ".d.ts", ".js", ".jsx")]
-        matches = [path for path in options if path in path_set]
-        if len(matches) == 1 and matches[0] in index.file_languages and matches[0] not in failed:
-            target = matches[0]
-            if index.file_languages[target] != "python":
-                return target, "unique-local-source"
-        return None, "ambiguous-or-unsupported-local-source"
-
+    resolution_cache = {}
     edges = set(index.import_edges)
     resolved = []
     for ref in [*index.esm_imports, *index.esm_exports]:
         if ref.specifier is None:
             continue
-        target, reason = target_for(ref.file, ref.specifier)
+        key = (ref.file, ref.specifier)
+        if key not in resolution_cache:
+            resolution_cache[key] = _resolve_source(ref.file, ref.specifier, path_set,
+                                                    index.file_languages, failed)
+        target, reason = resolution_cache[key]
         if target is not None:
             edges.add(ImportEdge(ref.file, target, ref.start_line))
         else:
