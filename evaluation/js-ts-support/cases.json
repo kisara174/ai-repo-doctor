@@ -1,0 +1,1067 @@
+{
+  "schema_version": 1,
+  "preparation_status": "prepared-not-run",
+  "actual_tests_run": false,
+  "cases": [
+    {
+      "case_id": "C01",
+      "feature": "JS symbols",
+      "contract": "current-supported",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/core.js"
+      ],
+      "expected_symbols": [
+        {
+          "id": "core.js::add",
+          "kind": "function",
+          "start_line": 1,
+          "end_line": 3
+        },
+        {
+          "id": "core.js::twice",
+          "kind": "function",
+          "start_line": 4,
+          "end_line": 4
+        },
+        {
+          "id": "core.js::Box",
+          "kind": "class",
+          "start_line": 5,
+          "end_line": 7
+        },
+        {
+          "id": "core.js::Box.get",
+          "kind": "method",
+          "start_line": 6,
+          "end_line": 6
+        },
+        {
+          "id": "core.js::main",
+          "kind": "function",
+          "start_line": 8,
+          "end_line": 10
+        }
+      ],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "core.js add=function lines1-3; twice=function line4; Box=class lines5-7; Box.get=method line6; main=function lines8-10"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_js_ts.JSTests.test_public_ids_and_exact_spans_come_from_source",
+          "file": "tests/test_js_ts.py",
+          "start_line": 19,
+          "end_line": 28
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    },
+    {
+      "case_id": "C02",
+      "feature": "mjs async default",
+      "contract": "current-supported",
+      "fixture_paths": [
+        "tests/test_js_ts.py::test_async_default_bindings_rewrites_and_type_aliases_are_conservative",
+        "tests/test_languages.py::test_only_implementation_extensions_are_analyzed"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "Anonymous async default has ID <default>, is_async=true; .mjs selected as javascript"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_js_ts.JSTests.test_async_default_bindings_rewrites_and_type_aliases_are_conservative",
+          "file": "tests/test_js_ts.py",
+          "start_line": 50,
+          "end_line": 59
+        },
+        {
+          "id": "tests.test_languages.LanguageTests.test_only_implementation_extensions_are_analyzed",
+          "file": "tests/test_languages.py",
+          "start_line": 19,
+          "end_line": 26
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": [
+        {
+          "stage": "J5",
+          "implementation_status": "not-written-not-run",
+          "test_file": "tests/test_js_ts.py",
+          "test_name": "test_mjs_async_default_preserves_source_span",
+          "fixture_name": "async.mjs",
+          "source": "export default async function() {\n  return 1;\n}\n",
+          "assert": "Parse through build_index(languages=javascript), ID async.mjs::<default>, function, is_async true, span1-3, quote exact; no syntax error."
+        }
+      ]
+    },
+    {
+      "case_id": "C03",
+      "feature": "TS overloads",
+      "contract": "current-supported",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/core.ts"
+      ],
+      "expected_symbols": [
+        {
+          "id": "core.ts::overloaded",
+          "start_line": 9,
+          "end_line": 11,
+          "overload_spans": [
+            [
+              7,
+              7
+            ],
+            [
+              8,
+              8
+            ]
+          ]
+        }
+      ],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "overloaded implementation9-11 with signatures7,8; no duplicate runtime implementation"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_js_ts.JSTests.test_public_ids_and_exact_spans_come_from_source",
+          "file": "tests/test_js_ts.py",
+          "start_line": 19,
+          "end_line": 28
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    },
+    {
+      "case_id": "C04",
+      "feature": "explicit ESM alias",
+      "contract": "current-supported",
+      "fixture_paths": [
+        "tests/test_esm.py::test_named_default_direct_export_and_import_alias_without_multihop"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "app.js import main,{add as inc} at1 targets core.js; direct declaration file evidence preserved"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_esm.DirectCallTests.test_named_default_direct_export_and_import_alias_without_multihop",
+          "file": "tests/test_esm.py",
+          "start_line": 118,
+          "end_line": 126
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    },
+    {
+      "case_id": "C05",
+      "feature": "TS js substitution",
+      "contract": "current-supported",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/consumer.ts",
+        "tests/fixtures/js_ts_contract/core.ts"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [
+        {
+          "source": "consumer.ts",
+          "target": "core.ts",
+          "line": 1,
+          "setup": "unique subset core.ts,consumer.ts,type_only.ts only"
+        }
+      ],
+      "expected_calls": [
+        {
+          "caller": "consumer.ts::run",
+          "callee": "core.ts::inc",
+          "line": 3,
+          "setup": "unique subset"
+        }
+      ],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "Unique-only copy core.ts/consumer.ts/type_only.ts: consumer.ts import at1 ->core.ts and run ->inc at3"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_esm.ESMTests.test_ts_js_substitution_unique_but_not_ambiguous_or_unselected",
+          "file": "tests/test_esm.py",
+          "start_line": 44,
+          "end_line": 56
+        },
+        {
+          "id": "tests.test_esm.DirectCallTests.test_fixture_calls_and_unique_ts_type_only_negative",
+          "file": "tests/test_esm.py",
+          "start_line": 71,
+          "end_line": 94
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    },
+    {
+      "case_id": "C06",
+      "feature": "ambiguous substitutions",
+      "contract": "current-limited",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/consumer.ts",
+        "tests/fixtures/js_ts_contract/core.ts",
+        "tests/fixtures/js_ts_contract/core.js",
+        "tests/fixtures/js_ts_contract/declarations.d.ts",
+        "tests/fixtures/js_ts_contract/unsupported.tsx"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "core.js/core.d.ts/core.tsx conflict variants individually prevent core.ts resolution; do not use whole mixed fixture as unique scenario"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_esm.ESMTests.test_ts_js_substitution_unique_but_not_ambiguous_or_unselected",
+          "file": "tests/test_esm.py",
+          "start_line": 44,
+          "end_line": 56
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": [
+        {
+          "stage": "J5",
+          "implementation_status": "not-written-not-run",
+          "test_file": "tests/test_esm.py",
+          "test_name": "test_unique_unselected_js_implementation_is_not_resolved",
+          "fixture_sources": {
+            "core.js": "export function inc(v) { return v + 1; }\n",
+            "app.ts": "import { inc } from './core.js';\nexport function entry() { return inc(1); }\n"
+          },
+          "assert": "With languages=typescript, unique core.js exists but unselected: no app.ts->core.js edge and no entry->inc. Same fixed source with javascript,typescript: file edge at1 and entry->core.js::inc at2. This isolates selection from ambiguity; do not include core.ts in this fixture."
+        }
+      ]
+    },
+    {
+      "case_id": "C07",
+      "feature": "type-only",
+      "contract": "current-supported",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/type_only.ts",
+        "tests/fixtures/js_ts_contract/core.ts"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [
+        {
+          "caller": "type_only.ts::bad",
+          "callee": "core.ts::inc",
+          "line": 3
+        }
+      ],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "import type at1 may have file evidence but bad->inc must not become runtime call"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_esm.DirectCallTests.test_fixture_calls_and_unique_ts_type_only_negative",
+          "file": "tests/test_esm.py",
+          "start_line": 71,
+          "end_line": 94
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": [
+        {
+          "stage": "J5",
+          "implementation_status": "not-written-not-run",
+          "test_file": "tests/test_esm.py",
+          "test_name": "test_type_only_export_never_exposes_runtime_function",
+          "fixture_sources": {
+            "core.ts": "function inc(v: number) { return v + 1; }\nexport type { inc };\n",
+            "app.ts": "import { inc } from './core.js';\nexport function entry() { return inc(1); }\n"
+          },
+          "assert": "Selected typescript: local inc symbol remains searchable, export inc records type_only=true at2, app.ts file import may resolve core.ts, but entry->core.ts::inc runtime call forbidden. Parse errors not expected; this is static syntax input, not compiler/runtime correctness."
+        }
+      ]
+    },
+    {
+      "case_id": "C08",
+      "feature": "safe direct calls",
+      "contract": "current-supported",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/core.js"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [
+        {
+          "caller": "core.js::twice",
+          "callee": "core.js::add",
+          "line": 4
+        },
+        {
+          "caller": "core.js::main",
+          "callee": "core.js::twice",
+          "line": 9
+        }
+      ],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "twice->add line4; main->twice line9; app.js entry->core.js add and <default> at3, no hop"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_esm.DirectCallTests.test_fixture_calls_and_unique_ts_type_only_negative",
+          "file": "tests/test_esm.py",
+          "start_line": 71,
+          "end_line": 94
+        },
+        {
+          "id": "tests.test_esm.DirectCallTests.test_named_default_direct_export_and_import_alias_without_multihop",
+          "file": "tests/test_esm.py",
+          "start_line": 118,
+          "end_line": 126
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    },
+    {
+      "case_id": "C09",
+      "feature": "shadow/rewrite",
+      "contract": "current-limited",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/shadow.js"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [
+        {
+          "caller": "shadow.js::entry",
+          "callee": "shadow.js::add",
+          "line": 3
+        }
+      ],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "entry(add) calling add(1) must not resolve outer add; rewritten targets never guessed"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_esm.DirectCallTests.test_rewrites_locals_blocks_methods_and_callbacks_do_not_get_false_edges",
+          "file": "tests/test_esm.py",
+          "start_line": 96,
+          "end_line": 116
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    },
+    {
+      "case_id": "C10",
+      "feature": "methods callbacks",
+      "contract": "current-limited",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/dynamic.js",
+        "tests/fixtures/js_ts_contract/core.js"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "Box.get is searchable method; obj.run and callback calls have no guessed target or outer caller attribution"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_esm.DirectCallTests.test_rewrites_locals_blocks_methods_and_callbacks_do_not_get_false_edges",
+          "file": "tests/test_esm.py",
+          "start_line": 96,
+          "end_line": 116
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    },
+    {
+      "case_id": "C11",
+      "feature": "reexport namespace dynamic",
+      "contract": "current-limited",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/dynamic.js"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "app entry->barrel hop not resolved; import(name) not ordinary static direct edge; namespace receiver unknown"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_esm.DirectCallTests.test_named_default_direct_export_and_import_alias_without_multihop",
+          "file": "tests/test_esm.py",
+          "start_line": 118,
+          "end_line": 126
+        },
+        {
+          "id": "tests.test_esm.ESMTests.test_external_dynamic_extensionless_invalid_and_type_only_do_not_become_runtime_calls",
+          "file": "tests/test_esm.py",
+          "start_line": 58,
+          "end_line": 68
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": [
+        {
+          "stage": "J5",
+          "implementation_status": "not-written-not-run",
+          "test_file": "tests/test_esm.py",
+          "test_name": "test_namespace_member_never_guesses_named_export",
+          "fixture_sources": {
+            "core.js": "export function target() { return 1; }\n",
+            "app.js": "import * as ns from './core.js';\nexport function entry() { return ns.target(); }\n"
+          },
+          "assert": "File edge app.js->core.js at1 allowed; entry->target forbidden, unresolved-call at2 retained."
+        }
+      ]
+    },
+    {
+      "case_id": "C12",
+      "feature": "extensionless/index",
+      "contract": "current-limited",
+      "fixture_paths": [
+        "tests/test_esm.py::test_external_dynamic_extensionless_invalid_and_type_only_do_not_become_runtime_calls"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "a5 ./core and ./dir are unknown; no inferred file/runtime edge; source-association extension remains proposed"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_esm.ESMTests.test_external_dynamic_extensionless_invalid_and_type_only_do_not_become_runtime_calls",
+          "file": "tests/test_esm.py",
+          "start_line": 58,
+          "end_line": 68
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": [
+        {
+          "stage": "J5",
+          "implementation_status": "not-written-not-run",
+          "test_file": "tests/test_esm.py",
+          "test_name": "test_extensionless_directory_index_stays_unknown",
+          "fixture_sources": {
+            "dir/index.ts": "export function target() { return 1; }\n",
+            "app.ts": "import {target} from './dir';\nexport function entry() { return target(); }\n"
+          },
+          "assert": "No app.ts->dir/index.ts file edge or entry->target call; ambiguous-or-unsupported-local-source and unresolved-call retained."
+        }
+      ]
+    },
+    {
+      "case_id": "C13",
+      "feature": "package/alias",
+      "contract": "current-limited",
+      "fixture_paths": [
+        "tests/test_esm.py::test_external_dynamic_extensionless_invalid_and_type_only_do_not_become_runtime_calls"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "pkg and @alias/core unresolved external-or-alias; no node_modules traversal"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_esm.ESMTests.test_external_dynamic_extensionless_invalid_and_type_only_do_not_become_runtime_calls",
+          "file": "tests/test_esm.py",
+          "start_line": 58,
+          "end_line": 68
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": [
+        {
+          "stage": "J5",
+          "implementation_status": "not-written-not-run",
+          "test_file": "tests/test_esm.py",
+          "test_name": "test_alias_and_node_modules_stay_external",
+          "fixture_sources": {
+            "node_modules/pkg/core.js": "export function target() {}\n",
+            "core.js": "export function target() {}\n",
+            "app.js": "import {target} from '@alias/core';\nexport function entry() { return target(); }\n"
+          },
+          "assert": "No alias mapping or dependency analysis; external-or-alias at1 and unresolved-call at2; discovered analyzed files exclude node_modules."
+        }
+      ]
+    },
+    {
+      "case_id": "C14",
+      "feature": "unsupported extensions",
+      "contract": "current-limited",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/unsupported.tsx",
+        "tests/fixtures/js_ts_contract/unsupported.cjs",
+        "tests/fixtures/js_ts_contract/declarations.d.ts"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "jsx/tsx/cjs/mts/cts/d.ts excluded from implementation analysis; files can remain structure nodes"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_languages.LanguageTests.test_only_implementation_extensions_are_analyzed",
+          "file": "tests/test_languages.py",
+          "start_line": 19,
+          "end_line": 26
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    },
+    {
+      "case_id": "C15",
+      "feature": "syntax/decoding",
+      "contract": "current-supported",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/bad.js"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "parse/read error produces no partial symbols/import evidence, UTF8 ff byte rejects"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_js_ts.JSTests.test_bad_syntax_and_bad_utf8_produce_errors_without_partial_evidence",
+          "file": "tests/test_js_ts.py",
+          "start_line": 37,
+          "end_line": 48
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    },
+    {
+      "case_id": "C16",
+      "feature": "encoding physical lines",
+      "contract": "current-supported",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/unicode.js"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "UTF8-sig BOM removed, CRLF and unicode preserved; café symbol lines2-4 (unicode.js UTF8 fixture); Python cookie unchanged"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_languages.LanguageTests.test_js_decoding_ignores_python_cookie_and_keeps_bom_crlf_unicode",
+          "file": "tests/test_languages.py",
+          "start_line": 39,
+          "end_line": 49
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    },
+    {
+      "case_id": "C17",
+      "feature": "mixed selection",
+      "contract": "current-supported",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/core.js",
+        "tests/fixtures/js_ts_contract/core.ts"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "default Python unchanged; selected mixed app.py entry->core.py inc at3; no cross-language edges, python_files counts only Python"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_index.MixedIndexTests.test_selected_language_fingerprint_and_python_calls_are_isolated",
+          "file": "tests/test_index.py",
+          "start_line": 15,
+          "end_line": 32
+        },
+        {
+          "id": "tests.test_cli.LanguageCliTests.test_all_five_commands_expose_scope_and_keep_python_counts",
+          "file": "tests/test_cli.py",
+          "start_line": 565,
+          "end_line": 596
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    },
+    {
+      "case_id": "C18",
+      "feature": "invalid selection/missingextra",
+      "contract": "current-supported",
+      "fixture_paths": [
+        "tests/test_cli.py::test_missing_extra_errors_but_default_python_does_not_import_it",
+        "tests/test_cli.py::test_invalid_languages_and_js_snapshot_reject_before_index_or_write"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0,
+        2
+      ],
+      "expected_limits": [
+        "Missing optional backend explicit JS exits2 with ai-repo-doctor[js]; invalid CSV exits2; default Python works"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_cli.LanguageCliTests.test_missing_extra_errors_but_default_python_does_not_import_it",
+          "file": "tests/test_cli.py",
+          "start_line": 539,
+          "end_line": 549
+        },
+        {
+          "id": "tests.test_cli.LanguageCliTests.test_invalid_languages_and_js_snapshot_reject_before_index_or_write",
+          "file": "tests/test_cli.py",
+          "start_line": 551,
+          "end_line": 563
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    },
+    {
+      "case_id": "C19",
+      "feature": "context budgets",
+      "contract": "current-supported",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/core.js"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "120 maximum source lines; budget1 target-first clipped block and truncation/budget_exhausted true; omitted counts explicit"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_context.ContextTests.test_context_marks_truncation_and_respects_budget",
+          "file": "tests/test_context.py",
+          "start_line": 397,
+          "end_line": 406
+        },
+        {
+          "id": "tests.test_context.JSContextTests.test_selected_symbols_precede_multiline_import_and_share_budget",
+          "file": "tests/test_context.py",
+          "start_line": 518,
+          "end_line": 535
+        },
+        {
+          "file": "tools/validate_js_ts_install.py",
+          "mode": "js",
+          "command_gate": "J5-install-js",
+          "not_run": true
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": [
+        {
+          "stage": "J5",
+          "implementation_status": "not-written-not-run",
+          "test_file": "tests/test_context.py",
+          "test_name": "test_js_small_budget_matches_exact_target_lines",
+          "fixture_sources": {
+            "app.mjs": "export function entry() {\n  return 1;\n}\n"
+          },
+          "assert": "build_context target app.mjs::entry budget1: first block target source line1 exact, used<=1, block truncated and budget exhausted; budget120 includes3 lines without truncation."
+        }
+      ]
+    },
+    {
+      "case_id": "C20",
+      "feature": "include and ambiguity",
+      "contract": "current-supported",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/duplicate.ts",
+        "tests/fixtures/js_ts_contract/core.js"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0,
+        2
+      ],
+      "expected_limits": [
+        "search duplicate.ts::same marked ambiguous not index-selected; JS include uses exact ID; unknown/ambiguous requests exit2 without arbitrary choice"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_index.MixedIndexTests.test_selected_language_fingerprint_and_python_calls_are_isolated",
+          "file": "tests/test_index.py",
+          "start_line": 15,
+          "end_line": 32
+        },
+        {
+          "id": "tests.test_context.ContextTests.test_explicit_symbol_must_resolve_in_index",
+          "file": "tests/test_context.py",
+          "start_line": 362,
+          "end_line": 368
+        },
+        {
+          "id": "tests.test_cli.CliTests.test_unknown_or_ambiguous_symbol_does_not_call_client",
+          "file": "tests/test_cli.py",
+          "start_line": 377,
+          "end_line": 393
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": [
+        {
+          "stage": "J5",
+          "implementation_status": "not-written-not-run",
+          "test_file": "tests/test_cli.py",
+          "test_name": "test_js_include_and_ambiguous_context_are_explicit",
+          "fixture_sources": {
+            "core.js": "export function add(a, b) {\n  return a + b;\n}\nexport const twice = value => add(value, value);\nexport class Box {\n  get() { return this.value; }\n}\nexport default function main() {\n  return twice(2);\n}\n",
+            "duplicate.ts": "export function same() { return 1; }\nexport function same() { return 2; }\n"
+          },
+          "assert": "symbols returns real add/twice IDs; context core.js::add include twice contains user_selected; duplicate.ts::same target/include requests each exit2 with ambiguity, not arbitrary implementation."
+        }
+      ]
+    },
+    {
+      "case_id": "C21",
+      "feature": "bounded impact",
+      "contract": "current-limited",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/core.js",
+        "tests/fixtures/js_ts_contract/consumer.ts",
+        "tests/fixtures/js_ts_contract/core.ts"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "core.js add depth2 includes twice distance1 line4 and main distance2 via twice line9; scope bounded even empty caller list"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_esm.DirectCallTests.test_fixture_calls_and_unique_ts_type_only_negative",
+          "file": "tests/test_esm.py",
+          "start_line": 71,
+          "end_line": 94
+        },
+        {
+          "id": "tests.test_context.ContextTests.test_impact_follows_reverse_calls_to_requested_depth",
+          "file": "tests/test_context.py",
+          "start_line": 408,
+          "end_line": 447
+        },
+        {
+          "file": "tools/validate_js_ts_install.py",
+          "mode": "js",
+          "command_gate": "J5-install-js",
+          "not_run": true
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    },
+    {
+      "case_id": "C22",
+      "feature": "disabled snapshots",
+      "contract": "current-limited",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/core.js"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        2
+      ],
+      "expected_limits": [
+        "selected JS snapshot exits2 before even creating requested parent; --json alternative shown"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_cli.LanguageCliTests.test_invalid_languages_and_js_snapshot_reject_before_index_or_write",
+          "file": "tests/test_cli.py",
+          "start_line": 551,
+          "end_line": 563
+        },
+        {
+          "id": "tests.test_agent_tools.JSSnapshotTests.test_native_api_rejects_js_snapshot_before_source_collection",
+          "file": "tests/test_agent_tools.py",
+          "start_line": 159,
+          "end_line": 169
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    },
+    {
+      "case_id": "C23",
+      "feature": "maps",
+      "contract": "current-supported",
+      "fixture_paths": [
+        "tests/test_repo_map.py::test_view_limit_reports_hidden_nodes_and_never_leaves_dangling_edges",
+        "tests/test_repo_map.py::test_mixed_relation_projection_uses_analyzed_and_preserves_legacy"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "map.json/map.html/structure.svg/relations.svg; caps200/500; no dangling edge; search selection and ancestor retained; label language"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_repo_map.RepoMapTests.test_view_limit_reports_hidden_nodes_and_never_leaves_dangling_edges",
+          "file": "tests/test_repo_map.py",
+          "start_line": 90,
+          "end_line": 100
+        },
+        {
+          "id": "tests.test_repo_map.RepoMapTests.test_mixed_relation_projection_uses_analyzed_and_preserves_legacy",
+          "file": "tests/test_repo_map.py",
+          "start_line": 14,
+          "end_line": 41
+        },
+        {
+          "file": "tools/validate_js_ts_install.py",
+          "mode": "js",
+          "command_gate": "J5-install-js",
+          "not_run": true
+        },
+        {
+          "file": "tests/test_map_search.js",
+          "command": [
+            "node",
+            "tests/test_map_search.js"
+          ],
+          "not_run": true
+        },
+        {
+          "file": "tests/test_map_dom.js",
+          "command_gate": "CI-map-viewer",
+          "not_run": true
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    },
+    {
+      "case_id": "C24",
+      "feature": "source boundaries/fingerprint",
+      "contract": "current-supported",
+      "fixture_paths": [
+        "tests/fixtures/js_ts_contract/core.ts"
+      ],
+      "expected_symbols": [],
+      "expected_imports": [],
+      "expected_calls": [],
+      "forbidden_calls": [],
+      "expected_exit": [
+        0
+      ],
+      "expected_limits": [
+        "ignore/path/root-identity/symlink protection; modifying selected TS changes mixed fingerprint and not pure-Python fingerprint"
+      ],
+      "existing_assertions": [
+        {
+          "id": "tests.test_languages.LanguageTests.test_new_language_uses_existing_path_and_root_identity_guards",
+          "file": "tests/test_languages.py",
+          "start_line": 51,
+          "end_line": 59
+        },
+        {
+          "id": "tests.test_index.MixedIndexTests.test_selected_language_fingerprint_and_python_calls_are_isolated",
+          "file": "tests/test_index.py",
+          "start_line": 15,
+          "end_line": 32
+        },
+        {
+          "id": "tests.test_repo_map.RepoMapTests.test_map_does_not_follow_symlinks_or_replace_an_existing_directory",
+          "file": "tests/test_repo_map.py",
+          "start_line": 113,
+          "end_line": 123
+        },
+        {
+          "id": "tests.test_scanner.ScannerTests.test_git_scan_includes_tracked_and_untracked_but_obeys_ignore",
+          "file": "tests/test_scanner.py",
+          "start_line": 10,
+          "end_line": 26
+        },
+        {
+          "id": "tests.test_scanner.ScannerTests.test_walk_scan_skips_generated_directories_and_symlinks",
+          "file": "tests/test_scanner.py",
+          "start_line": 28,
+          "end_line": 42
+        }
+      ],
+      "preparation_status": "prepared-not-run",
+      "fixture_isolation": "Reproduce test method setup exactly; do not indiscriminately combine all fixtures.",
+      "empty_list_semantics": "inapplicable or specified in expected_limits; not evidence of verified absence",
+      "supplement_required": []
+    }
+  ],
+  "proposed_extensions": [
+    {
+      "feature_id": "P01-extensionless-source-association",
+      "contract": "proposed",
+      "enabled": false,
+      "cases": [
+        "C12"
+      ],
+      "requirements": [
+        "unique selected safe source",
+        "ambiguity refusal including unsupported candidates",
+        "type-vs-implementation distinction",
+        "not a claim of Node/TS runtime resolution"
+      ],
+      "design_approval_required": true
+    }
+  ]
+}
