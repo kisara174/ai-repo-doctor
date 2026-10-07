@@ -5,7 +5,7 @@ from pathlib import PurePosixPath
 
 from collections import defaultdict
 
-from .model import AnalysisLimit, CallEdge, ImportEdge, RepoIndex
+from .model import AnalysisLimit, CallEdge, ESMImportRef, ESMSourceAssociation, ImportEdge, RepoIndex
 from .scanner import discover_files
 from .languages import language_for_path
 
@@ -63,6 +63,8 @@ def resolve_esm_graph(index: RepoIndex, *, resolve_calls: bool = True) -> None:
     path_set = set(paths)
     failed = {row.file for row in index.parse_errors}
     seen_limits = set(index.analysis_limits)
+    index.esm_source_associations.clear()
+    index.js_call_imports.clear()
 
     resolution_cache = {}
     edges = set(index.import_edges)
@@ -77,6 +79,12 @@ def resolve_esm_graph(index: RepoIndex, *, resolve_calls: bool = True) -> None:
         target, reason = resolution_cache[key]
         if target is not None:
             edges.add(ImportEdge(ref.file, target, ref.start_line))
+            association = ESMSourceAssociation(ref.file, ref.specifier, target,
+                                                ref.start_line, ref.end_line, reason)
+            edge_key = (ref.file, target, ref.start_line)
+            existing = index.esm_source_associations.get(edge_key)
+            if existing is None or (association.specifier, association.end_line) < (existing.specifier, existing.end_line):
+                index.esm_source_associations[edge_key] = association
         else:
             row = AnalysisLimit(ref.file, ref.start_line, reason, "Module " + ref.specifier + " was not resolved")
             if row not in seen_limits:
@@ -105,7 +113,7 @@ def resolve_esm_graph(index: RepoIndex, *, resolve_calls: bool = True) -> None:
     for ref in index.esm_exports:
         exports_by_name[(ref.file, ref.exported)].append(ref)
 
-    def direct_target(call, caller):
+    def direct_target(call, caller) -> tuple[str, ESMImportRef | None] | None:
         unsafe = index.unsafe_js_bindings.get(call.file, set())
         if (call.receiver is not None or not safe_symbol(caller.id)
                 or call.name in caller.local_bindings or call.name in unsafe or "*" in unsafe):
@@ -113,7 +121,7 @@ def resolve_esm_graph(index: RepoIndex, *, resolve_calls: bool = True) -> None:
         local = call.file + "::" + call.name
         imports = imports_by_alias[(call.file, call.name)]
         if not imports:
-            return local if safe_symbol(local) else None
+            return (local, None) if safe_symbol(local) else None
         if len(imports) != 1 or local in index.symbols or local in index.ambiguous_symbols:
             return None
         ref = imports[0]
@@ -126,7 +134,10 @@ def resolve_esm_graph(index: RepoIndex, *, resolve_calls: bool = True) -> None:
         if exported.type_only or exported.specifier is not None or exported.local_name is None:
             return None
         sid = ref.resolved_file + "::" + exported.local_name
-        return sid if safe_symbol(sid) else None
+        return (sid, ref) if safe_symbol(sid) else None
+
+    def source_key(item: ESMImportRef):
+        return (item.file, item.start_line, item.end_line, item.alias or '', item.imported or '')
 
     calls = set(index.call_edges)
     for call in index.calls:
@@ -135,7 +146,13 @@ def resolve_esm_graph(index: RepoIndex, *, resolve_calls: bool = True) -> None:
         caller = index.symbols.get(call.caller)
         target = direct_target(call, caller) if caller is not None else None
         if target is not None:
-            calls.add(CallEdge(call.caller, target, call.line))
+            sid, ref = target
+            calls.add(CallEdge(call.caller, sid, call.line))
+            if ref is not None:
+                key = (call.caller, sid, call.line)
+                previous = index.js_call_imports.get(key)
+                if previous is None or source_key(ref) < source_key(previous):
+                    index.js_call_imports[key] = ref
         else:
             row = AnalysisLimit(call.file, call.line, "unresolved-call",
                 "Call " + call.expression + " is outside unique unshadowed direct function bindings")

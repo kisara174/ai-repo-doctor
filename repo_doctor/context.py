@@ -4,9 +4,23 @@ import ast
 from collections import defaultdict, deque
 from dataclasses import asdict
 
-from .model import RepoIndex, SemanticEdge, Symbol
+from .model import CallEdge, RepoIndex, SemanticEdge, Symbol
 from .source import read_source
 from .languages import analysis_metadata
+
+
+def _call_edge_data(index: RepoIndex, edge: CallEdge) -> dict:
+    data = {
+        "caller": edge.caller,
+        "callee": edge.callee,
+        "file": index.symbols[edge.caller].file,
+        "line": edge.line,
+        "via_reexports": [asdict(hop) for hop in edge.via_reexports],
+    }
+    ref = index.js_call_imports.get((edge.caller, edge.callee, edge.line))
+    if ref is not None:
+        data['via_esm_import'] = asdict(ref)
+    return data
 
 
 def _require_symbol(index: RepoIndex, symbol_id: str) -> Symbol:
@@ -282,13 +296,7 @@ def build_context(
         included_imports += 1
 
     direct_edges = [
-        {
-            "caller": edge.caller,
-            "callee": edge.callee,
-            "file": index.symbols[edge.caller].file,
-            "line": edge.line,
-            "via_reexports": [asdict(hop) for hop in edge.via_reexports],
-        }
+        _call_edge_data(index, edge)
         for edge in index.call_edges
         if edge.caller == symbol_id or edge.callee == symbol_id
     ]
@@ -342,22 +350,20 @@ def build_impact(index: RepoIndex, symbol_id: str, depth: int = 2) -> dict:
             call_path_evidence = []
             for callee_id, caller_id in zip(caller_path, caller_path[1:]):
                 edge = first_call[(caller_id, callee_id)]
-                call_path_evidence.append({
-                    "caller": caller_id,
-                    "callee": callee_id,
-                    "file": index.symbols[caller_id].file,
-                    "line": edge.line,
-                    "via_reexports": [asdict(hop) for hop in edge.via_reexports],
-                })
+                call_path_evidence.append(_call_edge_data(index, edge))
             affected.append({"symbol": caller, "distance": distance + 1,
                              "path": caller_path, "call_path_evidence": call_path_evidence})
             queue.append((caller, distance + 1, caller_path))
     affected.sort(key=lambda item: (item["distance"], item["symbol"]))
-    imports = [
-        {"source": edge.source, "target": edge.target, "line": edge.line}
-        for edge in index.import_edges
-        if edge.target == target.file and edge.source != target.file
-    ]
+    imports = []
+    for edge in index.import_edges:
+        if edge.target != target.file or edge.source == target.file:
+            continue
+        item = {"source": edge.source, "target": edge.target, "line": edge.line}
+        association = index.esm_source_associations.get((edge.source, edge.target, edge.line))
+        if association is not None:
+            item['esm_source_association'] = asdict(association)
+        imports.append(item)
     semantic_relations = [
         _semantic_edge_data(edge, symbol_id)
         for edge in index.semantic_edges

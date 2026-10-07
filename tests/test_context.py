@@ -4,6 +4,104 @@ from pathlib import Path
 
 from repo_doctor.context import build_context, build_impact
 from repo_doctor.index import build_index
+from tests.test_js_ts import HAS_EXTRA
+
+
+@unittest.skipUnless(HAS_EXTRA, 'requires optional js extra')
+class ESMProvenanceTests(unittest.TestCase):
+    def test_call_and_file_sources_follow_actual_binding_for_each_path_kind(self):
+        cases = [('./core.js','core.ts','unique-local-source'),
+                 ('./core','core.ts','unique-extensionless-source'),
+                 ('./dir','dir/index.ts','unique-directory-index-source')]
+        for specifier,target,kind in cases:
+            with self.subTest(specifier=specifier), tempfile.TemporaryDirectory() as d:
+                root = Path(d).resolve()
+                (root/target).parent.mkdir(parents=True,exist_ok=True)
+                (root/target).write_text('export function inc() { return 1; }\n')
+                (root/'app.ts').write_text(f"import {{\n  inc as step\n}} from '{specifier}';\n"
+                                          'export function run() { return step(); }\n')
+                index = build_index(root,languages=('typescript',))
+                context = build_context(index,'app.ts::run',max_lines=120)
+                edge = next(e for e in context['call_evidence'] if e['callee']==target+'::inc')
+                proof = edge['via_esm_import']
+                self.assertEqual(proof, {'file':'app.ts','specifier':specifier,'imported':'inc',
+                    'alias':'step','start_line':1,'end_line':3,'type_only':False,
+                    'resolved_file':target,'resolution_kind':kind})
+                impact = build_impact(index,target+'::inc',depth=2)
+                self.assertEqual(impact['affected_symbols'][0]['call_path_evidence'],[edge])
+                self.assertEqual(impact['import_evidence'][0]['esm_source_association'],
+                    {'file':'app.ts','specifier':specifier,'target':target,'start_line':1,'end_line':3,
+                     'resolution_kind':kind})
+                self.assertEqual(context['analysis']['esm_source_resolution'],
+                    {'policy':'unique-visible-local-source-v1','runtime_resolution':False})
+                for budget in (1,120):
+                    bounded = build_context(index,'app.ts::run',max_lines=budget)
+                    self.assertLessEqual(sum(len(b['lines']) for b in bounded['blocks']),budget)
+                    self.assertEqual(bounded['budget_exhausted'],budget==1)
+                    self.assertNotIn('quote',bounded['call_evidence'][0]['via_esm_import'])
+
+    def test_two_hop_impact_each_import_proves_its_own_call(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d).resolve()
+            (root/'leaf.ts').write_text('export function leaf() { return 1; }\n')
+            (root/'mid.ts').write_text("import {leaf} from './leaf';\nexport function mid() { return leaf(); }\n")
+            (root/'app.ts').write_text("import {mid} from './mid';\nexport function run() { return mid(); }\n")
+            index = build_index(root,languages=('typescript',))
+            impact = build_impact(index,'leaf.ts::leaf',depth=2)
+            run = next(a for a in impact['affected_symbols'] if a['symbol']=='app.ts::run')
+            self.assertEqual(run['distance'],2)
+            self.assertEqual([(h['caller'],h['callee'],h['line'],h['via_esm_import']['specifier'])
+                              for h in run['call_path_evidence']],
+                             [('mid.ts::mid','leaf.ts::leaf',2,'./leaf'),
+                              ('app.ts::run','mid.ts::mid',2,'./mid')])
+
+    def test_type_namespace_and_reexport_have_file_evidence_without_false_call_proofs(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d).resolve()
+            (root/'core.ts').write_text('export function inc() { return 1; }\n')
+            (root/'barrel.ts').write_text("export {inc} from './core';\n")
+            (root/'app.ts').write_text("import type {inc} from './core';\nimport * as ns from './core';\n"
+                                     "import {inc as hop} from './barrel';\n"
+                                     'export function run() { return inc()+ns.inc()+hop(); }\n')
+            index = build_index(root,languages=('typescript',))
+            self.assertEqual(build_context(index,'app.ts::run')['call_evidence'],[])
+            impact = build_impact(index,'core.ts::inc')
+            self.assertEqual(impact['affected_symbols'],[])
+            self.assertEqual({(e['source'],e['line']) for e in impact['import_evidence']},
+                             {('app.ts',1),('app.ts',2),('barrel.ts',1)})
+            self.assertTrue(all(e['esm_source_association']['target']=='core.ts'
+                                for e in impact['import_evidence']))
+
+    def test_coalesced_line_has_one_stable_proven_import(self):
+        from repo_doctor.esm import resolve_esm_graph
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d).resolve()
+            (root/'core.ts').write_text('export function inc() { return 1; }\n')
+            (root/'app.ts').write_text("import {inc as zz} from './core'; import {inc as aa} from '././core';\n"
+                                     'export function run() { return zz()+aa(); }\n')
+            index=build_index(root,languages=('typescript',))
+            before=build_context(index,'app.ts::run')
+            self.assertEqual(len(before['call_evidence']),1)
+            self.assertEqual(before['call_evidence'][0]['via_esm_import']['alias'],'aa')
+            imported=build_impact(index,'core.ts::inc')['import_evidence']
+            self.assertEqual(imported[0]['esm_source_association']['specifier'],'././core')
+            resolve_esm_graph(index)
+            self.assertEqual(build_context(index,'app.ts::run'),before)
+
+    def test_local_and_python_calls_keep_the_existing_evidence_shape(self):
+        for ext,languages in (('.ts',('typescript',)),('.py',('python',))):
+            with self.subTest(ext=ext), tempfile.TemporaryDirectory() as d:
+                root=Path(d).resolve()
+                source=('export function leaf() { return 1; }\nexport function run() { return leaf(); }\n'
+                        if ext=='.ts' else 'def leaf():\n    return 1\ndef run():\n    return leaf()\n')
+                (root/('app'+ext)).write_text(source)
+                index=build_index(root,languages=languages)
+                context=build_context(index,'app'+ext+'::run')
+                self.assertEqual(set(context['call_evidence'][0]),
+                                 {'caller','callee','file','line','via_reexports'})
+                if ext=='.py':
+                    self.assertNotIn('analysis',context)
+                    self.assertNotIn('analysis',build_impact(index,'app.py::leaf'))
 
 
 class ContextTests(unittest.TestCase):

@@ -35,4 +35,6 @@ def analysis_metadata(index: RepoIndex) -> dict:
         "limits": [asdict(row) for row in limits[:50]],
         "limits_omitted": max(0, len(limits) - 50),
         "scope": "static selected source languages; no runtime completeness",
+        **({"esm_source_resolution": {"policy": "unique-visible-local-source-v1", "runtime_resolution": False}}
+           if any(name in index.analysis_languages for name in ("javascript", "typescript")) else {}),
     }
