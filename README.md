@@ -4,15 +4,15 @@
 
 需要 Python 3.11+。扫描、调查和地图生成不运行目标仓库代码；只有显式 reproduce/verify 才执行指定命令。
 
-[v0.5.2 稳定版](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.5.2) 已发布并部署到这台 Mac。普通终端直接运行 `repo-doctor --version`，无需激活环境。三项可靠性修复与安装证据见 [交付记录](docs/delivery/2026-10-02-v0.5.2-reliability.md)。
+v0.5.3 正式发行准备中，发布与安装验收完成后可使用下方链接。当前已公开稳定版为 [v0.5.2](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.5.2)。本轮图搜索与选择修复、解析性能优化及交付状态见 [交付记录](docs/delivery/2026-10-07-v0.5.3-release.md)。
 
 ## 安装
 
-从公开发行 wheel 安装 v0.5.2：
+v0.5.3 发布完成后，从公开发行 wheel 安装：
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.5.2/ai_repo_doctor-0.5.2-py3-none-any.whl'
+.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.5.3/ai_repo_doctor-0.5.3-py3-none-any.whl'
 export PATH="$PWD/.venv/bin:$PATH"
 repo-doctor --version
 repo-doctor skill export --out ~/.agents/skills/repo-doctor
