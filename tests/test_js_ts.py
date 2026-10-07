@@ -57,3 +57,23 @@ class JSTests(unittest.TestCase):
             self.assertTrue(data.parsed.symbols[0].is_async)
             self.assertTrue({'a', 'rest', 'local'} <= data.parsed.symbols[1].local_bindings)
             self.assertIn('a', data.unsafe_bindings)
+
+    def test_mjs_async_default_preserves_source_span(self):
+        from repo_doctor.index import build_index
+        from repo_doctor.context import build_context
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / 'async.mjs').write_text(
+                'export default async function() {\n  return 1;\n}\n', encoding='utf-8')
+            index = build_index(root, languages=('javascript',))
+            self.assertEqual(index.parse_errors, [])
+            symbol = index.symbols['async.mjs::<default>']
+            self.assertEqual((symbol.kind, symbol.is_async, symbol.start_line, symbol.end_line),
+                             ('function', True, 1, 3))
+            context = build_context(index, symbol.id)
+            self.assertEqual(context['blocks'][0]['lines'], [
+                {'line': 1, 'text': 'export default async function() {'},
+                {'line': 2, 'text': '  return 1;'},
+                {'line': 3, 'text': '}'},
+            ])

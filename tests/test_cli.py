@@ -594,3 +594,31 @@ class LanguageCliTests(unittest.TestCase):
             terminal = self.run_cli('impact', root, 'a.ts::entry', '--languages', 'typescript')
             self.assertIn('Limited direct', terminal.stdout)
             self.assertIn('typescript', terminal.stdout)
+
+    def test_js_include_and_ambiguous_context_are_explicit(self):
+        from tests.test_js_ts import HAS_EXTRA, FIXTURES
+        if not HAS_EXTRA:
+            self.skipTest('requires optional js extra')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            for name in ('core.js', 'duplicate.ts'):
+                (root / name).write_bytes((FIXTURES / name).read_bytes())
+            search = self.run_cli('symbols', root, '--query', 'core.js',
+                                  '--languages', 'javascript,typescript', '--json')
+            self.assertEqual(search.returncode, 0, search.stderr)
+            ids = {m['id'] for m in json.loads(search.stdout)['matches']}
+            self.assertTrue({'core.js::add', 'core.js::twice'} <= ids)
+            context = self.run_cli('context', root, 'core.js::add',
+                                   '--include-symbol', 'core.js::twice',
+                                   '--languages', 'javascript,typescript', '--json')
+            self.assertEqual(context.returncode, 0, context.stderr)
+            self.assertIn(('core.js::twice', 'user_selected'),
+                          [(b['symbol'], b['relation']) for b in json.loads(context.stdout)['blocks']])
+            for target, includes in [('duplicate.ts::same', []),
+                                     ('core.js::add', ['--include-symbol', 'duplicate.ts::same'])]:
+                with self.subTest(target=target, includes=includes):
+                    ambiguous = self.run_cli('context', root, target, *includes,
+                                             '--languages', 'javascript,typescript', '--json')
+                    self.assertEqual(ambiguous.returncode, 2)
+                    self.assertIn('Ambiguous symbol', ambiguous.stderr)
+                    self.assertEqual(ambiguous.stdout, '')

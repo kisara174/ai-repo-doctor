@@ -12,6 +12,7 @@ def resolve_esm_graph(index: RepoIndex, *, resolve_calls: bool = True) -> None:
     paths, _ = discover_files(index.root)
     path_set = set(paths)
     failed = {row.file for row in index.parse_errors}
+    seen_limits = set(index.analysis_limits)
 
     def target_for(file, specifier):
         if not specifier.startswith(("./", "../")) or "\\" in specifier:
@@ -38,8 +39,9 @@ def resolve_esm_graph(index: RepoIndex, *, resolve_calls: bool = True) -> None:
             edges.add(ImportEdge(ref.file, target, ref.start_line))
         else:
             row = AnalysisLimit(ref.file, ref.start_line, reason, "Module " + ref.specifier + " was not resolved")
-            if row not in index.analysis_limits:
+            if row not in seen_limits:
                 index.analysis_limits.append(row)
+                seen_limits.add(row)
         if hasattr(ref, "resolved_file"):
             resolved.append(replace(ref, resolved_file=target, resolution_kind=reason))
     index.esm_imports = resolved
@@ -97,6 +99,7 @@ def resolve_esm_graph(index: RepoIndex, *, resolve_calls: bool = True) -> None:
         else:
             row = AnalysisLimit(call.file, call.line, "unresolved-call",
                 "Call " + call.expression + " is outside unique unshadowed direct function bindings")
-            if row not in index.analysis_limits:
+            if row not in seen_limits:
                 index.analysis_limits.append(row)
+                seen_limits.add(row)
     index.call_edges = sorted(calls, key=lambda row: (row.caller, row.callee, row.line))

@@ -542,3 +542,27 @@ class JSContextTests(unittest.TestCase):
         data = build_context(index, 'core.js::Box.get', 5)
         self.assertEqual([(b['relation'], b['start_line'], b['end_line']) for b in data['blocks']],
                          [('target', 6, 6), ('owner_class', 5, 5)])
+
+    def test_js_small_budget_matches_exact_target_lines(self):
+        from tests.test_js_ts import HAS_EXTRA
+        if not HAS_EXTRA:
+            self.skipTest('requires optional js extra')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / 'app.mjs').write_text('export function entry() {\n  return 1;\n}\n')
+            index = build_index(root, languages=('javascript',))
+            small = build_context(index, 'app.mjs::entry', max_lines=1)
+            self.assertEqual(len(small['blocks']), 1)
+            self.assertEqual(small['blocks'][0]['relation'], 'target')
+            self.assertEqual(small['blocks'][0]['lines'],
+                             [{'line': 1, 'text': 'export function entry() {'}])
+            self.assertTrue(small['blocks'][0]['truncated'])
+            self.assertTrue(small['budget_exhausted'])
+            full = build_context(index, 'app.mjs::entry', max_lines=120)
+            self.assertEqual(full['blocks'][0]['lines'], [
+                {'line': 1, 'text': 'export function entry() {'},
+                {'line': 2, 'text': '  return 1;'},
+                {'line': 3, 'text': '}'},
+            ])
+            self.assertFalse(full['blocks'][0]['truncated'])
+            self.assertFalse(full['budget_exhausted'])

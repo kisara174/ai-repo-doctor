@@ -10,6 +10,37 @@ from tests.test_js_ts import HAS_EXTRA
 
 @unittest.skipUnless(HAS_EXTRA, 'requires optional js extra')
 class ESMTests(unittest.TestCase):
+    def test_limit_dedup_work_is_bounded_and_preserves_existing_order(self):
+        from unittest.mock import patch
+        from repo_doctor.esm import resolve_esm_graph
+        from repo_doctor.model import AnalysisLimit
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            calls = [f'  missing{i}();' for i in range(120)]
+            (root / 'app.js').write_text('export function entry() {\n' + '\n'.join(calls) + '\n}')
+            index = build_index(root, languages=('javascript',))
+            existing = [AnalysisLimit('earlier.js', i, 'external-or-alias', f'earlier-{i}')
+                        for i in range(250)]
+            wanted = [AnalysisLimit('app.js', i + 2, 'unresolved-call',
+                      f'Call missing{i} is outside unique unshadowed direct function bindings')
+                      for i in range(120)]
+            index.analysis_limits = existing + wanted[:1]
+            comparisons = 0
+            original_eq = AnalysisLimit.__eq__
+
+            def counted_eq(left, right):
+                nonlocal comparisons
+                comparisons += 1
+                return original_eq(left, right)
+
+            with patch.object(AnalysisLimit, '__eq__', counted_eq):
+                resolve_esm_graph(index)
+                resolve_esm_graph(index)
+            self.assertEqual(index.analysis_limits, existing + wanted)
+            self.assertEqual(index.call_edges, [])
+            self.assertLess(comparisons, 600, 'dedup must not scan the growing limits list')
+
     def test_ts_js_substitution_unique_but_not_ambiguous_or_unselected(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
@@ -93,3 +124,78 @@ class DirectCallTests(unittest.TestCase):
             index = build_index(root, languages=('javascript',))
             self.assertEqual({(e.caller, e.callee, e.line) for e in index.call_edges},
                              {('app.js::entry', 'core.js::add', 3), ('app.js::entry', 'core.js::<default>', 3)})
+
+    def test_unique_unselected_js_implementation_is_not_resolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / 'core.js').write_text('export function inc(v) { return v + 1; }\n')
+            (root / 'app.ts').write_text(
+                "import { inc } from './core.js';\nexport function entry() { return inc(1); }\n")
+            selected = build_index(root, languages=('typescript',))
+            self.assertEqual(selected.import_edges, [])
+            self.assertEqual(selected.call_edges, [])
+            mixed = build_index(root, languages=('javascript', 'typescript'))
+            self.assertEqual([(e.source, e.target, e.line) for e in mixed.import_edges],
+                             [('app.ts', 'core.js', 1)])
+            self.assertEqual([(e.caller, e.callee, e.line) for e in mixed.call_edges],
+                             [('app.ts::entry', 'core.js::inc', 2)])
+
+    def test_type_only_export_never_exposes_runtime_function(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / 'core.ts').write_text(
+                'function inc(v: number) { return v + 1; }\nexport type { inc };\n')
+            (root / 'app.ts').write_text(
+                "import { inc } from './core.js';\nexport function entry() { return inc(1); }\n")
+            index = build_index(root, languages=('typescript',))
+            self.assertEqual(index.parse_errors, [])
+            self.assertIn('core.ts::inc', index.symbols)
+            self.assertEqual([(e.exported, e.local_name, e.type_only, e.start_line)
+                              for e in index.esm_exports if e.file == 'core.ts'],
+                             [('inc', 'inc', True, 2)])
+            self.assertEqual([(e.source, e.target, e.line) for e in index.import_edges],
+                             [('app.ts', 'core.ts', 1)])
+            self.assertEqual(index.call_edges, [])
+
+    def test_namespace_member_never_guesses_named_export(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / 'core.js').write_text('export function target() { return 1; }\n')
+            (root / 'app.js').write_text(
+                "import * as ns from './core.js';\nexport function entry() { return ns.target(); }\n")
+            index = build_index(root, languages=('javascript',))
+            self.assertEqual([(e.source, e.target, e.line) for e in index.import_edges],
+                             [('app.js', 'core.js', 1)])
+            self.assertEqual(index.call_edges, [])
+            self.assertTrue(any(l.file == 'app.js' and l.line == 2 and
+                                l.reason == 'unresolved-call' for l in index.analysis_limits))
+
+    def test_extensionless_directory_index_stays_unknown(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / 'dir').mkdir()
+            (root / 'dir/index.ts').write_text('export function target() { return 1; }\n')
+            (root / 'app.ts').write_text(
+                "import {target} from './dir';\nexport function entry() { return target(); }\n")
+            index = build_index(root, languages=('typescript',))
+            self.assertEqual(index.import_edges, [])
+            self.assertEqual(index.call_edges, [])
+            limits = {(l.file, l.line, l.reason) for l in index.analysis_limits}
+            self.assertIn(('app.ts', 1, 'ambiguous-or-unsupported-local-source'), limits)
+            self.assertIn(('app.ts', 2, 'unresolved-call'), limits)
+
+    def test_alias_and_node_modules_stay_external(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / 'node_modules/pkg').mkdir(parents=True)
+            (root / 'node_modules/pkg/core.js').write_text('export function target() {}\n')
+            (root / 'core.js').write_text('export function target() {}\n')
+            (root / 'app.js').write_text(
+                "import {target} from '@alias/core';\nexport function entry() { return target(); }\n")
+            index = build_index(root, languages=('javascript',))
+            self.assertEqual({f.path for f in index.files}, {'app.js', 'core.js'})
+            self.assertEqual(index.import_edges, [])
+            self.assertEqual(index.call_edges, [])
+            limits = {(l.file, l.line, l.reason) for l in index.analysis_limits}
+            self.assertIn(('app.js', 1, 'external-or-alias'), limits)
+            self.assertIn(('app.js', 2, 'unresolved-call'), limits)

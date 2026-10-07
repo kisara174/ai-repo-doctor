@@ -9,6 +9,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
+from repo_doctor._version import __version__
 from repo_doctor.cli import main
 from repo_doctor.deepseek import DeepSeekError, DeepSeekResult
 
@@ -26,7 +27,7 @@ class ProductCliTests(unittest.TestCase):
             with self.assertRaises(SystemExit) as result:
                 main(['--version'])
         self.assertEqual(result.exception.code, 0)
-        self.assertEqual(out.getvalue().strip(), 'repo-doctor 0.6.0a1')
+        self.assertEqual(out.getvalue().strip(), f'repo-doctor {__version__}')
 
     def test_new_report_version_matches_release_and_old_case_stays_original(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -37,7 +38,7 @@ class ProductCliTests(unittest.TestCase):
             status, output, error = self.run_main('report', 'create', repo, '--out', case_dir, '--json')
             self.assertEqual(status, 0, error)
             case = json.loads(output)
-            self.assertEqual(case['tool_version'], '0.6.0a1')
+            self.assertEqual(case['tool_version'], __version__)
             case['tool_version'] = '0.5.0'
             (case_dir / 'case.json').write_text(json.dumps(case), encoding='utf-8')
             before = {name: (case_dir / name).read_bytes() for name in ('case.json', 'report.md')}
