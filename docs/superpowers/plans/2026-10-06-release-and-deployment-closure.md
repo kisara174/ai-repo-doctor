@@ -188,11 +188,11 @@ node tests/test_map_search.js
 
 **Consumes:** S2 准备提交与实际默认分支。**Produces:** PR URL、完整 CI 结果、正式来源 SHA。
 
-- [ ] 推送发行分支，目标为 `kisara174/ai-repo-doctor`；按 S0 实际默认分支设置 PR base。已有同一分支 PR 时更新该 PR，不创建重复 PR。
+- [ ] 推送发行分支，目标为 `kisara174/ai-repo-doctor`；执行发现默认分支已包含JS/TS0.6.0a1；从已发布v0.5.2 tag创建 `codex/python-stable` 作为独立稳定维护分支并设为 PR base。已有同一分支 PR 时更新该 PR，不创建重复 PR。
 
 ```sh
 git -C "$RD_WORKTREE" push --set-upstream origin "$RD_BRANCH"
-RD_BASE=$(gh repo view "$RD_REPO" --json defaultBranchRef --jq '.defaultBranchRef.name')
+RD_BASE='codex/python-stable'
 gh pr create --repo "$RD_REPO" --base "$RD_BASE" --head "$RD_BRANCH" \
   --title 'Release Python 0.5.3 stable CLI' --body-file "$RD_RELEASE/pr-body.md"
 ```
@@ -222,7 +222,7 @@ gh pr merge "$RD_PR_URL" --repo "$RD_REPO" --merge --match-head-commit "$RD_PR_H
 gh pr view "$RD_PR_URL" --repo "$RD_REPO" --json state,mergedAt,mergeCommit,url
 ```
 
-- [ ] 等待默认分支上合并提交的 4 个 CI job 完成；使用该合并 SHA 作为 `RD_FORMAL_SHA`。PR merge-ref 的结果不能直接冒充最终源码 SHA 的结果。
+- [ ] 等待稳定维护分支上合并提交的 4 个 CI job 完成；使用该合并 SHA 作为 `RD_FORMAL_SHA`。PR merge-ref 的结果不能直接冒充最终源码 SHA 的结果。
 - [ ] 通过 `gh pr view "$RD_PR_URL" --repo "$RD_REPO" --json mergeCommit --jq '.mergeCommit.oid'` 取得 `RD_FORMAL_SHA`，写入 source.json；执行 `git -C "$RD_WORKTREE" fetch origin "$RD_BASE"` 取回该对象，并确认它在实际远端 base 历史中。
 
 **Acceptance:** 正式来源明确，最终 SHA 上 4 个 job 全部成功，ci.json 保存实际链接与结果。
