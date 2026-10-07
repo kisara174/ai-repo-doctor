@@ -11,7 +11,7 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 
-EXPECTED_VERSION = '0.6.0'
+EXPECTED_VERSION = '0.7.0a1'
 
 
 def require(condition: bool, message: str) -> None:
