@@ -10,7 +10,7 @@
 
 **Spec:** `docs/delivery/2026-10-06-v0.5.3rc3-local-candidate.md`；预览工作树的 `docs/delivery/2026-10-06-v0.6.0a5-local-candidate.md`；`/Users/kisara/.local/share/ai-repo-doctor/evaluations/benchmark200-v1/delivery/revision-001/delivery-report.md`；沿用 `docs/superpowers/plans/2026-10-02-v0-5-2-reliability-and-delivery.md` 的发行与部署要求。
 
-**计划状态：** 2026-10-07，用户已授权完整执行并建立 Goal。S0–S2 已完成，S3 进行中；尚未发布或切换安装。
+**计划状态：** 2026-10-07，用户已授权完整执行并建立 Goal。S0–S7 稳定交付已完成；正式 tag `v0.5.3`、公开下载安装与 Mac 0.5.3 均通过，最终证据见新交付说明及 releases/v0.5.3/completion.json。J1 保持独立待选。
 
 ## Global Constraints
 
@@ -79,7 +79,7 @@ Python 与 JS/TS 候选均可通过已有候选 CLI 使用。稳定版发布完�
 固定发布根目录：`/Users/kisara/.local/share/ai-repo-doctor/releases/v0.5.3/`。
 
 - `baseline.json`：两候选 SHA、版本、保护清单、默认分支与授权范围。
-- `protection-before.json` / `protection-after.json`：原 14 个文件及原证据的路径和 SHA-256。
+- `protection-before.json` / `preservation.json`：原 14 个文件及原证据的路径和 SHA-256。
 - `source.json`：准备提交、PR head、合并 SHA、正式来源 SHA、核心文件一致性。
 - `ci.json`：正式来源 SHA、run URL、job 名称、结果、日志引用。
 - `source/`、`wheels/`、`SHA256SUMS`：从正式 SHA 导出的构建源码与包。
@@ -188,7 +188,7 @@ node tests/test_map_search.js
 
 **Consumes:** S2 准备提交与实际默认分支。**Produces:** PR URL、完整 CI 结果、正式来源 SHA。
 
-- [ ] 推送发行分支，目标为 `kisara174/ai-repo-doctor`；执行发现默认分支已包含JS/TS0.6.0a1；从已发布v0.5.2 tag创建 `codex/python-stable` 作为独立稳定维护分支并设为 PR base。已有同一分支 PR 时更新该 PR，不创建重复 PR。
+- [x] 推送发行分支，目标为 `kisara174/ai-repo-doctor`；执行发现默认分支已包含JS/TS0.6.0a1；从已发布v0.5.2 tag创建 `codex/python-stable` 作为独立稳定维护分支并设为 PR base。已有同一分支 PR 时更新该 PR，不创建重复 PR。
 
 ```sh
 git -C "$RD_WORKTREE" push --set-upstream origin "$RD_BRANCH"
@@ -197,10 +197,10 @@ gh pr create --repo "$RD_REPO" --base "$RD_BASE" --head "$RD_BRANCH" \
   --title 'Release Python 0.5.3 stable CLI' --body-file "$RD_RELEASE/pr-body.md"
 ```
 
-- [ ] 创建 PR 成功后调用 Codex `attach_artifact` 附加实际 URL；若后续继续处理已有 PR，也附加它。
-- [ ] 查询 PR 的 `headRefOid`；按这个 SHA 获取 CI 记录。不要用旧候选、本地 3.14 或另一个 PR 的绿色结果代替。
-- [ ] 核对全部预期 job：`Python 3.11`、`Python 3.12`、`Python 3.13`、`Offline map interaction and SVG`，共 4 个。
-- [ ] 每个 Python job 的 wheel 安装及生命周期验证必须实际执行；地图 job 必须包含 `test_map_search.js` 和 DOM/SVG 检查。缺失、跳过、取消或仍 pending 都不算通过。
+- [x] 创建 PR 成功后调用 Codex `attach_artifact` 附加实际 URL；若后续继续处理已有 PR，也附加它。
+- [x] 查询 PR 的 `headRefOid`；按这个 SHA 获取 CI 记录。不要用旧候选、本地 3.14 或另一个 PR 的绿色结果代替。
+- [x] 核对全部预期 job：`Python 3.11`、`Python 3.12`、`Python 3.13`、`Offline map interaction and SVG`，共 4 个。
+- [x] 每个 Python job 的 wheel 安装及生命周期验证必须实际执行；地图 job 必须包含 `test_map_search.js` 和 DOM/SVG 检查。缺失、跳过、取消或仍 pending 都不算通过。
 
 ```sh
 gh pr view "$RD_PR_URL" --repo "$RD_REPO" --json headRefOid,baseRefName,mergeable,url
@@ -212,18 +212,18 @@ gh run view "$RD_RUN_ID" --repo "$RD_REPO" --json headSha,status,conclusion,jobs
 
 `RD_PR_URL`、`RD_PR_HEAD`、`RD_RUN_ID` 均来自本阶段实际返回值。等待每次最长 60 秒并保持有意义的进度更新，不增加多余的手动 CI dispatch。
 
-- [ ] 如失败，按 `systematic-debugging` 提取首个失败和最小原因；只修复可复现的兼容性、安装或工作流问题。不得删除门槛、允许跳过或随意延长超时掩盖失败。
-- [ ] 修复改变实际 runtime 时，生成新的候选来源和对应验证记录；旧 rc3 证据保持不变。没有 runtime 改动时不重跑 200 仓库。
-- [ ] CI 成功、审查通过且合并授权有效时合并 PR；记录合并 SHA，核验源码变化与已审查 diff 一致。
-- [ ] 仓库允许 merge commit 时使用下列命令；若仓库策略要求 squash/rebase/merge queue，主代理根据真实策略选择，不能使用 `--admin` 绕过门槛。合并命令返回成功后仍查询实际合并状态，排队不等于合并完成。
+- [x] 如失败，按 `systematic-debugging` 提取首个失败和最小原因；只修复可复现的兼容性、安装或工作流问题。不得删除门槛、允许跳过或随意延长超时掩盖失败。
+- [x] 修复改变实际 runtime 时，生成新的候选来源和对应验证记录；旧 rc3 证据保持不变。没有 runtime 改动时不重跑 200 仓库。
+- [x] CI 成功、审查通过且合并授权有效时合并 PR；记录合并 SHA，核验源码变化与已审查 diff 一致。
+- [x] 仓库允许 merge commit 时使用下列命令；若仓库策略要求 squash/rebase/merge queue，主代理根据真实策略选择，不能使用 `--admin` 绕过门槛。合并命令返回成功后仍查询实际合并状态，排队不等于合并完成。
 
 ```sh
 gh pr merge "$RD_PR_URL" --repo "$RD_REPO" --merge --match-head-commit "$RD_PR_HEAD"
 gh pr view "$RD_PR_URL" --repo "$RD_REPO" --json state,mergedAt,mergeCommit,url
 ```
 
-- [ ] 等待稳定维护分支上合并提交的 4 个 CI job 完成；使用该合并 SHA 作为 `RD_FORMAL_SHA`。PR merge-ref 的结果不能直接冒充最终源码 SHA 的结果。
-- [ ] 通过 `gh pr view "$RD_PR_URL" --repo "$RD_REPO" --json mergeCommit --jq '.mergeCommit.oid'` 取得 `RD_FORMAL_SHA`，写入 source.json；执行 `git -C "$RD_WORKTREE" fetch origin "$RD_BASE"` 取回该对象，并确认它在实际远端 base 历史中。
+- [x] 等待稳定维护分支上合并提交的 4 个 CI job 完成；使用该合并 SHA 作为 `RD_FORMAL_SHA`。PR merge-ref 的结果不能直接冒充最终源码 SHA 的结果。
+- [x] 通过 `gh pr view "$RD_PR_URL" --repo "$RD_REPO" --json mergeCommit --jq '.mergeCommit.oid'` 取得 `RD_FORMAL_SHA`，写入 source.json；执行 `git -C "$RD_WORKTREE" fetch origin "$RD_BASE"` 取回该对象，并确认它在实际远端 base 历史中。
 
 **Acceptance:** 正式来源明确，最终 SHA 上 4 个 job 全部成功，ci.json 保存实际链接与结果。
 
@@ -235,7 +235,7 @@ gh pr view "$RD_PR_URL" --repo "$RD_REPO" --json state,mergedAt,mergeCommit,url
 
 **Consumes:** `RD_FORMAL_SHA`。**Produces:** 唯一正式 wheel 与 33 命令验收 receipt。
 
-- [ ] 将真实 `RD_FORMAL_SHA` 写入 source.json；从该 SHA 导出源码，排除工作树未提交文件。
+- [x] 将真实 `RD_FORMAL_SHA` 写入 source.json；从该 SHA 导出源码，排除工作树未提交文件。
 
 ```sh
 mkdir "$RD_RELEASE/source"
@@ -244,10 +244,10 @@ tar -xf "$RD_RELEASE/source.tar" -C "$RD_RELEASE/source"
 python3 -m pip wheel --no-deps --wheel-dir "$RD_RELEASE/wheels" "$RD_RELEASE/source"
 ```
 
-- [ ] 预期唯一包 `ai_repo_doctor-0.5.3-py3-none-any.whl`；读取 ZIP 内 metadata，确认版本、Python >=3.11、无 Requires-Dist 及 CLI 入口。
-- [ ] 生成 SHA256SUMS，记录实际 build interpreter、构建来源与包 hash；不要求新 wheel 与 rc3 整包 hash 相同。
-- [ ] 与 rc3 wheel 比较 `repo_doctor/` 内全部 runtime 资源：预期仅 `_version.py` 不同；viewer、分析器、CLI 和 Skill 字节相同。如有其他差异，定位原因并确定必要验证后继续。
-- [ ] 安装正式 wheel 到新 venv，复制正式源码的验证器到仓库外，执行现有生命周期验证。
+- [x] 预期唯一包 `ai_repo_doctor-0.5.3-py3-none-any.whl`；读取 ZIP 内 metadata，确认版本、Python >=3.11、无 Requires-Dist 及 CLI 入口。
+- [x] 生成 SHA256SUMS，记录实际 build interpreter、构建来源与包 hash；不要求新 wheel 与 rc3 整包 hash 相同。
+- [x] 与 rc3 wheel 比较 `repo_doctor/` 内全部 runtime 资源：预期仅 `_version.py` 不同；viewer、分析器、CLI 和 Skill 字节相同。如有其他差异，定位原因并确定必要验证后继续。
+- [x] 安装正式 wheel 到新 venv，复制正式源码的验证器到仓库外，执行现有生命周期验证。
 
 ```sh
 python3 -m venv "$RD_RELEASE/formal-install/venv"
@@ -261,8 +261,8 @@ cd /private/tmp
   --out "$RD_RELEASE/formal-install/evidence"
 ```
 
-- [ ] receipt 的 `version` 为 0.5.3，33 条受控命令符合预期退出码；导入来自 site-packages。验证器内预期失败的回归步骤不能误记为产品失败。
-- [ ] viewer 字节一致时，引用已有 4 地图交互证据，并写出一致性理由；不修复 Chrome、不追加随机地图验收。
+- [x] receipt 的 `version` 为 0.5.3，33 条受控命令符合预期退出码；导入来自 site-packages。验证器内预期失败的回归步骤不能误记为产品失败。
+- [x] viewer 字节一致时，引用已有 4 地图交互证据，并写出一致性理由；不修复 Chrome、不追加随机地图验收。
 
 **Acceptance:** 正式 SHA、包、metadata、CLI、新 case 与导出版本一致，安装 receipt 通过。
 
@@ -272,8 +272,8 @@ cd /private/tmp
 
 **Consumes:** S3 CI、S4 wheel 与安装 receipt。**Produces:** 可公开下载的 v0.5.3 稳定发行。
 
-- [ ] 完成 release-notes；实际审核文件、包与 SHA256SUMS 后再执行发布。
-- [ ] 再查 v0.5.3 tag/release。未存在才创建 tag，明确指向 `RD_FORMAL_SHA`；已有匹配来源则恢复原发行工作，来源不一致则停止，绝不覆盖。
+- [x] 完成 release-notes；实际审核文件、包与 SHA256SUMS 后再执行发布。
+- [x] 再查 v0.5.3 tag/release。未存在才创建 tag，明确指向 `RD_FORMAL_SHA`；已有匹配来源则恢复原发行工作，来源不一致则停止，绝不覆盖。
 
 ```sh
 git -C "$RD_WORKTREE" tag -a v0.5.3 "$RD_FORMAL_SHA" -m 'AI Repo Doctor 0.5.3'
@@ -283,8 +283,8 @@ gh release create v0.5.3 --repo "$RD_REPO" --verify-tag \
   "$RD_FORMAL_WHEEL" "$RD_RELEASE/SHA256SUMS"
 ```
 
-- [ ] Python 发行不带 `--prerelease`；不要发布未经验证的额外源码包或随意上传本地评估资料。
-- [ ] 下载公开资产到新目录，并比较公开 wheel 与 S4 wheel 的 SHA-256、metadata，以及远端 tag 解引用后的正式 SHA。
+- [x] Python 发行不带 `--prerelease`；不要发布未经验证的额外源码包或随意上传本地评估资料。
+- [x] 下载公开资产到新目录，并比较公开 wheel 与 S4 wheel 的 SHA-256、metadata，以及远端 tag 解引用后的正式 SHA。
 
 ```sh
 gh release download v0.5.3 --repo "$RD_REPO" \
@@ -295,8 +295,8 @@ python3 -m venv "$RD_RELEASE/public-install/venv"
   "$RD_RELEASE/public-download/ai_repo_doctor-0.5.3-py3-none-any.whl"
 ```
 
-- [ ] 从 /private/tmp 验证公开安装的 `--version`、site-packages metadata 和一个 overview；使用 S4 验证器生成的受控 Python repo。公开包与正式验收包完全相同且 site-packages 资源一致时，引用 S4 的 33 命令结果，不重复完整流程。
-- [ ] publication.json 记录发布链接、tag/正式来源、公开包 hash、安装证据与时间。资产下载或安装失败，状态记为失败并修复，不写“发布已验收”。
+- [x] 从 /private/tmp 验证公开安装的 `--version`、site-packages metadata 和一个 overview；使用 S4 验证器生成的受控 Python repo。公开包与正式验收包完全相同且 site-packages 资源一致时，引用 S4 的 33 命令结果，不重复完整流程。
+- [x] publication.json 记录发布链接、tag/正式来源、公开包 hash、安装证据与时间。资产下载或安装失败，状态记为失败并修复，不写“发布已验收”。
 
 **Acceptance:** 用户能从 `https://github.com/kisara174/ai-repo-doctor/releases/download/v0.5.3/ai_repo_doctor-0.5.3-py3-none-any.whl` 安装同一正式包。
 
@@ -306,10 +306,10 @@ python3 -m venv "$RD_RELEASE/public-install/venv"
 
 **Consumes:** S5 已验证的公开 wheel。**Produces:** 普通终端入口为 0.5.3、可恢复的 0.5.2 安装资料。
 
-- [ ] 保存当前 deployment.json、deployment-v0.5.2.json、INSTALLATION.md、CLI 入口文件/链接信息、Skill hash 和旧 wheel 信息至新的升级前目录。Key 不读取，不搬移。
-- [ ] 确认旧公开下载 wheel 存在且 SHA-256 为 `aa43f2ff3967b7584cb26f1ffe50a1866b964c9558c9aed9a7b78db30f0ced03`。
-- [ ] 旧 wheel 在独立 rollback-test venv 安装并验证 0.5.2；不要为测试回滚在持久环境先降级再升级。
-- [ ] 使用公开下载的同一正式 wheel 升级持久 venv，保留原 `/Users/kisara/.local/bin/repo-doctor` 入口和 Skill。
+- [x] 保存当前 deployment.json、deployment-v0.5.2.json、INSTALLATION.md、CLI 入口文件/链接信息、Skill hash 和旧 wheel 信息至新的升级前目录。Key 不读取，不搬移。
+- [x] 确认旧公开下载 wheel 存在且 SHA-256 为 `aa43f2ff3967b7584cb26f1ffe50a1866b964c9558c9aed9a7b78db30f0ced03`。
+- [x] 旧 wheel 在独立 rollback-test venv 安装并验证 0.5.2；不要为测试回滚在持久环境先降级再升级。
+- [x] 使用公开下载的同一正式 wheel 升级持久 venv，保留原 `/Users/kisara/.local/bin/repo-doctor` 入口和 Skill。
 
 ```sh
 /Users/kisara/.local/share/ai-repo-doctor/venv/bin/python -m pip install --no-index \
@@ -318,10 +318,10 @@ zsh -lc 'command -v repo-doctor'
 zsh -lc 'repo-doctor --version'
 ```
 
-- [ ] 在仓库外核验持久安装 metadata、site-packages、全部 runtime hash；登录 shell 解析到 `/Users/kisara/.local/bin/repo-doctor` 且输出 0.5.3。
-- [ ] 用持久解释器/CLI 执行 S4 仓库外验证器到新的 `mac-install/evidence`，验证该实际部署环境的 33 命令生命周期。
-- [ ] 重开既有 Python 调查 A-001，确认来源引用仍可读、旧版本与未评审状态保留；读取前后 case/report hash 不变。具体路径从 `fresh-trials/summary.json` 取得，不猜测案件目录。
-- [ ] 升级或验收失败，使用保留的 0.5.2 wheel 恢复持久环境，再核对版本/入口/旧记录；记录失败和恢复结果，部署状态不得标为成功。
+- [x] 在仓库外核验持久安装 metadata、site-packages、全部 runtime hash；登录 shell 解析到 `/Users/kisara/.local/bin/repo-doctor` 且输出 0.5.3。
+- [x] 用持久解释器/CLI 执行 S4 仓库外验证器到新的 `mac-install/evidence`，验证该实际部署环境的 33 命令生命周期。
+- [x] 重开既有 Python 调查 A-001，确认来源引用仍可读、旧版本与未评审状态保留；读取前后 case/report hash 不变。具体路径从 `fresh-trials/summary.json` 取得，不猜测案件目录。
+- [x] 升级或验收失败，使用保留的 0.5.2 wheel 恢复持久环境，再核对版本/入口/旧记录；记录失败和恢复结果，部署状态不得标为成功。
 
 回滚命令：
 
@@ -339,13 +339,13 @@ zsh -lc 'repo-doctor --version'
 
 **Consumes:** S0–S6 收据。**Produces:** 中文交付、实际部署状态与清楚的剩余方向。
 
-- [ ] 创建 `/Users/kisara/.local/share/ai-repo-doctor/deployment-v0.5.3.json`，通过它更新 deployment.json 和 INSTALLATION.md；原 0.5.2 收据与升级前备份保留。
-- [ ] 更新 README 的稳定版完成态；提交独立文档改动。正式 tag 保持 S5 来源，记录后续文档 HEAD，不移动 tag。
-- [ ] 如果合并文档到主目录，先核对 runtime 和所有受保护文件；无法安全快进时保留主目录现状，在已集成的发行分支交付，记录实际 checkout 状态，不强制合并脏文件。
-- [ ] 核验 protection-before 的全部原条目；原 14 个文件和旧评估 hash 均不变，新增的正式发行文件单独列出。
-- [ ] completion.json 的必需项包括：正式版本、精确 SHA 的 CI、wheel/install、公开下载、Mac、回滚资料、旧资料保护、中文说明。全部有证据才 `pending=[]`。
-- [ ] GraphFlow 仅增量索引实际修改的项目文件；自动图谱状态不代替 CI 和部署收据。
-- [ ] 中文交付报告说明实际版本、安装链接、普通终端命令、Codex 调查方式、地图位置、支持边界与回滚方法。
+- [x] 创建 `/Users/kisara/.local/share/ai-repo-doctor/deployment-v0.5.3.json`，通过它更新 deployment.json 和 INSTALLATION.md；原 0.5.2 收据与升级前备份保留。
+- [x] 更新 README 的稳定版完成态；提交独立文档改动。正式 tag 保持 S5 来源，记录后续文档 HEAD，不移动 tag。
+- [x] 如果合并文档到主目录，先核对 runtime 和所有受保护文件；无法安全快进时保留主目录现状，在已集成的发行分支交付，记录实际 checkout 状态，不强制合并脏文件。
+- [x] 核验 protection-before 的全部原条目；原 14 个文件和旧评估 hash 均不变，新增的正式发行文件单独列出。
+- [x] completion.json 的必需项包括：正式版本、精确 SHA 的 CI、wheel/install、公开下载、Mac、回滚资料、旧资料保护、中文说明。全部有证据才 `pending=[]`。
+- [x] GraphFlow 仅增量索引实际修改的项目文件；自动图谱状态不代替 CI 和部署收据。
+- [x] 中文交付报告说明实际版本、安装链接、普通终端命令、Codex 调查方式、地图位置、支持边界与回滚方法。
 
 **Acceptance:** 用户无需阅读历史长对话即可安装、调用、查阅图、保存/重开调查和回退旧版；所有必需阶段已闭合。
 
