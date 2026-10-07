@@ -1,24 +1,34 @@
-# 0.6.0 JS/TS 基础支持矩阵
+# JS/TS 基础支持与源码关联矩阵
+
+本分支包含拟随 0.7.0 交付的新增源码关联。当前已发布的 0.6.0 仍沿用明确扩展路径合同；候选验证与正式发布状态以交付记录为准。
 
 ## 支持范围
 
-| 能力 | 0.6.0 行为 |
+| 能力 | 本分支行为 |
 |---|---|
 | 文件选择 | 显式选择 javascript / typescript；实现文件 `.js`、`.mjs`、`.ts`；遵循 ignore、不追踪 node_modules |
 | 符号 | 具名函数、顶层 const 函数/箭头、类/方法位置；async、default；TS 重载与实现区分 |
-| 文件依赖 | 明确本地 ESM 路径；TS 的显式 `.js` 路径仅在已选实现唯一时可关联 `.ts`；歧义保留未知 |
-| 调用 | 唯一、未遮蔽、未改写的直接函数绑定和直接 ESM 导出；每条提供 caller/callee/文件/物理行 |
+| 文件依赖 | 明确本地 ESM 路径及旧 TS `.js` 替换；新增无后缀文件/index 的唯一可见实现源码关联；先判断歧义再检查语言选择与解析状态 |
+| 调用 | 唯一、未遮蔽、未改写的直接函数绑定和直接 ESM 导出；每条提供 caller/callee/文件/物理行，导入调用另提供实际 `via_esm_import` 来源 |
 | 类型引用 | import type / type-only export 不形成运行调用；声明记录与运行关系区分 |
 | context | 目标优先、真实源码行、可选 include-symbol、预算和截断标识；歧义 ID 拒绝 |
 | impact | 已解析反向直接调用的有界遍历；depth=2 可核对逐跳证据；空结果不代表无影响 |
 | map | 离线 HTML、两份 SVG、JSON；混合语言可查看；每视图至多 200 节点/500 边，显示隐藏数量 |
 | 错误/限制 | 不可读或解析失败文件排除证据；analysis limits 最多显示 50 条并保留省略计数 |
 
-符号存在不等于能解析其调用。静态源码关联不证明运行时执行，也不证明问题存在。
+符号存在不等于能解析其调用。静态源码关联不证明运行时执行，也不证明问题存在。JS/TS analysis 提供 `esm_source_resolution.runtime_resolution: false`。context/impact 的调用来源包含导入文件、声明行段、specifier、绑定和关联种类；impact 文件依赖另提供 `esm_source_association`。
+
+## 新增路径的保守边界
+
+文件与目录 index 同时进入候选并集，不选择扩展或文件优先级。`.ts` 与 `.d.ts`、`.js` 与 `.ts`、文件与 index 等多个可见候选都拒绝，即使其中一个不参加实现分析也不先删去。只有唯一候选、已选择语言、受支持实现扩展且成功解析时才连接。
+
+候选后缀为 `.ts .js .mjs .tsx .jsx .d.ts .mts .cts .cjs .d.mts .d.cts .json .node`，并检查无扩展 exact 文件；不受支持的后缀只参与拒绝歧义，不获得实现支持。该有限集合不覆盖自定义加载器。目录 package.json 可见时拒绝新增关联，不读取配置。URL 特殊字符、尾随斜杠、转义、外部来源保留未知。关联仍只覆盖扫描器可见、安全、仓库内文件。
+
+类型导入、namespace 和再导出可建立文件依赖；只有现有安全直接调用规则通过才有函数边。桶文件多跳调用仍不解析。源码行段引用不额外塞入源码引文，context blocks 仍按 max-lines 预算提供内容。
 
 ## 明确未知或未支持
 
-- 无后缀导入（`./core`）、目录 index、路径别名、外部 package；不模拟 tsconfig、bundler 或 Node 的完整解析。
+- 无后缀/index 的歧义或不合格候选、路径别名、外部 package；不模拟 tsconfig、bundler 或 Node 的完整解析。
 - CommonJS、JSX/TSX、`.cjs/.mts/.cts`、`.d.ts` 声明实现分析。
 - 对象/实例/this 方法、匿名回调、动态 import 调用、多跳 re-export 调用、运行时替换和仓库外调用。
 - Tree-sitter 对部分较新或复杂 TS 语法的覆盖有限。解析错误说明当前后端拒绝了文件，不能据此直接断言目标代码无效。
@@ -30,4 +40,4 @@
 
 [J5 固定样本报告](evaluations/2026-10-07-js-ts-support-validation.md)：12 个已见仓库、36 题，32 answered、4 bounded；没有将范围外题计为回答成功，也没有新的 200 仓库全量或盲测结论。地图 viewer 沿用 a5 实际交互证据，本次新地图仅做产物检查。
 
-下一阶段优先量化无后缀/目录 index 对实际调查的影响，再定义保守源码关联；随后研究已记录的 TS grammar 拒绝文件。两项都需独立来源与反例，不能直接扩成完整运行时解析。本版不增加新用户接口或自动修复。
+无后缀/index 的量化研究、设计及实施出口见 [研究报告](evaluations/2026-10-07-extensionless-source-survey.md) 与 [实施清单](superpowers/plans/2026-10-07-js-ts-source-association.md)。新的定向结果不能回写旧评分或称为新一轮完整 200 回归。后续可研究已记录的 TS grammar 拒绝文件，但需单独来源与反例。本轮不增加新命令或自动修复。

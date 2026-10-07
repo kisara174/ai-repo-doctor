@@ -4,6 +4,8 @@
 
 **0.6.0 基础正式支持**：Python 默认启用；JS/TS 通过可选 `[js]` 安装并显式选择语言。需要 Python 3.11+，JS/TS 分析不需要 Node。详细支持范围见 [支持矩阵](docs/JS_TS_SUPPORT.md)，验证证据见 [J5 报告](docs/evaluations/2026-10-07-js-ts-support-validation.md)。
 
+本开发分支正在验证无后缀/index 的唯一源码关联和导入来源输出，尚未发布；见 [设计与边界](docs/superpowers/specs/2026-10-07-js-ts-source-association-design.md)。正式安装链接仍指向 0.6.0。
+
 ## 安装
 
 发行方式为 [GitHub wheel](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.6.0)，目前没有 PyPI 发行。两种安装使用同一个 wheel。
