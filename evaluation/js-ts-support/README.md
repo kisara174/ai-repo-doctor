@@ -1,12 +1,14 @@
-# JS/TS 支持闭环准备材料（2026-10-07）
+# JS/TS 支持闭环材料（2026-10-07）
 
-状态：**J0–J4 prepared-not-run**。这是固定输入、独立源码参考和后续验收合同，不是产品测试报告；未执行目标代码、未安装目标依赖、未调用云端 API。
+准备材料的历史状态：**J0–J4 prepared-not-run**。`cases/cohort/readiness/test-plan` 等固定输入和原收据不改写为产品通过。
+
+后续执行已经完成：[J5 验证结果](../../docs/evaluations/2026-10-07-js-ts-support-validation.md)、[J6 正式 0.6.0 交付](../../docs/delivery/2026-10-07-v0.6.0-js-ts-support.md)。主代理已补齐八项断言并完成两组调查、安装与远端 CI，勿再次按下文原准备顺序重复执行。执行与发布状态分别记录在本机 `execution-completion-j5.json` 和 `releases/v0.6.0/completion.json`。未执行公开目标代码、未安装目标依赖、未调用云端诊断 API。
 
 ## 入口
 
 - [执行计划](../../docs/superpowers/plans/2026-10-07-js-ts-validation-and-support.md)：J0–J6 范围与发行门槛。
 - [cases.json](cases.json)：24 类能力合同、现有断言、8 个明确的补充断言任务。空列表不是已验证无关系。
-- [cohort.json](cohort.json)：12 个固定提交，JS/TS 各 8 个，小中大各 2 个；每层第一个 discovery，第二个 confirmation。
+- [cohort.json](cohort.json)：12 个固定提交，JS/TS 各 6 个，小中大各 2 个；每层第一个 discovery，第二个 confirmation。
 - 本机完整证据根：`/Users/kisara/.local/share/ai-repo-doctor/evaluations/js-ts-support-v1`。
   - `baseline.json`：稳定 0.5.3、预览 0.6.0a5、wheel/runtime/安装身份及隔离分支。
   - `protection-before.json`：14 个原文件、150789 个历史证据条目、65 个候选 runtime 的保护核验，引用旧清单而不复制或修改历史。
@@ -25,7 +27,7 @@
 
 所有 12 个仓库都已在历史开发评估中出现。confirmation 是本阶段冻结后的确认组，**不是新的盲测**。七条 oracle 口径复核不修改历史报告，不证明当前 a5 无 bug，也不证明未来覆盖已实现。
 
-## 下一位执行者的顺序
+## 原准备阶段的执行顺序（已完成，仅保留合同）
 
 1. 读取 `readiness.json`、`baseline.json`，核验输入 hash、候选 wheel/runtime、目标提交与源码，确认稳定入口仍为 0.5.3。
 2. 在隔离分支按 cases 中 `supplement_required` 写 8 个外部行为断言：mjs async default、唯一未选中目标、type-only export、namespace 调用未知、目录 index 未知、别名/node_modules、JS 小预算截断、JS include/歧义请求。原测试可覆盖的部分直接复用，不复制 24 个镜像测试。

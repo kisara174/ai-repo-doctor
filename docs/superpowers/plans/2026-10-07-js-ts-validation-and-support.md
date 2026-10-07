@@ -10,7 +10,7 @@
 
 **Spec:** 现有 `docs/superpowers/specs/2026-10-02-js-ts-readonly-preview-design.md` 的只读合同；预览工作树 `docs/delivery/2026-10-06-v0.6.0a5-local-candidate.md`；稳定版 `docs/delivery/2026-10-07-v0.5.3-release.md`。前两份文档中的旧日期状态为历史，不据此将本机版本判断为 0.5.2。
 
-**本计划状态：** 2026-10-07 J0–J4 准备和 J5 定向验证已完成；原准备收据仍保持 `prepared-not-run` 的历史状态，执行结果另见 [J5 报告](../../evaluations/2026-10-07-js-ts-support-validation.md)。J6 正式发布进行中。
+**本计划状态：** 2026-10-07 J0–J4 准备和 J5 定向验证已完成；原准备收据仍保持 `prepared-not-run` 的历史状态，执行结果另见 [J5 报告](../../evaluations/2026-10-07-js-ts-support-validation.md)。J6 0.6.0 已公开发布并独立部署，详见 [正式交付](../../delivery/2026-10-07-v0.6.0-js-ts-support.md)。
 
 ## 1. 已核实的起点
 
@@ -255,14 +255,14 @@ RD_JS_CLI="$RD_NEXT/venvs/js/bin/repo-doctor"
 
 **目标版本：** 0.6.0 基础正式支持，不等于支持所有 JS/TS 语法、框架或运行时关系。独立 alpha 发行是可选中间结果，不能代替本节完成定义。
 
-- [ ] 主代理审查实际支持边界及确认集，核对源码、wheel、CI、测试收据；release checklist 必须列出未支持 CommonJS、JSX/TSX、别名及方法/回调的实际范围，不能只有“支持 JS/TS”一句话。
-- [ ] 版本提升为 0.6.0 时同步 `_version.py`、两个安装验证器常量、README/Skill安装说明；两类安装的 metadata 保留三个 extra 条件依赖，不能套用 0.5.3 的“Requires-Dist为空”断言。
-- [ ] 选择实际合适的集成 base，检查稳定修复是否完整包含；不把 JS 分支强行合入 codex/python-stable。0.5.3 维护线继续保留；正式统一主线的选择由主代理记录。
-- [ ] 正式合并 SHA 的 7 项 CI 通过后，从该 SHA 构建正式 wheel；独立 base/extra 安装与 Python 生命周期通过。
-- [ ] 发布正确 tag 的 GitHub wheel 与 SHA256SUMS；匿名下载后核对包 hash、版本、runtime 和一个 JS/一个 TS 实际入口。公开包与验收包一致方可复用安装结果。
-- [ ] 先在独立本机 JS/TS 环境交付，普通 Python 稳定入口仍为 0.5.3。需要将全局入口升级到 0.6.0 时，在该部署范围获授权后备份并切换，保留已验证的 0.5.3 回滚包；不能现在预先切换。
-- [ ] 交付两种明确安装方式：基础 wheel 与同一 wheel 的 `[js]` extra；文档给出语言 CSV、Codex调用、地图、未知关系和当前支持矩阵。
-- [ ] 最终保护哈希一致；completion 必需项 pending=[]；准备/执行/公开安装/本机状态分开记录。GraphFlow 增量索引实际变动文件。
+- [x] 主代理审查实际支持边界及确认集，核对源码、wheel、CI、测试收据；release checklist 必须列出未支持 CommonJS、JSX/TSX、别名及方法/回调的实际范围，不能只有“支持 JS/TS”一句话。
+- [x] 版本提升为 0.6.0 时同步 `_version.py`、两个安装验证器常量、README/Skill安装说明；两类安装的 metadata 保留三个 extra 条件依赖，不能套用 0.5.3 的“Requires-Dist为空”断言。
+- [x] 选择实际合适的集成 base，检查稳定修复是否完整包含；不把 JS 分支强行合入 codex/python-stable。0.5.3 维护线继续保留；正式统一主线的选择由主代理记录。
+- [x] 正式合并 SHA 的 7 项 CI 通过后，从该 SHA 构建正式 wheel；独立 base/extra 安装与 Python 生命周期通过。
+- [x] 发布正确 tag 的 GitHub wheel 与 SHA256SUMS；匿名下载后核对包 hash、版本、runtime 和一个 JS/一个 TS 实际入口。公开包与验收包一致方可复用安装结果。
+- [x] 先在独立本机 JS/TS 环境交付，普通 Python 稳定入口仍为 0.5.3。需要将全局入口升级到 0.6.0 时，在该部署范围获授权后备份并切换，保留已验证的 0.5.3 回滚包；不能现在预先切换。
+- [x] 交付两种明确安装方式：基础 wheel 与同一 wheel 的 `[js]` extra；文档给出语言 CSV、Codex调用、地图、未知关系和当前支持矩阵。
+- [x] 最终保护哈希一致；completion 必需项 pending=[]；准备/执行/公开安装/本机状态分开记录。GraphFlow 增量索引实际变动文件。
 
 **发布闭环：** 可安装 → 可从真实仓库找符号取证 → 可看关系图 → 未知明确 → Python兼容 → 包/源码/CI来源一致 → 旧版本可回滚。不能仅以发布成功宣布闭环。
 
