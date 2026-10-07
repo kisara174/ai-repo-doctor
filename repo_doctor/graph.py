@@ -1,6 +1,8 @@
 """Resolve local imports and calls conservatively, then find import cycles."""
 
 from collections import defaultdict
+from contextvars import ContextVar
+from dataclasses import dataclass
 from pathlib import PurePosixPath
 
 from .model import (
@@ -14,6 +16,23 @@ from .model import (
     SemanticEdge,
     Symbol,
 )
+
+
+@dataclass
+class _ResolutionLookups:
+    index: RepoIndex
+    candidates: dict[str, set[str]]
+    modules: dict[str, str]
+    imports: dict[tuple[str, str], list[ImportRef]]
+    wildcard_files: set[str]
+
+
+_RESOLUTION_LOOKUPS = ContextVar("repo_doctor_resolution_lookups", default=None)
+
+
+def _lookups(index: RepoIndex) -> _ResolutionLookups | None:
+    current = _RESOLUTION_LOOKUPS.get()
+    return current if current is not None and current.index is index else None
 
 
 def _module_names(path: str) -> set[str]:
@@ -42,6 +61,9 @@ def _base_module(ref: ImportRef) -> str | None:
 
 
 def _module_candidates(index: RepoIndex) -> dict[str, set[str]]:
+    current = _lookups(index)
+    if current is not None:
+        return current.candidates
     candidates: dict[str, set[str]] = defaultdict(set)
     for file in index.files:
         for name in _module_names(file.path):
@@ -50,6 +72,9 @@ def _module_candidates(index: RepoIndex) -> dict[str, set[str]]:
 
 
 def _module_lookup(index: RepoIndex) -> dict[str, str]:
+    current = _lookups(index)
+    if current is not None:
+        return current.modules
     candidates = _module_candidates(index)
     return {name: next(iter(paths)) for name, paths in candidates.items() if len(paths) == 1}
 
@@ -231,6 +256,9 @@ def _resolve_call(
 
 
 def _module_level_imports(index: RepoIndex, file: str, name: str) -> list[ImportRef]:
+    current = _lookups(index)
+    if current is not None:
+        return current.imports.get((file, name), [])
     return sorted(
         (
             ref
@@ -282,7 +310,8 @@ def _resolve_direct_symbol_or_explicit_import(
     direct_symbol = symbol_id in index.symbols
     imports = _module_level_imports(index, file, name)
     submodules = _submodule_candidates(index, file, name)
-    has_wildcard_import = any(
+    current = _lookups(index)
+    has_wildcard_import = file in current.wildcard_files if current is not None else any(
         ref.file == file and ref.owner is None and ref.name == "*"
         for ref in index.imports
     )
@@ -413,6 +442,27 @@ def _import_cycles(index: RepoIndex) -> list[list[str]]:
 
 def resolve_graph(index: RepoIndex) -> None:
     """Populate edges that refer to a unique source-defined local target."""
+    candidates = _module_candidates(index)
+    modules = {name: next(iter(paths)) for name, paths in candidates.items() if len(paths) == 1}
+    imports: dict[tuple[str, str], list[ImportRef]] = defaultdict(list)
+    wildcard_files = set()
+    for ref in index.imports:
+        if ref.owner is not None:
+            continue
+        if ref.name == "*":
+            wildcard_files.add(ref.file)
+        elif ref.name is not None:
+            imports[(ref.file, ref.alias)].append(ref)
+    for refs in imports.values():
+        refs.sort(key=lambda ref: (ref.line, ref.module, ref.name or "", ref.alias))
+    token = _RESOLUTION_LOOKUPS.set(_ResolutionLookups(index, candidates, modules, imports, wildcard_files))
+    try:
+        _resolve_graph(index)
+    finally:
+        _RESOLUTION_LOOKUPS.reset(token)
+
+
+def _resolve_graph(index: RepoIndex) -> None:
     modules = _module_lookup(index)
     aliases: dict[tuple[str, str | None, str], set[tuple[str, str]]] = defaultdict(set)
     for ref in index.imports:
