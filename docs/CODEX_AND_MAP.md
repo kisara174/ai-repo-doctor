@@ -1,5 +1,7 @@
 # Codex 调用与仓库结构关系图
 
+五个只读调查命令的参数、JSON、退出码与兼容规则见 [CLI 合同](CLI_CONTRACT.md)。
+
 v0.8.0 使用说明。Codex 获取本地Python及显式选择的JS/TS结构与来源证据，人查看离线HTML/SVG。正式版本、安装验收与公开下载身份见[0.8.0交付记录](delivery/2026-10-08-v0.8.0-js-ts-completion.md)。历史Python流程保持兼容。
 
 ## 1. 一次安装

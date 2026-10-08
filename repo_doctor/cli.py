@@ -634,7 +634,7 @@ def main(argv: list[str] | None = None) -> int:
             raise ValueError(f"--max-lines must be from 1 through {MAX_CONTEXT_LINES}")
         selected = normalize_languages(getattr(args, "languages", "python"))
         if args.command == "context" and args.snapshot_out is not None and selected != ("python",):
-            raise ValueError("JS/TS readonly preview does not support context snapshots; use --json")
+            raise ValueError("JS/TS context snapshots are not supported; use context --json")
         index = build_index(args.path, languages=selected)
 
         if args.command == 'map':

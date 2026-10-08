@@ -18,7 +18,7 @@ Codex 负责判断和修复。工具提供静态证据和关系图，不扩展�
 | 阶段 | 交付结果 | 前置 | 状态 |
 | --- | --- | --- | --- |
 | V0 | 基线保护、确认范围、修复已确认的文档缺陷 | 无 | 已完成 |
-| V1 | 五个核心命令及 JSON/退出码兼容合同 | V0 | 待开始 |
+| V1 | 五个核心命令及 JSON/退出码兼容合同 | V0 | 已完成 |
 | V2 | 可移植安装、Skill 版本绑定、升级和回滚 | V1 | 待开始 |
 | V3 | 文件/源码/时间/深度边界及可用规模证据 | V1；顺序在 V2 后 | 待开始 |
 | V4 | macOS/Linux 的明确平台支持及 CI | V2、V3 | 待开始 |
@@ -53,4 +53,6 @@ Codex 负责判断和修复。工具提供静态证据和关系图，不扩展�
 - [ ] A8 许可、维护、反馈、兼容和发布说明齐全。
 - [ ] 无未解决的发布阻塞；报告与实际产物一致后更新 Goal 为 complete。
 
-下一执行点：详细计划 **V1.1**。V0 证据：`~/.local/share/ai-repo-doctor/evaluations/v1-product-closure-v1/baseline/`；155,745 个保护路径、15 个既有未提交文件，75 个符号链接口径差异已逐项核对，未发现内容变化。
+下一执行点：详细计划 **V2.0**。V0 证据：`~/.local/share/ai-repo-doctor/evaluations/v1-product-closure-v1/baseline/`；155,745 个保护路径、15 个既有未提交文件，75 个符号链接口径差异已逐项核对，未发现内容变化。
+
+V1 证据：`~/.local/share/ai-repo-doctor/evaluations/v1-product-closure-v1/v1/`；10 项核心合同、11 项既有 agent workflow、无 extra 的实际退出 2 均已核对。
