@@ -1,6 +1,6 @@
 # JS/TS 基础支持与源码关联矩阵
 
-0.8.0 新增 JSX/TSX 实现分析与完整 ERROR/MISSING 整文件隔离；0.7.0 增加下述保守源码关联。旧版 0.6.0 仍沿用明确扩展路径合同；正式发行身份和验收结果见 [交付记录](delivery/2026-10-08-v0.7.0-source-association.md)。
+0.8.0 新增 JSX/TSX 实现分析与完整 ERROR/MISSING 整文件隔离；0.7.0 增加下述保守源码关联。旧版 0.6.0 仍沿用明确扩展路径合同；正式发行身份和验收结果见 [0.8.0交付记录](delivery/2026-10-08-v0.8.0-js-ts-completion.md)；[0.7.0历史](delivery/2026-10-08-v0.7.0-source-association.md)保留。
 
 ## 支持范围
 

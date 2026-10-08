@@ -113,13 +113,13 @@ files = {
 
 **Files:** 三处版本repo_doctor/_version.py、tools/validate_js_ts_install.py、tools/validate_release_install.py；E/candidate/attempt-001、E/ci。
 
-- [ ] 设0.8.0a1并冻结干净SHA；用git archive打包源码，pip wheel --no-deps，仅构建本项目。
-- [ ] 独立base和js两个venv，base --no-index安装wheel，js安装wheel[js]；verify import来自site-packages和三个固定backend版本。
-- [ ] 从wheel枚举全部repo_doctor runtime文件，与archive/source及两个安装runtime逐文件比对；实际数量从包读取，记录版本与wheel SHA。
-- [ ] 独立安装执行validate_js_ts_install.py的base/js两模式以及validate_release_install.py完整Python生命周期。正负例按expected code计数；新frontend夹具必须能拒绝旧0.7语义。
-- [ ] 使用安装CLI再跑P4三个真实调查，源码环境不能替代。输出重复字段差异逐项核对；不得用结果“类似”代替证据一致。
-- [ ] 创建PR附到任务，必须精确候选SHA七项CI：Python3.11/3.12/3.13、JS对应三项、Offline map interaction and SVG。
-- [ ] 冻结来源之后若生产行为变化，重新建attempt并重跑受影响门槛；不能继承旧候选通过标签。
+- [x] 设0.8.0a1并冻结干净SHA；用git archive打包源码，pip wheel --no-deps，仅构建本项目。
+- [x] 独立base和js两个venv，base --no-index安装wheel，js安装wheel[js]；verify import来自site-packages和三个固定backend版本。
+- [x] 从wheel枚举全部repo_doctor runtime文件，与archive/source及两个安装runtime逐文件比对；实际数量从包读取，记录版本与wheel SHA。
+- [x] 独立安装执行validate_js_ts_install.py的base/js两模式以及validate_release_install.py完整Python生命周期。正负例按expected code计数；新frontend夹具必须能拒绝旧0.7语义。
+- [x] 使用安装CLI再跑P4三个真实调查，源码环境不能替代。输出重复字段差异逐项核对；不得用结果“类似”代替证据一致。
+- [x] 创建PR附到任务，必须精确候选SHA七项CI：Python3.11/3.12/3.13、JS对应三项、Offline map interaction and SVG。
+- [x] 冻结来源之后若生产行为变化，重新建attempt并重跑受影响门槛；不能继承旧候选通过标签。
 
 ## P6：正式发布和独立部署（D4/D5）
 
@@ -142,4 +142,4 @@ files = {
 
 ## 当前进度
 
-P0–P4完成：错误隔离及JSX/TSX已实施，498项完整单元无skip通过；三个真实前端仓库17条源码调查及0.7.0 baseline已核对。新增安装门槛已拒绝旧语义，P5须验证独立新候选转绿。P5候选安装与精确CI开始；P6/P7未完成，尚未正式发行0.8.0。
+P0–P5完成；候选0.8.0a1精确SHA 23c84ea07360cc06861b3bbc3db5841dfdcb671e七项CI通过（run37720111835），独立base10/js31/Python生命周期33条验收通过，安装CLI三个真实仓库17条与源码语义JSON一致。失败attempt-001是验证器空查询错误，已修正且attempt-002通过。P6准备正式0.8.0，仍须正式源码/合并提交CI、安装、公开下载与部署；P7未完成。

@@ -10,13 +10,13 @@
 
 ## 安装
 
-发行方式为 [GitHub wheel](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.7.0)，目前没有 PyPI 发行。两种安装使用同一个 wheel。
+发行方式为 [GitHub wheel](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.8.0)，目前没有 PyPI 发行。两种安装使用同一个 wheel。
 
 仅使用 Python（没有无条件运行依赖）：
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.7.0/ai_repo_doctor-0.7.0-py3-none-any.whl'
+.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.8.0/ai_repo_doctor-0.8.0-py3-none-any.whl'
 .venv/bin/repo-doctor --version
 ```
 
@@ -24,13 +24,13 @@ python3 -m venv .venv
 
 ```sh
 python3 -m venv .venv-js
-.venv-js/bin/python -m pip install 'ai-repo-doctor[js] @ https://github.com/kisara174/ai-repo-doctor/releases/download/v0.7.0/ai_repo_doctor-0.7.0-py3-none-any.whl'
+.venv-js/bin/python -m pip install 'ai-repo-doctor[js] @ https://github.com/kisara174/ai-repo-doctor/releases/download/v0.8.0/ai_repo_doctor-0.8.0-py3-none-any.whl'
 .venv-js/bin/repo-doctor --version
 ```
 
 以下 `repo-doctor` 表示所选环境中的完整 CLI 路径，或已加入 PATH 的入口。默认扫描遵循目标仓库 ignore 规则；没有安装 extra 时，显式 JS/TS 选择会报错并提示安装方式。
 
-本机原有全局 Python 入口继续使用 [0.5.3](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.5.3)，其维护线和回滚包保留。0.7.0 独立部署路径见 [交付记录](docs/delivery/2026-10-08-v0.7.0-source-association.md)。
+本机原有全局 Python 入口继续使用 [0.5.3](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.5.3)，其维护线和回滚包保留。0.8.0 独立部署路径见 [交付记录](docs/delivery/2026-10-08-v0.8.0-source-association.md)。
 
 ## Codex 调查仓库
 
