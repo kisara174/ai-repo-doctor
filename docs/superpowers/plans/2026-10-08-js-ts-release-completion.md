@@ -42,7 +42,7 @@
 **Files:** 修改repo_doctor/js_ts.py；新增tests/test_js_ts_dialects.py中的错误合同。
 **Interfaces:** 既有extract(source, *, file, language)->dict；错误返回结构不变，symbols/imports/exports/calls及辅助集合全部为空。
 
-- [ ] 先加入最小失败合同（JS缺大括号、TS缺右括号），保留已有named ERROR合同。示例：
+- [x] 先加入最小失败合同（JS缺大括号、TS缺右括号），保留已有named ERROR合同。示例：
 
 ```python
 source = ('export function target() { return 1; }\n'
@@ -56,16 +56,16 @@ for key in ('symbols', 'esm_imports', 'esm_exports', 'calls', 'identifier_uses',
 self.assertEqual(data['class_header_spans'], {})
 ```
 
-- [ ] 运行红例并存E/local-verification/p2-red.log：
+- [x] 运行红例并存E/local-verification/p2-red.log：
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 /Users/kisara/.local/share/ai-repo-doctor/releases/v0.7.0/candidate/venvs/js/bin/python -B -m unittest tests.test_js_ts_dialects -v
 ```
 
-- [ ] 仅错误检测遍历完整children，valid AST提取仍用named_children。实现前先检查root.has_error；错误找最早byte位置，使用现有span，不访问Point.column。
-- [ ] 同命令转绿；增加坏文件作为import目标的index合同，确认无symbols/imports/calls及指向坏目标的边。
-- [ ] 另存新研究attempt，以工作树代码复核原130文件；所有has_error文件extract.error非空且证据为空。不要覆盖原baseline研究文件。
-- [ ] 主代理审diff、记录根因/红绿/真实样本变化，提交fix。
+- [x] 仅错误检测遍历完整children，valid AST提取仍用named_children。实现前先检查root.has_error；错误找最早byte位置，使用现有span，不访问Point.column。
+- [x] 同命令转绿；增加坏文件作为import目标的index合同，确认无symbols/imports/calls及指向坏目标的边。
+- [x] 另存新研究attempt，以工作树代码复核原130文件；所有has_error文件extract.error非空且证据为空。不要覆盖原baseline研究文件。
+- [x] 主代理审diff、记录根因/红绿/真实样本变化，提交fix。
 
 ## P3：前端方言、选择与有界证据（D2/D3）
 
@@ -142,4 +142,4 @@ files = {
 
 ## 当前进度
 
-P0–P1完成；研究、设计、gap review与实施清单已审查。P2–P7未开始；尚无0.8.0候选或新正式发行。0.7.0现有发行仍保持。
+P0–P2完成；错误隔离红绿合同与36项相关检查通过，原130文件均无部分证据，37个漏报已修复。P3–P7未开始；尚无0.8.0候选或新正式发行。0.7.0现有发行仍保持。

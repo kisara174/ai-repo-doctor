@@ -60,9 +60,16 @@ def extract(source: str, *, file: str, language: str) -> dict:
         for child in node.named_children:
             yield from descendants(child)
 
-    errors = [n for n in descendants(tree.root_node) if n.type == 'ERROR' or n.is_missing]
-    if errors:
-        first = min(errors, key=lambda n: (n.start_byte, n.end_byte))
+    if tree.root_node.has_error:
+        # MISSING punctuation can be anonymous; named_children misses it.
+        pending, errors = [tree.root_node], []
+        while pending:
+            node = pending.pop()
+            if node.type == 'ERROR' or node.is_missing:
+                errors.append(node)
+            pending.extend(node.children)
+        first = min(errors, key=lambda n: (n.start_byte, n.end_byte),
+                    default=tree.root_node)
         data['error'] = {'file': file, 'line': span(first)[0], 'message': 'Tree-sitter ERROR/missing; whole file excluded'}
         return data
 
