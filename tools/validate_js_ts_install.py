@@ -1,4 +1,4 @@
-"""Verify an installed base or JS preview using static CLI commands only.
+"""Verify an installed base or JS/TS installation using static CLI commands only.
 
 This validator has no imports from the source checkout and never executes fixture code.
 """
@@ -41,12 +41,12 @@ def validate(mode, python, cli, out):
         start = time.monotonic()
         result = subprocess.run(argv, cwd=out, env=env, capture_output=True,
                                 text=True, encoding="utf-8", timeout=30)
-        record = dict(argv=argv, cwd=str(out), exit_code=result.returncode,
+        record = dict(argv=argv, cwd=str(out), exit_code=result.returncode, expected_exit_code=expected,
                       duration_seconds=time.monotonic()-start, stdout=result.stdout,
                       stderr=result.stderr)
         filename = f"{len(commands)+1:02d}-{name}.json"
         write(out / filename, record)
-        commands.append(dict(name=name, record=filename, exit_code=result.returncode))
+        commands.append(dict(name=name, record=filename, exit_code=result.returncode, expected_exit_code=expected))
         require(result.returncode == expected, f"{name}: expected {expected}, see {filename}")
         return result
 
@@ -81,6 +81,20 @@ def validate(mode, python, cli, out):
     unique.mkdir()
     for filename in ("core.ts", "consumer.ts", "type_only.ts"):
         (unique / filename).write_text(FIXTURES[filename], encoding="utf-8")
+    frontend = out / "frontend"
+    frontend_sources = {
+        'helper.ts': 'export function value() { return 1; }\n',
+        'Card.tsx': 'export function Card() { return <div />; }\n',
+        'App.tsx': "import {value} from './helper.js';\nimport {Card} from './Card';\n"
+                   'export function App() { return <Card onClick={() => value()}>{value()}</Card>; }\n',
+        'Legacy.jsx': 'export const Legacy = () => <section>中文😀</section>;\n',
+        'bad.js': 'export function leaked() { return 1; }\nexport function broken() {\n  return leaked();\n',
+        'consumer.js': "import {leaked} from './bad.js';\nexport function consume() { return leaked(); }\n",
+    }
+    frontend.mkdir()
+    for filename, text in frontend_sources.items():
+        (frontend / filename).write_text(text, encoding='utf-8')
+    frontend_before = {name: digest(frontend / name) for name in frontend_sources}
     before = {str(p.relative_to(repo)): digest(p) for p in repo.rglob("*") if p.is_file()}
 
     overview = data("python-overview", "overview", repo)
@@ -95,6 +109,8 @@ def validate(mode, python, cli, out):
     if mode == "base":
         failure = rd("missing-extra", "overview", repo, "--languages", "javascript", expected=2)
         require("ai-repo-doctor[js]" in failure.stderr, "missing extra not explained")
+        failure = rd('missing-tsx-extra', 'overview', frontend, '--languages', 'typescript', expected=2)
+        require('ai-repo-doctor[js]' in failure.stderr, 'TSX missing extra not explained')
     else:
         languages = "python,javascript,typescript"
         overview = data("mixed-overview", "overview", repo, "--languages", languages)
@@ -204,15 +220,70 @@ def validate(mode, python, cli, out):
         require(association_before == {name: digest(association / name) for name in sources},
                 'association fixture modified')
 
+
+        frontend_languages = 'javascript,typescript'
+        front = data('frontend-overview', 'overview', frontend, '--languages', frontend_languages)
+        require(front['analysis'].get('source_extensions') == {
+            'javascript': ['.js', '.mjs', '.jsx'], 'typescript': ['.ts', '.tsx']}, 'frontend scope missing')
+        require(front['stats']['parse_errors'] == 1, 'MISSING token file not excluded')
+        matches = data('frontend-symbols', 'symbols', frontend, '--query', '',
+                       '--languages', frontend_languages)['matches']
+        ids = {m['id'] for m in matches}
+        require(ids == {'helper.ts::value', 'Card.tsx::Card', 'App.tsx::App',
+                        'Legacy.jsx::Legacy', 'consumer.js::consume'}, 'frontend symbol or error isolation failed')
+        sid = next(m['id'] for m in matches if m['id'] == 'App.tsx::App')
+        context = data('frontend-context', 'context', frontend, sid, '--include-symbol', 'helper.ts::value',
+                       '--max-lines', '120', '--languages', frontend_languages)
+        edge = next(e for e in context['call_evidence'] if e['caller'] == sid)
+        require((edge['callee'], edge['line'], edge['via_esm_import']['specifier'],
+                 edge['via_esm_import']['start_line'], edge['via_esm_import']['resolved_file']) ==
+                ('helper.ts::value', 3, './helper.js', 1, 'helper.ts'), 'frontend import provenance incorrect')
+        count = 0
+        for block in context['blocks']:
+            lines = (frontend / block['file']).read_text(encoding='utf-8').splitlines()
+            for line in block['lines']:
+                require(lines[line['line'] - 1] == line['text'], 'frontend context quote mismatch')
+                count += 1
+        require(count <= 120 and not context['budget_exhausted'], 'frontend context budget failed')
+        impact = data('frontend-impact', 'impact', frontend, 'helper.ts::value', '--depth', '2',
+                      '--languages', frontend_languages)
+        require(len(impact['affected_symbols']) == 1 and
+                impact['affected_symbols'][0]['symbol'] == sid and
+                impact['affected_symbols'][0]['call_path_evidence'] == [edge], 'frontend impact path mismatch')
+        mapping = data('frontend-map', 'map', frontend, '--languages', frontend_languages,
+                       '--out', out / 'frontend-map')
+        graph = json.loads(Path(mapping['map_json']).read_text(encoding='utf-8'))
+        require({(e['source'], e['target']) for e in graph['edges'] if e['kind'] == 'call'} ==
+                {('symbol:App.tsx::App', 'symbol:helper.ts::value')}, 'tag, callback or bad-file call invented')
+        require({(e['source'], e['target']) for e in graph['edges'] if e['kind'] == 'import'} ==
+                {('file:App.tsx', 'file:helper.ts'), ('file:App.tsx', 'file:Card.tsx')}, 'frontend dependency mismatch')
+        for language, expected_ids in (
+                ('javascript', {'Legacy.jsx::Legacy', 'consumer.js::consume'}),
+                ('typescript', {'helper.ts::value', 'Card.tsx::Card', 'App.tsx::App'})):
+            selected = data('frontend-' + language, 'symbols', frontend, '--query', '', '--languages', language)
+            require({m['id'] for m in selected['matches']} == expected_ids, 'unselected frontend language read')
+        rd('frontend-bad-symbol', 'context', frontend, 'bad.js::leaked',
+           '--languages', frontend_languages, '--json', expected=2)
+
     maps = {}
-    for directory in (out / "python-map", out / "mixed-map", out / 'association-map'):
+    for directory in (out / "python-map", out / "mixed-map", out / 'association-map', out / 'frontend-map'):
         if not directory.exists():
             continue
         require({p.name for p in directory.iterdir()} == {"map.json", "map.html", "structure.svg", "relations.svg"}, "wrong map files")
-        for name in ("structure.svg", "relations.svg"):
-            ET.parse(directory / name)
+        graph = json.loads((directory / 'map.json').read_text(encoding='utf-8'))
+        for view_name, view in graph['views'].items():
+            nodes = {n['id'] for n in view['nodes']}
+            require(len(nodes) <= 200 and len(view['edges']) <= 500, 'map bounds exceeded')
+            require(all(e['source'] in nodes and e['target'] in nodes for e in view['edges']),
+                    'map dangling endpoint')
+            svg = ET.parse(directory / (view_name + '.svg'))
+            actual = {e.get('data-edge-id') for e in svg.findall('.//{http://www.w3.org/2000/svg}path')
+                      if e.get('data-edge-id') is not None}
+            require(actual == {e['id'] for e in view['edges']}, 'SVG projection mismatch')
         maps[directory.name] = {p.name: digest(p) for p in directory.iterdir()}
     require(before == {str(p.relative_to(repo)): digest(p) for p in repo.rglob("*") if p.is_file()}, "target source modified")
+    require(frontend_before == {name: digest(frontend / name) for name in frontend_sources},
+            'frontend fixture modified')
     summary = dict(status="passed", mode=mode, version=VERSION, installed_metadata=metadata,
                    python=str(python), cli=str(cli), commands=commands, maps_sha256=maps,
                    source_fingerprint=overview["source_fingerprint"] if "source_fingerprint" in overview

@@ -97,17 +97,17 @@ files = {
 
 ## P4：真实调查与公开使用闭环（D3/D4/D5）
 
-**Files:** 新evaluation/js-ts-release-completion/cases.json及README.md；tools/validate_js_ts_install.py、.github/workflows/ci.yml；README.md、docs/JS_TS_SUPPORT.md、resources/skill/SKILL.md；E/product-validation/。
+**Files:** 新evaluation/js-ts-release-completion/cases.json及README.md；tools/validate_js_ts_install.py、.github/workflows/ci.yml；README.md、docs/JS_TS_SUPPORT.md、repo_doctor/resources/skill/SKILL.md；E/product-validation/。
 
-- [ ] 从research/frontend-parse-files.json冻结三个来源：jenkins-infra/plugin-site(JSX)、emircanagac/voxpery(TSX)、roseforljh/qoneagent(TSX)。固定commit/tree、source SHA、组件符号行段和直接helper调用来源；主代理手工核对原文后写cases，不从工具结果反填正确答案。
-- [ ] JSX案例至少搜索具名组件并核对文件依赖、context引文及无虚构标签调用。TSX两个案例至少一条安全helper直接调用含via_esm_import/impact逐跳证据。不能把包调用、匿名callback或标签当作函数调用题。
-- [ ] 每仓库执行overview→symbols→context(120行)→impact(depth2)→map。真实ID取symbols输出，复制全部命令、stdout/stderr/exitcode与输出hash；前后核对目标commit、Git状态和来源字节不变。
-- [ ] 使用既有0.7.0独立CLI作三个同题baseline，记录不支持范围；新增结果按实际证据回答，拒绝文件或未知保持unknown。
-- [ ] 在安装验证器新增独立frontend夹具，与旧case不混用：前端overview/symbols/context/impact/map、MISSING坏文件隔离、JSX标签/props/callback无假边、两种语言选择与无extra错误提示。
-- [ ] 验证器每条命令显式expected exit；最终计数从回执读取。不能继续写旧23或要求负例exit0。
-- [ ] 文档支持矩阵、README五命令教程、packaged Skill同步后缀、源码证据及JSX限制；用户安装Skill不改，新的包内Skill另行导出到交付目录并比对。
-- [ ] 运行一次完整本地unit及受影响合同无skip；运行既有map viewer/search DOM检查，验证新前端地图四份产物和上限。viewer未变不要求重复无关Chrome排障。
-- [ ] 主代理检查实际diff与真实题答案，处理具体发现，不把单元绿色当作语义正确替代。提交集成代码。
+- [x] 从research/frontend-parse-files.json冻结三个来源：jenkins-infra/plugin-site(JSX)、emircanagac/voxpery(TSX)、roseforljh/qoneagent(TSX)。固定commit/tree、source SHA、组件符号行段和直接helper调用来源；主代理手工核对原文后写cases，不从工具结果反填正确答案。
+- [x] JSX案例至少搜索具名组件并核对文件依赖、context引文及无虚构标签调用。TSX两个案例至少一条安全helper直接调用含via_esm_import/impact逐跳证据。不能把包调用、匿名callback或标签当作函数调用题。
+- [x] 每仓库执行overview→symbols→context(120行)→impact(depth2)→map。真实ID取symbols输出，复制全部命令、stdout/stderr/exitcode与输出hash；前后核对目标commit、Git状态和来源字节不变。
+- [x] 使用既有0.7.0独立CLI作三个同题baseline，记录不支持范围；新增结果按实际证据回答，拒绝文件或未知保持unknown。
+- [x] 在安装验证器新增独立frontend夹具，与旧case不混用：前端overview/symbols/context/impact/map、MISSING坏文件隔离、JSX标签/props/callback无假边、两种语言选择与无extra错误提示。
+- [x] 验证器每条命令显式expected exit；最终计数从回执读取。不能继续写旧23或要求负例exit0。
+- [x] 文档支持矩阵、README五命令教程、packaged Skill同步后缀、源码证据及JSX限制；用户安装Skill不改，新的包内Skill另行导出到交付目录并比对。
+- [x] 运行一次完整本地unit及受影响合同无skip；运行既有map viewer/search DOM检查，验证新前端地图四份产物和上限。viewer未变不要求重复无关Chrome排障。
+- [x] 主代理检查实际diff与真实题答案，处理具体发现，不把单元绿色当作语义正确替代。提交集成代码。
 
 ## P5：候选安装和精确CI（D4）
 
@@ -142,4 +142,4 @@ files = {
 
 ## 当前进度
 
-P0–P3完成；错误隔离与JSX/TSX功能已实施，121项相关合同通过。P4真实调查、使用文档和安装门槛正在准备；P5–P7未开始；尚无0.8.0候选或新正式发行。0.7.0现有发行仍保持。
+P0–P4完成：错误隔离及JSX/TSX已实施，498项完整单元无skip通过；三个真实前端仓库17条源码调查及0.7.0 baseline已核对。新增安装门槛已拒绝旧语义，P5须验证独立新候选转绿。P5候选安装与精确CI开始；P6/P7未完成，尚未正式发行0.8.0。

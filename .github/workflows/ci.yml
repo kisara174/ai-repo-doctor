@@ -112,7 +112,7 @@ jobs:
         run: |
           python - <<'PY'
           import unittest
-          modules = ['tests.test_languages', 'tests.test_js_ts', 'tests.test_esm', 'tests.test_index', 'tests.test_context', 'tests.test_cli', 'tests.test_agent_tools', 'tests.test_repo_map', 'tests.test_js_ts_spike']
+          modules = ['tests.test_languages', 'tests.test_js_ts', 'tests.test_esm', 'tests.test_index', 'tests.test_context', 'tests.test_cli', 'tests.test_agent_tools', 'tests.test_repo_map', 'tests.test_js_ts_spike', 'tests.test_js_ts_dialects']
           result = unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromNames(modules))
           assert result.wasSuccessful() and not result.skipped, 'JS contract gate failed or skipped'
           PY
