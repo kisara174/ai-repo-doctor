@@ -3,6 +3,8 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .limits import AnalysisBudget
+
 
 @dataclass(frozen=True, slots=True)
 class FileRecord:
@@ -257,3 +259,5 @@ class RepoIndex:
     js_calls_resolved: bool = False
     esm_source_associations: dict[tuple[str, str, int], ESMSourceAssociation] = field(default_factory=dict)
     js_call_imports: dict[tuple[str, str, int], ESMImportRef] = field(default_factory=dict)
+    budget: AnalysisBudget = field(default_factory=AnalysisBudget, repr=False)
+    discovered_paths: tuple[str, ...] | None = None

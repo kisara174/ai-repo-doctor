@@ -3,6 +3,8 @@ import stat
 import subprocess
 from pathlib import Path
 
+from .limits import AnalysisBudget, AnalysisLimitError
+
 
 _GENERATED_DIRS = {
     ".git",
@@ -18,24 +20,38 @@ _GENERATED_DIRS = {
 }
 
 
-def discover_files(root: Path, *, python_only: bool = False) -> tuple[list[str], str]:
+def run_git(argv: list[str], *, timeout: float, **kwargs) -> subprocess.CompletedProcess:
+    try:
+        return subprocess.run(argv, timeout=timeout, **kwargs)
+    except subprocess.TimeoutExpired as exc:
+        raise AnalysisLimitError(f'git_timeout_seconds limit {timeout} exceeded: Git {argv[3]}') from exc
+    except subprocess.CalledProcessError as exc:
+        raise ValueError(f'Git {argv[3]} failed with exit code {exc.returncode}') from exc
+
+
+def discover_files(root: Path, *, python_only: bool = False,
+                   budget: AnalysisBudget | None = None) -> tuple[list[str], str]:
+    budget = budget if budget is not None else AnalysisBudget()
+    budget.checkpoint("file discovery")
+    timeout = budget.limits.git_timeout_seconds
     root = Path(root).resolve()
     if not root.is_dir():
         raise ValueError(f"Not a directory: {root}")
 
     try:
-        result = subprocess.run(
+        result = run_git(
             ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
-            check=False,
+            check=False, timeout=timeout,
         )
     except FileNotFoundError:
         result = None
 
+    budget.checkpoint("Git discovery")
     if result is not None and result.returncode == 0:
         top = Path(os.fsdecode(result.stdout.removesuffix(b"\n"))).resolve()
-        listed = subprocess.run(
+        listed = run_git(
             [
                 "git",
                 "-C",
@@ -46,10 +62,11 @@ def discover_files(root: Path, *, python_only: bool = False) -> tuple[list[str],
                 "-z",
             ],
             stdout=subprocess.PIPE,
-            check=True,
+            check=True, timeout=timeout,
         ).stdout
         files = set()
         for entry in listed.split(b"\0"):
+            budget.checkpoint("Git file listing")
             if not entry:
                 continue
             candidate = top / os.fsdecode(entry)
@@ -80,6 +97,7 @@ def discover_files(root: Path, *, python_only: bool = False) -> tuple[list[str],
 
     files = []
     for current, directories, filenames in os.walk(root, topdown=True, followlinks=False):
+        budget.checkpoint("directory walk")
         current_path = Path(current)
         directories[:] = [
             name
@@ -88,6 +106,7 @@ def discover_files(root: Path, *, python_only: bool = False) -> tuple[list[str],
             and not (current_path / name).is_symlink()
         ]
         for name in filenames:
+            budget.checkpoint("file walk")
             if python_only and not name.endswith(".py"):
                 continue
             path = current_path / name

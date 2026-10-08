@@ -2,6 +2,7 @@
 
 from pathlib import PurePosixPath
 
+from .limits import AnalysisLimitError
 from .model import RepoIndex
 from .source import read_source
 
@@ -31,7 +32,9 @@ def _validate_evidence(index: RepoIndex, item: object, number: int, known_files:
         reasons.append(f"{prefix} line range must contain integers")
     else:
         try:
-            lines = read_source(index.root, path, index.root_identity).splitlines()
+            lines = read_source(index.root, path, index.root_identity, budget=index.budget).splitlines()
+        except AnalysisLimitError:
+            raise
         except ValueError:
             return [f"{prefix} has an Unsafe evidence path"]
         except (OSError, SyntaxError, UnicodeError) as exc:

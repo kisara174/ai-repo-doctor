@@ -3,6 +3,7 @@
 from dataclasses import replace
 from pathlib import Path
 
+from .limits import AnalysisBudget, AnalysisLimits
 from .graph import resolve_graph
 from .model import AnalysisLimit, RepoIndex
 from .parser import parse_python_file
@@ -11,22 +12,28 @@ from .languages import language_for_path, normalize_languages
 from .semantics import resolve_semantic_edges
 
 
-def build_index(root: Path, *, languages: tuple[str, ...] = ("python",)) -> RepoIndex:
+def build_index(root: Path, *, languages: tuple[str, ...] = ("python",),
+                limits: AnalysisLimits | None = None) -> RepoIndex:
+    budget = AnalysisBudget(limits)
     if not isinstance(languages, tuple) or not all(isinstance(name, str) for name in languages):
         raise ValueError("languages must be a tuple of source language names")
     languages = normalize_languages(",".join(languages))
     root = Path(root).resolve()
     root_stat = root.stat()
     root_identity = (root_stat.st_dev, root_stat.st_ino)
-    paths, scan_mode = discover_files(root)
+    paths, scan_mode = discover_files(root, budget=budget)
     selected = [path for path in paths if language_for_path(path) in languages]
-    index = RepoIndex(root=root, scan_mode=scan_mode, root_identity=root_identity)
+    budget.checkpoint("selected file count")
+    budget.check_file_count(len(selected))
+    index = RepoIndex(root=root, scan_mode=scan_mode, root_identity=root_identity,
+                      budget=budget, discovered_paths=tuple(paths))
     candidates_by_id = {}
     for path in selected:
         if language_for_path(path) != "python":
             continue
         index.file_languages[path] = "python"
-        parsed = parse_python_file(root, path, root_identity=root_identity)
+        parsed = parse_python_file(root, path, root_identity=root_identity, budget=budget)
+        budget.checkpoint(path)
         index.files.append(parsed.file)
         for symbol in parsed.symbols:
             candidates_by_id.setdefault(symbol.id, []).append(symbol)
@@ -61,7 +68,9 @@ def build_index(root: Path, *, languages: tuple[str, ...] = ("python",)) -> Repo
         if any(f"{symbol.file}::{'.'.join(symbol.qualname.split('.')[:part])}" in index.ambiguous_symbols for part in range(1, len(symbol.qualname.split('.')))):
             del index.symbols[symbol_id]
             index.ambiguous_symbols.add(symbol_id)
+    budget.checkpoint("Python graph")
     resolve_graph(index)
+    budget.checkpoint("Python semantics")
     resolve_semantic_edges(index)
     index.analysis_languages = languages
     js_candidates = {}
@@ -77,7 +86,8 @@ def build_index(root: Path, *, languages: tuple[str, ...] = ("python",)) -> Repo
         for path in selected:
             if language_for_path(path) == "python":
                 continue
-            data = parse_js_ts_file(root, path, root_identity=root_identity)
+            data = parse_js_ts_file(root, path, root_identity=root_identity, budget=budget)
+            budget.checkpoint(path)
             parsed = data.parsed
             index.files.append(parsed.file)
             index.file_languages[path] = language_for_path(path)
@@ -104,6 +114,8 @@ def build_index(root: Path, *, languages: tuple[str, ...] = ("python",)) -> Repo
                 del index.symbols[sid]
                 index.ambiguous_symbols.add(sid)
         from .esm import resolve_esm_graph
+        budget.checkpoint("ESM graph")
         resolve_esm_graph(index)
     index.files.sort(key=lambda item: item.path)
+    budget.checkpoint("index complete")
     return index

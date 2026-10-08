@@ -5,6 +5,7 @@ from collections import defaultdict, deque
 from dataclasses import asdict
 
 from .model import CallEdge, RepoIndex, SemanticEdge, Symbol
+from .limits import AnalysisLimitError
 from .source import read_source
 from .languages import analysis_metadata
 
@@ -34,7 +35,7 @@ def _require_symbol(index: RepoIndex, symbol_id: str) -> Symbol:
 
 def _read_lines(index: RepoIndex, path: str) -> list[str]:
     return read_source(index.root, path, index.root_identity,
-                       language=index.file_languages.get(path, "python")).splitlines()
+                       language=index.file_languages.get(path, "python"), budget=index.budget).splitlines()
 
 
 def _semantic_edge_data(edge: SemanticEdge, symbol_id: str) -> dict:
@@ -208,6 +209,8 @@ def build_context(
         if symbol.file not in parsed_modules:
             try:
                 module = ast.parse("\n".join(source_lines(symbol.file)))
+            except AnalysisLimitError:
+                raise
             except (SyntaxError, ValueError):
                 module = None
             parsed_modules[symbol.file] = module
@@ -305,6 +308,7 @@ def build_context(
         for edge in index.semantic_edges
         if edge.source_symbol == symbol_id or edge.target_symbol == symbol_id
     ]
+    index.budget.checkpoint("context/impact evidence")
     return {
         "schema_version": 2,
         "symbol": symbol_id,
@@ -326,8 +330,8 @@ def build_context(
 def build_impact(index: RepoIndex, symbol_id: str, depth: int = 2) -> dict:
     """Follow reverse static call edges; this is not runtime coverage."""
     target = _require_symbol(index, symbol_id)
-    if depth < 1:
-        raise ValueError("depth must be at least 1")
+    if not 1 <= depth <= 10:
+        raise ValueError("depth must be from 1 through 10")
     incoming: dict[str, set[str]] = defaultdict(set)
     first_call = {}
     for edge in index.call_edges:
@@ -369,6 +373,7 @@ def build_impact(index: RepoIndex, symbol_id: str, depth: int = 2) -> dict:
         for edge in index.semantic_edges
         if edge.source_symbol == symbol_id or edge.target_symbol == symbol_id
     ]
+    index.budget.checkpoint("context/impact evidence")
     return {
         "schema_version": 2,
         "symbol": symbol_id,

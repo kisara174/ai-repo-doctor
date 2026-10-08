@@ -1,28 +1,27 @@
 # Codex 调用与仓库结构关系图
 
-v0.8.0 使用说明。Codex 获取本地Python及显式选择的JS/TS结构与来源证据，人查看离线HTML/SVG。正式版本、安装验收与公开下载身份见[0.8.0交付记录](delivery/2026-10-08-v0.8.0-js-ts-completion.md)。历史Python流程保持兼容。
+<!-- repo-doctor-install-versions: 1.0.0 -->
 
-## 1. 一次安装
+本页使用正式 1.0.0；完整下载校验、版本绑定和回滚见 [安装指南](INSTALL.md)，实际发行身份见 [交付记录](delivery/2026-10-08-v1.0.0-product-closure.md)。五个只读调查命令的参数、JSON、退出码见 [CLI 合同](CLI_CONTRACT.md)。
 
-其他机器使用 Python 3.11+ 安装发行 wheel；使用公开安装地址：
+## 1. 一次安装与绑定
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.8.0/ai_repo_doctor-0.8.0-py3-none-any.whl'
+.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v1.0.0/ai_repo_doctor-1.0.0-py3-none-any.whl'
 export PATH="$PWD/.venv/bin:$PATH"
-repo-doctor --version
-repo-doctor skill export --out NEW_SKILL_DIRECTORY
+RD_CLI="$PWD/.venv/bin/repo-doctor"
+"$RD_CLI" --version
+"$RD_CLI" skill export --cli "$RD_CLI" --out "$HOME/.agents/skills/repo-doctor-v1"
 ```
 
-这台 Mac 的全局 `~/.local/bin/repo-doctor` 保留0.5.3。0.8.0独立入口为 `/Users/kisara/.local/share/ai-repo-doctor/releases/v0.8.0/candidate/venvs/js/bin/repo-doctor`；使用此完整路径可分析Python和JS/TS。已有用户Skill保持，新的Skill另行导出，不覆盖设置。
-
-Skill 导出目录必须尚不存在。Codex 中可显式使用 `$repo-doctor`；如果当前会话尚未发现 Skill，重新启动客户端再调用。安装不新增 MCP 服务，也不修改全局配置。旧版与可选云端接口见 [兼容参考](LEGACY_USAGE.md)。
+Skill 目标目录必须不存在；保留原 Skill，在新会话显式指定 `$repo-doctor-v1`。先读取 installation.json 并核对绑定 CLI 的版本，下列 repo-doctor 命令在 Codex 中始终改用绑定的绝对 CLI。JS/TS 安装相同 wheel 的 js extra，见安装指南。不新增 MCP 或改客户端配置；历史 Python 接口见 [兼容参考](LEGACY_USAGE.md)。
 
 ## 2. 用 Codex 阅读仓库
 
 可以直接提出：
 
-> 使用 $repo-doctor 理解这个 Python 仓库，生成结构关系图，并分析指定函数的调用与影响。详细分析在对话中解释。
+> 使用 $repo-doctor-v1 理解这个 Python 仓库，生成结构关系图，并分析指定函数的调用与影响。详细分析在对话中解释。
 
 调用工具的基本顺序是：
 
@@ -166,8 +165,8 @@ verify/reproduce 只运行显式参数数组，不经隐式 shell；默认 120 �
 ```sh
 # 按上面的 .venv 安装时
 .venv/bin/python -m repo_doctor.case_recovery OLD_CASE --out NEW_ARCHIVE
-# 这台 Mac 的持久安装
-~/.local/share/ai-repo-doctor/venv/bin/python -m repo_doctor.case_recovery OLD_CASE --out NEW_ARCHIVE
+# 或显式选择安装环境中的 Python
+"$RD_PY" -m repo_doctor.case_recovery OLD_CASE --out NEW_ARCHIVE
 ```
 
 两条命令择一。输出目录必须不存在且在源任务外；工具保留原件，生成 original-case.json（完整原字节）、recovered-report.md 和 recovery.json（来源和产物哈希）。完整成功才有 recovery.json；出错返回 2，并可能留下部分产物供人工查看。
@@ -176,7 +175,7 @@ verify/reproduce 只运行显式参数数组，不经隐式 shell；默认 120 �
 
 ## JS/TS 正式版的 Codex 调用路径
 
-0.8.0已正式发布，安装同一wheel的`[js]` extra后显式选择语言。Mac独立CLI为 `/Users/kisara/.local/share/ai-repo-doctor/releases/v0.8.0/candidate/venvs/js/bin/repo-doctor`，先检查`--version`。安装方法及完整边界见[README](../README.md)和[支持矩阵](JS_TS_SUPPORT.md)。旧0.6预览及0.7发行保留为历史版本，不代表当前范围。
+0.8.0已正式发布，安装同一wheel的`[js]` extra后显式选择语言。选择自己安装环境的绝对 CLI 并先检查 `--version`。安装方法及完整边界见[README](../README.md)和[支持矩阵](JS_TS_SUPPORT.md)。旧0.6预览及0.7发行保留为历史版本，不代表当前范围。
 
 使用该绝对 CLI 依次调用 `overview REPO --languages javascript,typescript --json`、`symbols REPO --languages javascript,typescript --query NAME --json`。从本轮返回结果选择真实 ID，再调用 `context REPO REAL_ID --languages javascript,typescript --max-lines 120 --json` 和 `impact REPO REAL_ID --languages javascript,typescript --depth 2 --json`。缺少证据时补读源码，明确区分源码可见关系和工具已解析关系。
 

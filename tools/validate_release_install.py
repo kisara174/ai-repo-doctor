@@ -11,7 +11,7 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 
-EXPECTED_VERSION = '0.8.0'
+EXPECTED_VERSION = '1.0.0'
 
 
 def require(condition: bool, message: str) -> None:
@@ -36,8 +36,9 @@ def case_hashes(directory: Path) -> dict:
 
 
 class InstalledValidation:
-    def __init__(self, python: Path, cli: Path, out: Path):
+    def __init__(self, python: Path, cli: Path, out: Path, expected_version: str = EXPECTED_VERSION):
         self.python, self.cli, self.out = python, cli, out
+        self.expected_version = expected_version
         self.env = dict(os.environ)
         self.env.pop('PYTHONPATH', None)
         self.env.pop('DEEPSEEK_API_KEY', None)
@@ -49,10 +50,12 @@ class InstalledValidation:
         result = subprocess.run(argv, cwd=self.out, env=self.env, capture_output=True,
                                 text=True, encoding='utf-8', timeout=120, check=False)
         record = dict(name=name, argv=argv, cwd=str(self.out), exit_code=result.returncode,
+                      expected_exit_code=expected,
                       stdout=result.stdout, stderr=result.stderr)
         log = f'{len(self.commands) + 1:02d}-{name}.json'
         write_json(self.out / log, record)
-        self.commands.append(dict(name=name, exit_code=result.returncode, log=log))
+        self.commands.append(dict(name=name, exit_code=result.returncode,
+                                  expected_exit_code=expected, log=log))
         require(result.returncode == expected,
                 f'{name}: expected exit {expected}, got {result.returncode}; see {log}')
         return result.stdout
@@ -72,13 +75,13 @@ class InstalledValidation:
             "print(json.dumps({'version': version('ai-repo-doctor'), "
             "'import_path': repo_doctor.__file__, "
             "'requires_dist': metadata('ai-repo-doctor').get_all('Requires-Dist') or []}))"]))
-        require(metadata['version'] == EXPECTED_VERSION, 'wrong installed distribution version')
+        require(metadata['version'] == self.expected_version, 'wrong installed distribution version')
         require('site-packages' in Path(metadata['import_path']).parts, 'source checkout imported')
         dependencies = metadata['requires_dist']
         require(len(dependencies) == 3 and all('extra == "js"' in row or "extra == 'js'" in row for row in dependencies),
                 'unexpected unconditional runtime dependencies')
         version = self.rd('version', '--version').strip()
-        require(version == f'repo-doctor {EXPECTED_VERSION}', 'CLI version mismatch')
+        require(version == f'repo-doctor {self.expected_version}', 'CLI version mismatch')
 
         repo, case = self.out / 'repo', self.out / 'case'
         repo.mkdir()
@@ -102,7 +105,7 @@ class InstalledValidation:
         for name in ('structure.svg', 'relations.svg'):
             ElementTree.parse(map_dir / name)
         created = json.loads(self.rd('create-case', 'report', 'create', repo, '--out', case, '--json'))
-        require(created['tool_version'] == EXPECTED_VERSION, 'new case version mismatch')
+        require(created['tool_version'] == self.expected_version, 'new case version mismatch')
         finding = dict(title='Controlled value contract', category='behavior', confidence=0.9,
                        reasoning='This controlled fixture requires value() == 2.',
                        impact='entry calls value', suggested_fix='Change value and check explicitly',
@@ -198,14 +201,14 @@ class InstalledValidation:
         require(len(read_json(archive / 'original-case.json')['issues']) == 6, 'recovery lost issues')
         require(recovery == read_json(archive / 'recovery.json'), 'recovery receipt mismatch')
         require(recovery['source_tool_version'] == '0.5.0'
-                and recovery['export_tool_version'] == EXPECTED_VERSION, 'recovery version mismatch')
+                and recovery['export_tool_version'] == self.expected_version, 'recovery version mismatch')
         for name, digest in recovery['files_sha256'].items():
             require(file_hash(archive / name) == digest, 'recovery artifact hash mismatch')
         report_text = (archive / 'recovered-report.md').read_text(encoding='utf-8')
         require('只读档案' in report_text and all(f'A-{i:03d}' in report_text for i in range(1, 7)),
                 'read-only report is incomplete')
 
-        return dict(version=EXPECTED_VERSION, site_packages_import=True,
+        return dict(version=self.expected_version, site_packages_import=True,
                     report_version_matches=True, normal_offline_flow=True,
                     current_cycle_guard=True, related_command_guard=True,
                     oversize_write_preserved_case=True, oversize_write_preserved_report=True,
@@ -221,6 +224,7 @@ def main() -> int:
     parser.add_argument('--python', type=Path, required=True)
     parser.add_argument('--cli', type=Path, required=True)
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--expected-version', default=EXPECTED_VERSION)
     args = parser.parse_args()
     try:
         require(all(path.is_absolute() for path in (args.python, args.cli, args.out)),
@@ -228,7 +232,7 @@ def main() -> int:
         require(args.python.is_file() and args.cli.is_file(), 'installed Python/CLI missing')
         require(not args.out.exists() and not args.out.is_symlink(), 'evidence output already exists')
         args.out.mkdir(mode=0o700, parents=True)
-        validator = InstalledValidation(args.python, args.cli, args.out.resolve())
+        validator = InstalledValidation(args.python, args.cli, args.out.resolve(), args.expected_version)
         receipt = validator.validate()
         write_json(args.out / 'receipt.json', receipt)
         print(json.dumps(receipt, ensure_ascii=False, indent=2))

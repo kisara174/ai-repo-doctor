@@ -3,7 +3,6 @@
 import hashlib
 import json
 import os
-import subprocess
 import tempfile
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -13,6 +12,8 @@ from ._version import __version__
 from .architecture import build_architecture_summary
 from .context import build_impact
 from .leads import build_review_leads
+from .limits import AnalysisBudget, AnalysisLimitError
+from .scanner import run_git
 from .model import RepoIndex
 from .source import read_source
 
@@ -34,22 +35,28 @@ def source_fingerprint(index: RepoIndex) -> str:
         digest.update(b"\0")
         try:
             content = read_source(index.root, item.path, index.root_identity,
-                                  language=index.file_languages.get(item.path, "python"))
+                                  language=index.file_languages.get(item.path, "python"), budget=index.budget)
+        except AnalysisLimitError:
+            raise
         except (OSError, ValueError, UnicodeError, SyntaxError):
             content = "<unreadable>"
         digest.update(content.encode("utf-8"))
         digest.update(b"\0")
+    index.budget.checkpoint("source fingerprint")
     return digest.hexdigest()
 
 
-def _revision(root: Path) -> str | None:
+def _revision(root: Path, *, budget: AnalysisBudget | None = None) -> str | None:
+    budget = budget if budget is not None else AnalysisBudget()
+    budget.checkpoint("Git revision")
     try:
-        result = subprocess.run(
+        result = run_git(
             ["git", "-C", str(root), "rev-parse", "HEAD"],
-            capture_output=True, text=True, timeout=5, check=False,
+            capture_output=True, text=True, timeout=budget.limits.git_timeout_seconds, check=False,
         )
-    except (OSError, subprocess.TimeoutExpired):
+    except OSError:
         return None
+    budget.checkpoint("Git revision complete")
     value = result.stdout.strip()
     return value if result.returncode == 0 and len(value) == 40 else None
 
@@ -105,9 +112,6 @@ def create_case(index: RepoIndex, directory: Path) -> dict:
     if directory.exists():
         if not directory.is_dir() or any(directory.iterdir()):
             raise ValueError("case directory already exists or is not empty")
-    else:
-        directory.mkdir(mode=0o700, parents=True)
-    os.chmod(directory, 0o700)
     symbols = list(index.symbols.values())
     static_issues = _static_issues(index)
     case = {
@@ -117,7 +121,7 @@ def create_case(index: RepoIndex, directory: Path) -> dict:
         "updated_at": timestamp(),
         "repository": {
             "root": str(index.root),
-            "revision": _revision(index.root),
+            "revision": _revision(index.root, budget=index.budget),
             "source_fingerprint": source_fingerprint(index),
             "scan_mode": index.scan_mode,
         },
@@ -142,6 +146,9 @@ def create_case(index: RepoIndex, directory: Path) -> dict:
         "diagnoses": [],
         "issues": static_issues,
     }
+    index.budget.checkpoint("case evidence complete")
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(directory, 0o700)
     save_case(directory, case)
     return case
 

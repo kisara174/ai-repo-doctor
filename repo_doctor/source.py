@@ -1,9 +1,12 @@
 """Read scanned source without following repository path symlinks."""
 
+import io
 import os
 import stat
 import tokenize
 from pathlib import Path, PurePosixPath
+
+from .limits import AnalysisBudget
 
 
 def _open_no_follow(
@@ -52,7 +55,7 @@ def _open_checked_fallback(
 
 def read_source(
     root: Path, relative_path: str, root_identity: tuple[int, int] | None = None,
-    *, language: str = "python",
+    *, language: str = "python", budget: AnalysisBudget | None = None,
 ) -> str:
     """Read selected source with path containment; Python retains encoding cookies."""
     if language not in ("python", "javascript", "typescript"):
@@ -61,6 +64,8 @@ def read_source(
     parts = relative.parts
     if not parts or relative.is_absolute() or ".." in parts or "\\" in relative_path:
         raise ValueError(f"Unsafe source path: {relative_path}")
+    budget = budget if budget is not None else AnalysisBudget()
+    budget.checkpoint(relative_path)
     root = Path(root).absolute()
     try:
         if os.open in os.supports_dir_fd and hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY"):
@@ -72,8 +77,10 @@ def read_source(
     with os.fdopen(descriptor, "rb") as stream:
         if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
             raise ValueError(f"Unsafe source path: {relative_path}")
+        raw = stream.read(budget.read_size())
+        budget.record_read(len(raw), relative_path)
+        budget.checkpoint(relative_path)
         encoding = "utf-8-sig"
         if language == "python":
-            encoding, _ = tokenize.detect_encoding(stream.readline)
-            stream.seek(0)
-        return stream.read().decode(encoding)
+            encoding, _ = tokenize.detect_encoding(io.BytesIO(raw).readline)
+        return raw.decode(encoding)

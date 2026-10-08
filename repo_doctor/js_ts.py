@@ -8,6 +8,7 @@ from pathlib import Path, PurePosixPath
 from .languages import language_for_path
 from .model import (AnalysisLimit, CallSite, ESMExportRef, ESMImportRef, FileRecord,
                     IdentifierUse, JSParsedFile, OverloadSignature, ParsedFile, ParseError, Symbol)
+from .limits import AnalysisBudget
 from .source import read_source
 
 EXTRA_HELP = "JS/TS backend unavailable or incompatible; install ai-repo-doctor[js]"
@@ -294,7 +295,8 @@ def extract(source: str, *, file: str, language: str) -> dict:
 
 
 def parse_js_ts_file(root: Path, relative_path: str, *,
-                     root_identity: tuple[int, int] | None = None) -> JSParsedFile:
+                     root_identity: tuple[int, int] | None = None,
+                     budget: AnalysisBudget | None = None) -> JSParsedFile:
     language = language_for_path(relative_path)
     if language not in ("javascript", "typescript"):
         raise ValueError("Unsupported JS/TS implementation path: " + relative_path)
@@ -303,7 +305,7 @@ def parse_js_ts_file(root: Path, relative_path: str, *,
     is_test = ("test" in parts or "tests" in parts or
                PurePosixPath(relative_path).name.startswith("test_"))
     try:
-        source = read_source(root, relative_path, root_identity, language=language)
+        source = read_source(root, relative_path, root_identity, language=language, budget=budget)
     except (UnicodeError, SyntaxError) as exc:
         parsed = ParsedFile(FileRecord(relative_path, 0, 0, is_test), [], [], [],
                             error=ParseError(relative_path, 1, "Invalid UTF-8 source: " + str(exc)))

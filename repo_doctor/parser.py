@@ -18,6 +18,7 @@ from .model import (
     ParseError,
     Symbol,
 )
+from .limits import AnalysisBudget, AnalysisLimitError
 from .source import read_source
 
 
@@ -919,13 +920,14 @@ class _Extractor(ast.NodeVisitor):
 
 
 def parse_python_file(
-    root: Path, relative_path: str, root_identity: tuple[int, int] | None = None
+    root: Path, relative_path: str, root_identity: tuple[int, int] | None = None,
+    *, budget: AnalysisBudget | None = None,
 ) -> ParsedFile:
     """Parse one file; return an error record instead of stopping a scan."""
     root = Path(root).resolve() if root_identity is None else Path(root)
     path = root / relative_path
     try:
-        source = read_source(root, relative_path, root_identity)
+        source = read_source(root, relative_path, root_identity, budget=budget)
         lines = source.splitlines()
         file = FileRecord(
             path=relative_path,
@@ -934,6 +936,8 @@ def parse_python_file(
             is_test=path.name.startswith("test_") or "tests" in path.parts or "test" in path.parts,
         )
         tree = ast.parse(source, filename=relative_path)
+    except AnalysisLimitError:
+        raise
     except (SyntaxError, UnicodeError, OSError, ValueError) as exc:
         if "file" not in locals():
             file = FileRecord(relative_path, 0, 0, False)

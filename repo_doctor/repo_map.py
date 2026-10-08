@@ -25,7 +25,10 @@ def build_map(index: RepoIndex, *, symbol: str | None = None, depth: int = 1) ->
     if symbol is not None and symbol not in index.symbols:
         raise ValueError(f'Unknown symbol: {symbol}')
     fingerprint = source_fingerprint(index)
-    paths, mode = discover_files(index.root)
+    if index.discovered_paths is not None:
+        paths, mode = index.discovered_paths, index.scan_mode
+    else:
+        paths, mode = discover_files(index.root, budget=index.budget)
     nodes = {'dir:.': {'id': 'dir:.', 'kind': 'directory', 'label': index.root.name,
                        'file': '.', 'parent': None, 'is_test': False}}
     records = {item.path: item for item in index.files}
@@ -88,7 +91,8 @@ def build_map(index: RepoIndex, *, symbol: str | None = None, depth: int = 1) ->
             if evidence not in projected['evidence']:
                 projected['evidence'].append(evidence)
     data = {
-        'schema_version': 1, 'repository': {'name': index.root.name, 'revision': _revision(index.root),
+        'resource_limits': index.budget.limits.as_dict(),
+        'schema_version': 1, 'repository': {'name': index.root.name, 'revision': _revision(index.root, budget=index.budget),
                                            'source_fingerprint': fingerprint, 'scan_mode': mode},
         'coverage': {'python_files': sum(index.file_languages.get(row.path, 'python') == 'python' for row in index.files), 'parse_errors': len(index.parse_errors),
                      'resolved_calls': len(index.call_edges), 'unresolved_calls': len(index.calls) - len(index.call_edges),
@@ -176,6 +180,7 @@ def write_map(index: RepoIndex, destination: Path, *, symbol: str | None = None,
                  'map.html': render_html(data),
                  'structure.svg': render_svg(data, data['views']['structure']),
                  'relations.svg': render_svg(data, data['views']['relations'])}
+    index.budget.checkpoint("map artifacts prepared")
     destination.mkdir(parents=True)
     for name, content in artifacts.items():
         (destination / name).write_text(content, encoding='utf-8')
@@ -183,4 +188,5 @@ def write_map(index: RepoIndex, destination: Path, *, symbol: str | None = None,
             'html': str((destination / 'map.html').resolve()),
             'structure_svg': str((destination / 'structure.svg').resolve()),
             'relations_svg': str((destination / 'relations.svg').resolve()),
-            'coverage': data['coverage'], 'analysis': data['analysis']}
+            'coverage': data['coverage'], 'analysis': data['analysis'],
+            'resource_limits': data['resource_limits']}
