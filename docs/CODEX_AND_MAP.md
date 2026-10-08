@@ -1,5 +1,9 @@
 # Codex 调用与仓库结构关系图
 
+<!-- repo-doctor-install-versions: 0.8.0 -->
+
+本页下载示例属于公开 0.8.0。1.0 候选使用 [可移植安装与绑定 Skill 指导](INSTALL.md)，两者的 Skill 名称和版本不可混用。
+
 五个只读调查命令的参数、JSON、退出码与兼容规则见 [CLI 合同](CLI_CONTRACT.md)。
 
 1.0 开发候选增加版本绑定 Skill；可移植安装、接入与回滚见 [安装指南](INSTALL.md)。该流程尚待正式发行与新会话验收，以下 0.8.0 说明保留其已发布版本归属。
@@ -18,7 +22,7 @@ repo-doctor --version
 repo-doctor skill export --out NEW_SKILL_DIRECTORY
 ```
 
-这台 Mac 的全局 `~/.local/bin/repo-doctor` 保留0.5.3。0.8.0独立入口为 `/Users/kisara/.local/share/ai-repo-doctor/releases/v0.8.0/candidate/venvs/js/bin/repo-doctor`；使用此完整路径可分析Python和JS/TS。已有用户Skill保持，新的Skill另行导出，不覆盖设置。
+使用选中虚拟环境的 CLI；实际版本以 `--version` 为准。已有用户 Skill 保留，新 Skill 另行导出到新目录。
 
 Skill 导出目录必须尚不存在。Codex 中可显式使用 `$repo-doctor`；如果当前会话尚未发现 Skill，重新启动客户端再调用。安装不新增 MCP 服务，也不修改全局配置。旧版与可选云端接口见 [兼容参考](LEGACY_USAGE.md)。
 

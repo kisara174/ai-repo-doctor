@@ -11,12 +11,12 @@ permissions:
 jobs:
   test:
     name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -27,6 +27,15 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Check maintained public instructions
+        run: python tools/check_public_docs.py --root .
+
+      - name: Record runner identity
+        run: |
+          uname -a
+          python -c "import json,platform,sys; print(json.dumps({'python':sys.version,'platform':platform.platform(),'machine':platform.machine()}))" > "$RUNNER_TEMP/machine.json"
+          cat "$RUNNER_TEMP/machine.json"
 
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
@@ -89,15 +98,29 @@ jobs:
             --cli "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" \
             --expected-version "$RD_EXPECTED_VERSION" \
             --out "$RUNNER_TEMP/installed-base-preview-evidence"
+          "$RUNNER_TEMP/repo-doctor-venv/bin/python" "$GITHUB_WORKSPACE/tools/validate_v1_install.py" --mode base \
+            --python "$RUNNER_TEMP/repo-doctor-venv/bin/python" \
+            --cli "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" \
+            --expected-version "$RD_EXPECTED_VERSION" --out "$RUNNER_TEMP/installed-v1-base-evidence"
+      - name: Preserve installed base evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: linux-base-${{ matrix.python-version }}
+          path: |
+            ${{ runner.temp }}/machine.json
+            ${{ runner.temp }}/installed-release-evidence
+            ${{ runner.temp }}/installed-base-preview-evidence
+            ${{ runner.temp }}/installed-v1-base-evidence
 
   js-preview:
-    name: JS preview Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    name: JS extra Python ${{ matrix.python-version }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -107,6 +130,11 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Record runner identity
+        run: |
+          uname -a
+          python -c "import json,platform,sys; print(json.dumps({'python':sys.version,'platform':platform.platform(),'machine':platform.machine()}))" > "$RUNNER_TEMP/machine.json"
+          cat "$RUNNER_TEMP/machine.json"
       - name: Install and verify native optional backend
         run: |
           python -m pip install '.[js]'
@@ -115,7 +143,7 @@ jobs:
         run: |
           python - <<'PY'
           import unittest
-          modules = ['tests.test_languages', 'tests.test_js_ts', 'tests.test_esm', 'tests.test_index', 'tests.test_context', 'tests.test_cli', 'tests.test_agent_tools', 'tests.test_repo_map', 'tests.test_js_ts_spike', 'tests.test_js_ts_dialects']
+          modules = ['tests.test_languages', 'tests.test_js_ts', 'tests.test_esm', 'tests.test_index', 'tests.test_context', 'tests.test_cli', 'tests.test_agent_tools', 'tests.test_repo_map', 'tests.test_js_ts_spike', 'tests.test_js_ts_dialects', 'tests.test_analysis_limits', 'tests.test_v1_contract', 'tests.test_skill_binding', 'tests.test_public_docs']
           result = unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromNames(modules))
           assert result.wasSuccessful() and not result.skipped, 'JS contract gate failed or skipped'
           PY
@@ -133,10 +161,73 @@ jobs:
             --cli "$RUNNER_TEMP/repo-doctor-js-venv/bin/repo-doctor" \
             --expected-version "$RD_EXPECTED_VERSION" \
             --out "$RUNNER_TEMP/installed-js-preview-evidence"
+          "$RUNNER_TEMP/repo-doctor-js-venv/bin/python" "$GITHUB_WORKSPACE/tools/validate_v1_install.py" --mode js \
+            --python "$RUNNER_TEMP/repo-doctor-js-venv/bin/python" \
+            --cli "$RUNNER_TEMP/repo-doctor-js-venv/bin/repo-doctor" \
+            --expected-version "$RD_EXPECTED_VERSION" --out "$RUNNER_TEMP/installed-v1-js-evidence"
+      - name: Preserve installed JS evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: linux-js-${{ matrix.python-version }}
+          path: |
+            ${{ runner.temp }}/machine.json
+            ${{ runner.temp }}/installed-js-preview-evidence
+            ${{ runner.temp }}/installed-v1-js-evidence
+
+  mac-install:
+    name: macOS Python ${{ matrix.python-version }} (base + js)
+    runs-on: macos-15
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.14"]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Record runner identity
+        run: |
+          uname -a
+          python -c "import json,platform,sys; print(json.dumps({'python':sys.version,'platform':platform.platform(),'machine':platform.machine()}))" > "$RUNNER_TEMP/machine.json"
+          cat "$RUNNER_TEMP/machine.json"
+      - name: Build and validate separate base and JS installs
+        shell: bash
+        run: |
+          python -m pip wheel --no-deps --wheel-dir dist .
+          RD_EXPECTED_VERSION="$(python -c 'from repo_doctor._version import __version__; print(__version__)')"
+          RD_WHEEL="$(python -c 'from pathlib import Path; print(next(Path("dist").glob("*.whl")).resolve())')"
+          for RD_MODE in base js; do
+            RD_ENV="$RUNNER_TEMP/repo-doctor-$RD_MODE"
+            python -m venv "$RD_ENV"
+            if [ "$RD_MODE" = js ]; then
+              "$RD_ENV/bin/python" -m pip install "$RD_WHEEL[js]"
+            else
+              "$RD_ENV/bin/python" -m pip install --no-index "$RD_WHEEL"
+            fi
+            (cd "$RUNNER_TEMP" && "$RD_ENV/bin/python" "$GITHUB_WORKSPACE/tools/validate_v1_install.py" \
+              --mode "$RD_MODE" --python "$RD_ENV/bin/python" --cli "$RD_ENV/bin/repo-doctor" \
+              --expected-version "$RD_EXPECTED_VERSION" --out "$RUNNER_TEMP/installed-v1-$RD_MODE-evidence")
+          done
+      - name: Preserve installed macOS evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: macos-${{ matrix.python-version }}
+          path: |
+            ${{ runner.temp }}/machine.json
+            ${{ runner.temp }}/installed-v1-base-evidence
+            ${{ runner.temp }}/installed-v1-js-evidence
 
   map-viewer:
     name: Offline map interaction and SVG
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Check out source

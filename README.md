@@ -1,5 +1,9 @@
 # AI Repo Doctor
 
+<!-- repo-doctor-install-versions: 0.8.0 -->
+
+1.0 开发候选正在完成闭环验收，尚未正式发行。本文下载示例继续指向已公开的 0.8.0；新候选接入、升级回滚见 [安装指导](docs/INSTALL.md)，当前平台门禁见 [平台矩阵](docs/SUPPORT_MATRIX.md)。
+
 为 Codex 提供本地 Python、JavaScript、TypeScript 仓库的结构、静态调用证据和有界源码上下文，并生成供人查看的离线交互 HTML 与 SVG 关系图。Codex 负责问题判断和代码修改；Repo Doctor 提供可核对的源码证据。主要流程无需 API Key，不运行目标仓库代码。
 
 **0.8.0 支持范围**：Python 默认启用；JS/TS 通过可选 `[js]` 安装并显式选择语言。需要 Python 3.11+，JS/TS 分析不需要 Node。详细支持范围见 [支持矩阵](docs/JS_TS_SUPPORT.md)，验证证据见 [J5 报告](docs/evaluations/2026-10-07-js-ts-support-validation.md)。

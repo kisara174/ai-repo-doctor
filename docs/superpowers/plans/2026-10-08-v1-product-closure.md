@@ -165,7 +165,9 @@ git diff --check
 
 **目标：**正式承诺对应真实运行组合，并让以后更新可重复检查。
 
-**文件：**Modify `.github/workflows/ci.yml`、`pyproject.toml`、`docs/INSTALL.md`；Create `docs/SUPPORT_MATRIX.md`、`tools/check_public_docs.py`、`tests/test_public_docs.py`。复用 V2 安装验证器和现有 JS-extra/地图门禁。
+**文件：**Modify `.github/workflows/ci.yml`、`pyproject.toml`、`docs/INSTALL.md`、`README.md`、`docs/CODEX_AND_MAP.md`；Create `docs/SUPPORT_MATRIX.md`、`tools/check_public_docs.py`、`tests/test_public_docs.py`。复用 V2 安装验证器和现有 JS-extra/地图门禁。
+
+实施决定：Ubuntu runner 固定 ubuntu-24.04；macOS 选 macos-15，实际架构以 machine.json 为准。七份文档对公开 0.8.0 下载示例与开发 1.0.0.dev1 使用显式版本标记，INSTALL 的正式 1.0.0 示例仍注明未发布。允许 README/CODEX_AND_MAP 补候选入口并移除维护者路径，不批量改历史报告。
 
 - [ ] **V4.1** 将 Linux Python 核心/JS-extra 矩阵补到 3.11/3.12/3.13/3.14。保留现有 viewer/search/DOM 验证，不能删掉旧门禁以减少失败。
 - [ ] **V4.2** 加 macOS Python 3.11/3.14 的 wheel 独立安装与 base/js 核心流程；每个 runner 记录 `uname`/Python/实际架构。不要把一台 ARM Mac 的结果宣传为所有架构通过。
