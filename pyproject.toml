@@ -7,6 +7,8 @@ name = "ai-repo-doctor"
 dynamic = ["version"]
 description = "Static source evidence and offline maps for Python and optional JavaScript/TypeScript repositories"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 classifiers = [
   "Programming Language :: Python :: 3",

@@ -73,4 +73,4 @@ ID='ID_RETURNED_BY_SYMBOLS'
 - [变化记录](CHANGELOG.md)、[问题反馈与维护](SUPPORT.md)
 - [1.0 准备状态](docs/delivery/2026-10-08-v1-readiness.md)
 
-许可尚待项目所有者确定；没有 LICENSE 不能解释为获得再分发或商用授权。1.0 正式发行前必须完成许可声明和实际 wheel 核验。
+本项目采用 [MIT 许可](LICENSE)，版权署名 `kisara174`。1.0 正式发行仍须完成候选与公开产物验收。

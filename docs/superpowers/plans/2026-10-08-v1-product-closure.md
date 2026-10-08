@@ -212,8 +212,8 @@ git diff --check
 
 **文件：**Modify `pyproject.toml`、`README.md`、`docs/CODEX_AND_MAP.md`、`docs/JS_TS_SUPPORT.md`、`docs/INSTALL.md`；Create `LICENSE`（用户决定后）、`CHANGELOG.md`、`SUPPORT.md`、`docs/COMPATIBILITY.md`、`.github/ISSUE_TEMPLATE/bug_report.yml`、`docs/delivery/2026-10-08-v1-readiness.md`。
 
-- [ ] **V6.1** 记录用户明确的许可决定；若尚未回复，保持此项待完成并继续 V6.3–V6.8 等无依赖条目。不得默认 MIT/Apache/商业许可。
-- [ ] **V6.2** 按用户选择写正确许可文本与权利人信息；同步 `project.license`/`license-files`。如果选择商业许可，等用户提供适用文本，不由简单模型自行起草法律条款。
+- [x] **V6.1** 记录用户明确的许可决定；若尚未回复，保持此项待完成并继续 V6.3–V6.8 等无依赖条目。不得默认 MIT/Apache/商业许可。
+- [x] **V6.2** 按用户选择写正确许可文本与权利人信息；同步 `project.license`/`license-files`。如果选择商业许可，等用户提供适用文本，不由简单模型自行起草法律条款。
 - [x] **V6.3** 更新包描述为 Python 与可选 JS/TS 的静态源码证据工具，补 Homepage/Repository/Issues/Changelog URL；分类器只声明实际支持的平台/版本。
 - [x] **V6.4** README 首屏只保留产品定位、支持范围、安装入口、五步最小使用链、离线图示例与限制；诊断/案件命令移到次级文档入口，保留兼容命令。
 - [x] **V6.5** 完整列出从 0.8 升级的变化：新 Skill 名称/绑定、资源边界、impact 深度范围、旧入口处理和回滚。旧案件/证据不做批量迁移重写。
@@ -223,7 +223,7 @@ git diff --check
 - [ ] **V6.9** 构建临时 wheel 读取 METADATA/许可文件，核对 Name/Version/Summary/Requires-Python/Project-URL/License-Expression/License-File；未声明或未打包许可则不能通过。
 - [x] **V6.10** 运行公开文档门禁，主代理核对安装例子可复制且无维护者路径；提交更新。
 
-**当前：**V6.3–V6.8/V6.10 的无许可依赖文档与元数据已准备并通过公开文档门禁。V6.1/V6.2 等所有者许可决定；V6.9 未能完整通过，不提前勾选。
+**当前：**V6.3–V6.8/V6.10 的无许可依赖文档与元数据已准备并通过公开文档门禁。V6.1/V6.2 已按用户确认采用 MIT、版权署名 kisara174；V6.9 等待含许可的新 wheel 实测，不提前勾选。
 
 **验证：**`"$RD_PY" tools/check_public_docs.py --root .`；读取真实 wheel zip 内 metadata；A1–A8 readiness 无虚假完成。缺许可时本阶段不完整，禁止进入正式发行。
 
@@ -331,4 +331,4 @@ DOM 按现有 CI 的 fixture/依赖路径命令执行并保存回执；无需临
 - [x] V5 三份调查、3份真实Chrome交互和独立Codex消费者完成；首轮超时保留，第二次295.53秒成功。
 - [ ] V6–V9 产品交付待完成。
 
-下一动作：V6.1–V6.10；许可未定，先完成无依赖条目。阶段通过不等于 1.0 产品完成。
+下一动作：V6.9 新 wheel 许可核验，再进入 V7 RC。阶段通过不等于 1.0 产品完成。
