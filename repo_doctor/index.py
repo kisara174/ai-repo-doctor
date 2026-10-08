@@ -71,7 +71,7 @@ def build_index(root: Path, *, languages: tuple[str, ...] = ("python",)) -> Repo
             if language != "python":
                 _parser(language)
         for path in paths:
-            if path.endswith((".jsx", ".tsx", ".cjs", ".mts", ".cts", ".d.ts")):
+            if path.endswith((".cjs", ".mts", ".cts", ".d.ts")):
                 index.analysis_limits.append(AnalysisLimit(path, None, "unsupported-source-kind",
                     "Path is displayed but this source kind is not analyzed"))
         for path in selected:

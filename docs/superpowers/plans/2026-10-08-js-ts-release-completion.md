@@ -72,8 +72,8 @@ PYTHONDONTWRITEBYTECODE=1 /Users/kisara/.local/share/ai-repo-doctor/releases/v0.
 **Files:** repo_doctor/languages.py、js_ts.py、index.py、esm.py；tests/test_languages.py、test_js_ts_dialects.py、test_esm.py、test_context.py、test_repo_map.py。
 **Interfaces:** 新parse_tree(source, language, *, tsx=False)与private _parser(language, *, tsx=False)；extract原签名不变。JS/TS analysis.source_extensions为dict[str,list[str]]，默认Python无该键。
 
-- [ ] 写失败合同：language_for_path('a.jsx')=='javascript'、('a.tsx')=='typescript'；其他未知扩展保持None。
-- [ ] 写TSX/JSX完整流程合同，fixture内容如下（每个文件均UTF-8）：
+- [x] 写失败合同：language_for_path('a.jsx')=='javascript'、('a.tsx')=='typescript'；其他未知扩展保持None。
+- [x] 写TSX/JSX完整流程合同，fixture内容如下（每个文件均UTF-8）：
 
 ```python
 files = {
@@ -87,17 +87,17 @@ files = {
 
 要求App→helper::value只返回实际直接调用；Card JSX标签、event callback无函数边；App到Card有文件依赖；context/impact含真实import来源；源码行不超预算；map/SVG只含实际边。
 
-- [ ] .ts尖括号类型断言和generic箭头仍按TS grammar通过；.tsx用TSX grammar且错误整文件排除；BOM/CRLF/Unicode位置与源码引文一致；默认Python不加载前端或native extra。
-- [ ] 红例记录后修改映射；_parser缓存三个有效variant且拒绝JS+tsx；extract按后缀选择，parse_js_ts_file用对应parser检查依赖。
-- [ ] index不再把已支持jsx/tsx标unsupported；未选择语言仍不读取。JS/TS metadata加入当前选择语言source_extensions。
-- [ ] ESM TypeScript.js替换来源扩展扩大为.ts/.tsx；有限候选并集、类型-only、namespace、重写、歧义、parse失败/ignore/链接拒绝均保持。
-- [ ] JSX实际节点加入jsx-render limitation（物理行，说明标签/事件引用不是运行调用）。遍历实际表达式，不把标签或props引用转为CallSite。
-- [ ] 更新原合同的旧unsupported JSX/TSX断言，保留其他原边界；不能为适配新功能删除负例要求，需用未选择语言或其他不支持扩展维持验证。
-- [ ] 运行受影响合同后审查并提交feat；只有未覆盖的具体风险才增加测试。
+- [x] .ts尖括号类型断言和generic箭头仍按TS grammar通过；.tsx用TSX grammar且错误整文件排除；BOM/CRLF/Unicode位置与源码引文一致；默认Python不加载前端或native extra。
+- [x] 红例记录后修改映射；_parser缓存三个有效variant且拒绝JS+tsx；extract按后缀选择，parse_js_ts_file用对应parser检查依赖。
+- [x] index不再把已支持jsx/tsx标unsupported；未选择语言仍不读取。JS/TS metadata加入当前选择语言source_extensions。
+- [x] ESM TypeScript.js替换来源扩展扩大为.ts/.tsx；有限候选并集、类型-only、namespace、重写、歧义、parse失败/ignore/链接拒绝均保持。
+- [x] JSX实际节点加入jsx-render limitation（物理行，说明标签/事件引用不是运行调用）。遍历实际表达式，不把标签或props引用转为CallSite。
+- [x] 更新原合同的旧unsupported JSX/TSX断言，保留其他原边界；不能为适配新功能删除负例要求，需用未选择语言或其他不支持扩展维持验证。
+- [x] 运行受影响合同后审查并提交feat；只有未覆盖的具体风险才增加测试。
 
 ## P4：真实调查与公开使用闭环（D3/D4/D5）
 
-**Files:** 新evaluation/js-ts-release-completion/cases.json及README.md；tools/validate_js_ts_install.py；README.md、docs/JS_TS_SUPPORT.md、resources/skill/SKILL.md；E/product-validation/。
+**Files:** 新evaluation/js-ts-release-completion/cases.json及README.md；tools/validate_js_ts_install.py、.github/workflows/ci.yml；README.md、docs/JS_TS_SUPPORT.md、resources/skill/SKILL.md；E/product-validation/。
 
 - [ ] 从research/frontend-parse-files.json冻结三个来源：jenkins-infra/plugin-site(JSX)、emircanagac/voxpery(TSX)、roseforljh/qoneagent(TSX)。固定commit/tree、source SHA、组件符号行段和直接helper调用来源；主代理手工核对原文后写cases，不从工具结果反填正确答案。
 - [ ] JSX案例至少搜索具名组件并核对文件依赖、context引文及无虚构标签调用。TSX两个案例至少一条安全helper直接调用含via_esm_import/impact逐跳证据。不能把包调用、匿名callback或标签当作函数调用题。
@@ -142,4 +142,4 @@ files = {
 
 ## 当前进度
 
-P0–P2完成；错误隔离红绿合同与36项相关检查通过，原130文件均无部分证据，37个漏报已修复。P3–P7未开始；尚无0.8.0候选或新正式发行。0.7.0现有发行仍保持。
+P0–P3完成；错误隔离与JSX/TSX功能已实施，121项相关合同通过。P4真实调查、使用文档和安装门槛正在准备；P5–P7未开始；尚无0.8.0候选或新正式发行。0.7.0现有发行仍保持。
