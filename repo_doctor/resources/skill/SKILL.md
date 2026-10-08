@@ -37,9 +37,9 @@ If a concrete regression command is appropriate, explicitly record it with `repr
 
 Record Codex's judgment with `issue CASE ISSUE --status confirmed|rejected|resolved --actor codex --note "REASON" --json`. Use `--related-test` only when the chosen regression actually addresses the issue. Reopen the report and distinguish exact-source checks, hypotheses and regression results; never claim a user personally confirmed Codex's judgment.
 
-## Optional JS/TS basic support (0.6.0)
+## Optional JS/TS basic support (0.7.0)
 
-Install the 0.6.0 GitHub wheel with its `js` extra in a separate environment; use that environment’s explicit CLI. On the maintainer’s Mac the independent deployment path is `/Users/kisara/.local/share/ai-repo-doctor/releases/v0.6.0/venvs/js/bin/repo-doctor`. Check `--version` before using it. Keep the existing Python CLI and installed Skill in place.
+Install the 0.7.0 GitHub wheel with its `js` extra in a separate environment; use that environment’s explicit CLI. On the maintainer’s Mac the independent deployment path is `/Users/kisara/.local/share/ai-repo-doctor/releases/v0.7.0/candidate/venvs/js/bin/repo-doctor`. Check `--version` before using it. Keep the existing Python CLI and installed Skill in place.
 
 Pass `--languages javascript,typescript` to each of overview, symbols, context, impact and map; use `python,javascript,typescript` only when mixed source coverage is wanted. Always select a real ID returned by symbols. Read the analysis metadata and limits before interpreting calls or empty impact. Supported implementation extensions are .js, .mjs and .ts. Package/alias paths, CommonJS, JSX/TSX and declaration implementation analysis remain unsupported. A parser error means the whole file was excluded, not independent proof that the target source is invalid. Calls cover only unique, unshadowed, unmodified direct functions and direct ESM exports; dynamic calls, methods, anonymous callbacks and multi-hop re-exports remain unknown.
 
