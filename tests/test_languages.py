@@ -20,8 +20,8 @@ class LanguageTests(unittest.TestCase):
         from repo_doctor.languages import language_for_path
         for path, expected in [('a.py', 'python'), ('a.js', 'javascript'),
                                ('a.mjs', 'javascript'), ('a.ts', 'typescript'),
-                               ('a.d.ts', None), ('a.tsx', None), ('a.cjs', None),
-                               ('a.mts', None), ('a.cts', None), ('a.jsx', None)]:
+                               ('a.d.ts', None), ('a.tsx', 'typescript'), ('a.cjs', None),
+                               ('a.mts', None), ('a.cts', None), ('a.jsx', 'javascript')]:
             with self.subTest(path=path):
                 self.assertEqual(language_for_path(path), expected)
 

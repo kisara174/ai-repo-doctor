@@ -5,6 +5,11 @@ from pathlib import PurePosixPath
 from .model import AnalysisLimit, RepoIndex
 
 SUPPORTED_LANGUAGES = ("python", "javascript", "typescript")
+SOURCE_EXTENSIONS = {
+    "python": (".py",),
+    "javascript": (".js", ".mjs", ".jsx"),
+    "typescript": (".ts", ".tsx"),
+}
 
 
 def normalize_languages(value: str) -> tuple[str, ...]:
@@ -17,8 +22,9 @@ def normalize_languages(value: str) -> tuple[str, ...]:
 def language_for_path(path: str) -> str | None:
     if path.endswith(".d.ts"):
         return None
-    return {".py": "python", ".js": "javascript", ".mjs": "javascript",
-            ".ts": "typescript"}.get(PurePosixPath(path).suffix)
+    suffix = PurePosixPath(path).suffix
+    return next((name for name, extensions in SOURCE_EXTENSIONS.items()
+                 if suffix in extensions), None)
 
 
 def analysis_metadata(index: RepoIndex) -> dict:
@@ -35,6 +41,8 @@ def analysis_metadata(index: RepoIndex) -> dict:
         "limits": [asdict(row) for row in limits[:50]],
         "limits_omitted": max(0, len(limits) - 50),
         "scope": "static selected source languages; no runtime completeness",
-        **({"esm_source_resolution": {"policy": "unique-visible-local-source-v1", "runtime_resolution": False}}
+        **({"esm_source_resolution": {"policy": "unique-visible-local-source-v1", "runtime_resolution": False},
+            "source_extensions": {name: list(SOURCE_EXTENSIONS[name]) for name in index.analysis_languages
+                                  if name != "python"}}
            if any(name in index.analysis_languages for name in ("javascript", "typescript")) else {}),
     }

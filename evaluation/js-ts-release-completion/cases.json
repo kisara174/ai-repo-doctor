@@ -1,0 +1,243 @@
+{
+  "schema_version": 1,
+  "oracle_origin": "primary manually inspected numbered source before product runs",
+  "scope": "directed previously-seen fixed repositories; not blind or full-200",
+  "cases": [
+    {
+      "repo_id": "jenkins-infra__plugin-site",
+      "commit": "98398fc25dada177dff64807dd080a5a8529ca54",
+      "tree": "c349ae1f3516179115c87c63badde254d22575a4",
+      "component": {
+        "file": "plugins/plugin-site/src/components/ActiveFilters.jsx",
+        "name": "ActiveFilters",
+        "id": "plugins/plugin-site/src/components/ActiveFilters.jsx::ActiveFilters",
+        "start_line": 8,
+        "end_line": 76,
+        "quote": [
+          "function ActiveFilters({activeCategories, activeLabels, activeQuery, clearQuery, toggleCategory, toggleLabel}) {",
+          "    const data = useStaticQuery(graphql`",
+          "    query {",
+          "        categories: allJenkinsPluginCategory {",
+          "            edges {",
+          "                node {",
+          "                    id",
+          "                    labels",
+          "                    title",
+          "                }",
+          "            }",
+          "        }",
+          "        labels: allJenkinsPluginLabel {",
+          "            edges {",
+          "                node {",
+          "                    id",
+          "                    title",
+          "                }",
+          "            }",
+          "        }",
+          "    }",
+          "    `);",
+          "",
+          "    const labels = data.labels.edges.reduce((prev, {node: label}) => {",
+          "        prev[label.id] = label;",
+          "        return prev;",
+          "    }, {});",
+          "    const categories = data.categories.edges.reduce((prev, {node: category}) => {",
+          "        prev[category.id] = category;",
+          "        return prev;",
+          "    }, {});",
+          "",
+          "    const renderedActiveCategories = activeCategories.map((activeCategory) => {",
+          "        return (",
+          "            <ActiveCategory",
+          "                key={`category_${activeCategory}`}",
+          "                category={categories[activeCategories]}",
+          "                toggleCategory={toggleCategory}",
+          "            />",
+          "        );",
+          "    });",
+          "    const renderedActiveLabels = activeLabels.map((activeLabel) => {",
+          "        return (",
+          "            <ActiveLabel",
+          "                key={`label_${activeLabel}`}",
+          "                label={labels[activeLabel]}",
+          "                toggleLabel={toggleLabel}",
+          "            />",
+          "        );",
+          "    });",
+          "    return (",
+          "        <div className=\"ActiveFilters--FilterBox\">",
+          "            <div>",
+          "                {renderedActiveCategories}",
+          "            </div>",
+          "            <div>",
+          "                {renderedActiveLabels}",
+          "            </div>",
+          "            <div>",
+          "                {activeQuery && <a",
+          "                    className=\"nav-link\"",
+          "                    title=\"clear search string\"",
+          "                    onClick={clearQuery}>",
+          "                    {activeQuery}",
+          "                </a>}",
+          "            </div>",
+          "        </div>",
+          "    );",
+          "}"
+        ]
+      },
+      "sources": {
+        "plugins/plugin-site/src/components/ActiveFilters.jsx": {
+          "sha256": "a497487fee2eb8b6c6886e3672e82ccdc7325cab42f27688c767c12393791f04"
+        },
+        "plugins/plugin-site/src/components/ActiveCategory.jsx": {
+          "sha256": "38b965a34e996b4aa89364e24473271272ec5f7f52a1609bdf1d70a1d8682233"
+        },
+        "plugins/plugin-site/src/components/ActiveLabel.jsx": {
+          "sha256": "de9be20fc265ac720e6aab48249d7990db876365c248838a80c62cdbd6062845"
+        }
+      },
+      "imports": [
+        {
+          "target": "plugins/plugin-site/src/components/ActiveCategory.jsx",
+          "line": 3,
+          "specifier": "./ActiveCategory",
+          "quote": "import ActiveCategory from './ActiveCategory';"
+        },
+        {
+          "target": "plugins/plugin-site/src/components/ActiveLabel.jsx",
+          "line": 4,
+          "specifier": "./ActiveLabel",
+          "quote": "import ActiveLabel from './ActiveLabel';"
+        }
+      ],
+      "call": null,
+      "question": "具名组件位置、源码上下文和真实文件依赖；JSX标签/事件引用不能当作函数边"
+    },
+    {
+      "repo_id": "roseforljh__qoneagent",
+      "commit": "0e8b7775550ae3e0ea3fc41212e021b7afbc19bf",
+      "tree": "986f36008b7a5786aeb4f83ebd15cfdfe6418200",
+      "component": {
+        "file": "apps/desktop/src/components/ui/skeleton.tsx",
+        "name": "Skeleton",
+        "id": "apps/desktop/src/components/ui/skeleton.tsx::Skeleton",
+        "start_line": 4,
+        "end_line": 6,
+        "quote": [
+          "export function Skeleton({ className, ...props }: ComponentPropsWithoutRef<\"div\">) {",
+          "  return <div data-slot=\"skeleton\" className={cn(\"animate-pulse rounded-md bg-muted\", className)} {...props} />;",
+          "}"
+        ]
+      },
+      "sources": {
+        "apps/desktop/src/components/ui/skeleton.tsx": {
+          "sha256": "cb9eb60b9b9a3704c0ab66e06aabeeb999b6c250fb7bfb34a7b5bcbceb0525bf"
+        },
+        "apps/desktop/src/lib/utils.ts": {
+          "sha256": "ef54c4ab402c95d7a1b412db4d983476870741697c2af601e59a2d236aeb88b6"
+        }
+      },
+      "imports": [
+        {
+          "target": "apps/desktop/src/lib/utils.ts",
+          "line": 2,
+          "specifier": "../../lib/utils",
+          "quote": "import { cn } from \"../../lib/utils\";"
+        }
+      ],
+      "call": {
+        "callee_id": "apps/desktop/src/lib/utils.ts::cn",
+        "callee_query": "cn",
+        "callee_start_line": 6,
+        "callee_end_line": 8,
+        "line": 5,
+        "quote": "  return <div data-slot=\"skeleton\" className={cn(\"animate-pulse rounded-md bg-muted\", className)} {...props} />;",
+        "callee_quote": [
+          "export function cn(...inputs: ClassValue[]) {",
+          "  return twMerge(...inputs);",
+          "}"
+        ]
+      },
+      "question": "具名组件到本地helper的直接调用、实际import来源及反向影响"
+    },
+    {
+      "repo_id": "emircanagac__voxpery",
+      "commit": "e5933d1e16cd4f6a5c59a0bfa8913973b96034b0",
+      "tree": "214289e07218fd5e5a156410dc1c6be60e85b68e",
+      "component": {
+        "file": "apps/web/src/components/VoiceChannelDuration.tsx",
+        "name": "VoiceChannelDuration",
+        "id": "apps/web/src/components/VoiceChannelDuration.tsx::VoiceChannelDuration",
+        "start_line": 5,
+        "end_line": 30,
+        "quote": [
+          "export default function VoiceChannelDuration({ startedAt }: { startedAt: number }) {",
+          "  const [now, setNow] = useState(() => Date.now())",
+          "",
+          "  // Only the counter rerenders each second; the channel/member list stays untouched.",
+          "  useEffect(() => {",
+          "    let interval: number | undefined",
+          "    const syncVisibility = () => {",
+          "      window.clearInterval(interval)",
+          "      if (document.hidden) return",
+          "      setNow(Date.now())",
+          "      interval = window.setInterval(() => setNow(Date.now()), 1000)",
+          "    }",
+          "    syncVisibility()",
+          "    document.addEventListener('visibilitychange', syncVisibility)",
+          "    return () => {",
+          "      window.clearInterval(interval)",
+          "      document.removeEventListener('visibilitychange', syncVisibility)",
+          "    }",
+          "  }, [])",
+          "",
+          "  const duration = formatVoiceChannelDuration(now - startedAt)",
+          "  const label = `Voice channel active for ${duration}`",
+          "  return <span className=\"channel-voice-duration\" role=\"timer\" aria-live=\"off\" aria-label={label} title={label}>",
+          "    <Clock3 size={12} aria-hidden=\"true\" /><span>{duration}</span>",
+          "  </span>",
+          "}"
+        ]
+      },
+      "sources": {
+        "apps/web/src/components/VoiceChannelDuration.tsx": {
+          "sha256": "0aec560502e914bb6307ad7335e51e59a457c4196b149ff411fa9fe885970add"
+        },
+        "apps/web/src/voiceChannelDuration.ts": {
+          "sha256": "2c78d43eb906630a3912101b9fb4620306d1e3af965177c6e2d260fe902ed0a6"
+        }
+      },
+      "imports": [
+        {
+          "target": "apps/web/src/voiceChannelDuration.ts",
+          "line": 3,
+          "specifier": "../voiceChannelDuration",
+          "quote": "import { formatVoiceChannelDuration } from '../voiceChannelDuration'"
+        }
+      ],
+      "call": {
+        "callee_id": "apps/web/src/voiceChannelDuration.ts::formatVoiceChannelDuration",
+        "callee_query": "formatVoiceChannelDuration",
+        "callee_start_line": 1,
+        "callee_end_line": 12,
+        "line": 25,
+        "quote": "  const duration = formatVoiceChannelDuration(now - startedAt)",
+        "callee_quote": [
+          "export function formatVoiceChannelDuration(elapsedMs: number): string {",
+          "    const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000))",
+          "    const hours = Math.floor(totalSeconds / 3600)",
+          "    const minutes = Math.floor((totalSeconds % 3600) / 60)",
+          "    const seconds = totalSeconds % 60",
+          "",
+          "    if (hours > 0) {",
+          "        return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`",
+          "    }",
+          "",
+          "    return `${minutes}:${seconds.toString().padStart(2, '0')}`",
+          "}"
+        ]
+      },
+      "question": "具名组件到本地helper的直接调用、实际import来源及反向影响"
+    }
+  ]
+}

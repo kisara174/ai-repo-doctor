@@ -47,7 +47,7 @@ def _resolve_source(file: str, specifier: str, path_set: set[str],
 
     # Preserve the explicit-path and TypeScript .js substitution contract.
     options = [candidate]
-    if file.endswith(".ts") and specifier.endswith(".js"):
+    if file.endswith((".ts", ".tsx")) and specifier.endswith(".js"):
         stem = candidate[:-3]
         options = [stem + suffix for suffix in (".ts", ".tsx", ".d.ts", ".js", ".jsx")]
     matches = [path for path in options if path in path_set]

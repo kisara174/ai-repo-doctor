@@ -62,7 +62,7 @@ class SourceAssociationTests(unittest.TestCase):
                  ('./core', {'core.ts':source,'core/package.json':'{}'}, 'directory-package-configuration'),
                  ('../../../outside', {}, 'outside-source-root')]
         cases += [('./core', {'core'+ext:source}, 'unselected-or-unsupported-local-source')
-                  for ext in ('.d.ts','.tsx','.jsx','.mts','.cts','.cjs','.d.mts','.d.cts','.json','.node')]
+                  for ext in ('.d.ts','.jsx','.mts','.cts','.cjs','.d.mts','.d.cts','.json','.node')]
         cases += [(spec, {'core.ts':source}, 'unsupported-source-specifier')
                   for spec in ('./core?x','./core#x','./core%x','./core/')]
         for specifier, files, reason in cases:

@@ -13,10 +13,12 @@ from .source import read_source
 EXTRA_HELP = "JS/TS backend unavailable or incompatible; install ai-repo-doctor[js]"
 
 
-@lru_cache(maxsize=2)
-def _parser(language):
+@lru_cache(maxsize=3)
+def _parser(language, *, tsx=False):
     if language not in ("javascript", "typescript"):
         raise ValueError("JS/TS parser requires javascript or typescript")
+    if tsx and language != "typescript":
+        raise ValueError("TSX grammar requires typescript")
     try:
         for name, pinned in (("tree-sitter", "0.26.0"), ("tree-sitter-javascript", "0.25.0"),
                              ("tree-sitter-typescript", "0.23.2")):
@@ -28,19 +30,19 @@ def _parser(language):
             capsule = grammar.language()
         else:
             import tree_sitter_typescript as grammar
-            capsule = grammar.language_typescript()
+            capsule = grammar.language_tsx() if tsx else grammar.language_typescript()
         return Parser(Language(capsule))
     except (ImportError, PackageNotFoundError, AttributeError, TypeError, ValueError) as exc:
         raise ValueError(EXTRA_HELP) from exc
 
 
-def parse_tree(source, language):
+def parse_tree(source, language, *, tsx=False):
     raw = source.encode("utf-8")
-    return raw, _parser(language).parse(raw)
+    return raw, _parser(language, tsx=tsx).parse(raw)
 
 
 def extract(source: str, *, file: str, language: str) -> dict:
-    raw, tree = parse_tree(source, language)
+    raw, tree = parse_tree(source, language, tsx=PurePosixPath(file).suffix == '.tsx')
     # Point.column crashes the pinned native binding on this Mac. Offsets remain usable.
     line_starts = [0] + [i + 1 for i, byte in enumerate(raw) if byte == 10]
 
@@ -60,9 +62,16 @@ def extract(source: str, *, file: str, language: str) -> dict:
         for child in node.named_children:
             yield from descendants(child)
 
-    errors = [n for n in descendants(tree.root_node) if n.type == 'ERROR' or n.is_missing]
-    if errors:
-        first = min(errors, key=lambda n: (n.start_byte, n.end_byte))
+    if tree.root_node.has_error:
+        # MISSING punctuation can be anonymous; named_children misses it.
+        pending, errors = [tree.root_node], []
+        while pending:
+            node = pending.pop()
+            if node.type == 'ERROR' or node.is_missing:
+                errors.append(node)
+            pending.extend(node.children)
+        first = min(errors, key=lambda n: (n.start_byte, n.end_byte),
+                    default=tree.root_node)
         data['error'] = {'file': file, 'line': span(first)[0], 'message': 'Tree-sitter ERROR/missing; whole file excluded'}
         return data
 
@@ -192,6 +201,8 @@ def extract(source: str, *, file: str, language: str) -> dict:
     def walk(node, owner=None, parent=None):
         if node.type in ('comment', 'string', 'type_annotation', 'type_alias_declaration', 'interface_declaration'):
             return
+        if node.type in ('jsx_opening_element', 'jsx_self_closing_element'):
+            limit(node, 'jsx-render', 'JSX tags and event references are not resolved runtime calls')
         if node.type in ('import_statement', 'export_statement'):
             esm(node)
             if node.type == 'import_statement':
@@ -287,7 +298,7 @@ def parse_js_ts_file(root: Path, relative_path: str, *,
     language = language_for_path(relative_path)
     if language not in ("javascript", "typescript"):
         raise ValueError("Unsupported JS/TS implementation path: " + relative_path)
-    _parser(language)  # dependency errors are input errors, never file parse errors
+    _parser(language, tsx=relative_path.endswith('.tsx'))  # dependency errors are input errors
     parts = PurePosixPath(relative_path).parts
     is_test = ("test" in parts or "tests" in parts or
                PurePosixPath(relative_path).name.startswith("test_"))
