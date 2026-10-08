@@ -123,7 +123,9 @@ git diff --check
 
 **目标：**解决无边界读取和等待，知道用户能分析到什么规模；避免无证据的缓存重构。
 
-**文件：**Create `repo_doctor/limits.py`、`tests/test_analysis_limits.py`、`tools/profile_analysis.py`、`docs/RESOURCE_LIMITS.md`；Modify `repo_doctor/source.py`、`repo_doctor/scanner.py`、`repo_doctor/index.py`、`repo_doctor/parser.py`、`repo_doctor/js_ts.py`、`repo_doctor/cli.py`、`repo_doctor/repo_map.py`、`tests/test_v1_contract.py`、`docs/CLI_CONTRACT.md`。只有需要传播预算的现有调用点才修改，先用引用搜索列出。
+**文件：**Create `repo_doctor/limits.py`、`tests/test_analysis_limits.py`、`tools/profile_analysis.py`、`docs/RESOURCE_LIMITS.md`；Modify `repo_doctor/source.py`、`repo_doctor/scanner.py`、`repo_doctor/index.py`、`repo_doctor/parser.py`、`repo_doctor/js_ts.py`、`repo_doctor/cli.py`、`repo_doctor/repo_map.py`、`repo_doctor/model.py`、`repo_doctor/context.py`、`repo_doctor/case.py`、`repo_doctor/evidence.py`、`tests/test_v1_contract.py`、`docs/CLI_CONTRACT.md`、`docs/INSTALL.md`。只有需要传播预算的现有调用点才修改，先用引用搜索列出。
+
+实现前调用点核对（2026-10-08）：`context._read_lines`、`case.source_fingerprint`、`evidence.validate_findings` 和 CLI 的预览证据读取均需传播同一预算；`RepoIndex` 保存单次预算及发现路径供地图复用。累计字节是本次分析**实际读取的总量**，包含指纹和上下文的再次读取，并非去重后的仓库大小。60 秒从本次索引开始，延续到证据准备的检查点；不含最终文件写入或强制中断 native parser。案件目录在证据准备成功后创建，避免预算失败留下空目录。旧 diagnose 的提供方等待使用既有独立 timeout，从分析检查点时间中扣除（字节预算不重置），避免兼容流程因网络等待误报源码超限；以假时钟/假响应验证，不调用 API。
 
 ### V3A 最小边界实现
 

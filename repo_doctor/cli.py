@@ -42,6 +42,7 @@ from .evidence import validate_findings
 from .index import build_index
 from .languages import analysis_metadata, normalize_languages
 from .model import RepoIndex, Symbol
+from .limits import AnalysisLimitError
 from .source import read_source
 from .symbols import search_symbols
 from .skills import export_skill
@@ -252,12 +253,14 @@ def _verify_selected_source(index: RepoIndex, context: dict) -> None:
         for block in context["blocks"]:
             path = block["file"]
             if path not in source_cache:
-                source_cache[path] = read_source(index.root, path, index.root_identity).splitlines()
+                source_cache[path] = read_source(index.root, path, index.root_identity, budget=index.budget).splitlines()
             source = source_cache[path]
             for line in block["lines"]:
                 number = line["line"]
                 if number > len(source) or source[number - 1] != line["text"]:
                     raise ValueError("selected source line changed")
+    except AnalysisLimitError:
+        raise
     except (OSError, ValueError, UnicodeError, SyntaxError):
         raise ValueError("Selected source changed during diagnosis; rerun preview and diagnosis") from None
 
@@ -465,7 +468,7 @@ def _parser() -> argparse.ArgumentParser:
     impact.add_argument("--languages", default="python", help="Explicit CSV: python,javascript,typescript")
     impact.add_argument("path", type=Path)
     impact.add_argument("symbol")
-    impact.add_argument("--depth", type=int, default=2)
+    impact.add_argument("--depth", type=int, choices=range(1, 11), default=2)
     impact.add_argument("--json", action="store_true")
     validate = subcommands.add_parser("validate", help="Check source evidence in a model finding JSON file")
     validate.add_argument("path", type=Path)
@@ -668,7 +671,9 @@ def main(argv: list[str] | None = None) -> int:
                 for item in matches for value in (item["id"], item["name"], item["qualname"])
             )
             payload = {"schema_version": 1, "query": args.query, "candidates": candidates,
-                       "matches": matches, "analysis": analysis_metadata(index)}
+                       "matches": matches, "analysis": analysis_metadata(index),
+                       "resource_limits": index.budget.limits.as_dict()}
+            index.budget.checkpoint("symbols output")
             if args.json:
                 _print_json(payload)
             else:
@@ -763,8 +768,9 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             client = complete_json_schema if args.response_format == "json-schema" else complete_json
             try:
-                result = client(system_prompt, user_prompt, api_key=api_key, model=model,
-                                **chat_options)
+                with index.budget.exclude_external_wait():
+                    result = client(system_prompt, user_prompt, api_key=api_key, model=model,
+                                    **chat_options)
                 _verify_selected_source(index, context)
                 if reproduction is not None and source_fingerprint(build_index(index.root)) != reproduction["source_fingerprint"]:
                     raise ValueError("Python source changed during diagnosis; rerun reproduce")
@@ -806,6 +812,8 @@ def main(argv: list[str] | None = None) -> int:
             printer = _print_diagnosis
         if args.command in {"overview", "context", "impact"}:
             payload["analysis"] = analysis_metadata(index)
+            payload["resource_limits"] = index.budget.limits.as_dict()
+            index.budget.checkpoint("investigation output")
         if args.json:
             _print_json(payload)
         else:

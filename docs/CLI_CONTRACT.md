@@ -13,6 +13,12 @@
 - 符号 ID 为 `相对文件::限定名`，如 `app.py::Service.run`，保留大小写。使用搜索返回的 ID；重复/歧义定义不返回为可用符号，context/impact 拒绝歧义 ID。
 - Git revision、fingerprint、工具版本不是运行时验证结果。源码改变后重新调查，不把旧行号当成新证据。
 
+## resource_limits（核心五命令和 map.json）
+
+顶层对象固定键：max_file_bytes integer = 2097152、max_total_bytes integer = 67108864、max_files integer = 5000、git_timeout_seconds number = 15、index_timeout_seconds number = 60、timeout_kind string = "cooperative"。它描述当前分析预算，不是实际消费量，不改变各命令 schema_version。
+
+累计量包含指纹/上下文再次读取；时间从索引延续到证据准备检查点，不能中断 native parser，也不是 RSS 上限。整体超限不返回部分成功；与 `analysis.limits` 覆盖限制列表以及 map 投影 limits 分别解释。详情见 [资源边界](RESOURCE_LIMITS.md)。
+
 ## 参数
 
 REPO 为目标目录，ID 为真实符号 ID。所有核心命令支持 `--json` 和 `--languages CSV`。
@@ -22,7 +28,7 @@ REPO 为目标目录，ID 为真实符号 ID。所有核心命令支持 `--json`
 | `overview REPO` | 无 | 有界摘要，不返回整个索引 |
 | `symbols REPO --query TEXT` | `--limit N` | 默认 20，范围 1–100；query 非空 |
 | `context REPO ID` | `--max-lines N`、可重复 `--include-symbol ID`、`--snapshot-out NEW_FILE` | 默认 120，N 为正整数；Python snapshot 额外要求 1–120 |
-| `impact REPO ID` | `--depth N` | 默认 2；当前至少 1，1.0 的 1–10 上限将在资源阶段落实 |
+| `impact REPO ID` | `--depth N` | 默认 2；允许 1–10 |
 | `map REPO --out NEW_DIR` | `--symbol ID`、`--depth N` | depth 默认 1、允许 1/2；目录不能已存在或为符号链接 |
 
 `--include-symbol` 共用一个行预算。JS/TS snapshot 拒绝发生在建立索引/写入快照之前，应改用 `context --json`。
@@ -106,7 +112,7 @@ map.json 的 schema_version=1，含 repository、coverage、nodes、edges、file
 
 现有字段类型、ID 和证据含义保持，新增字段/关系说明可忽略。删除字段、改变类型或将未知改为确定证据须评估兼容并按主版本管理。不为统一数字重编号各命令 schema_version。
 
-1.0 资源边界将在对应阶段补入合同。旧 Python 案件不批量重写。其他历史命令可能退出 1（如 findings 部分拒绝或回归失败），不能将核心五命令的退出政策推广到所有接口。
+资源超限属于操作错误，退出 2/stdout 空；[资源说明](RESOURCE_LIMITS.md) 定义累计读取与 cooperative 时间的含义。旧 Python 案件不批量重写。其他历史命令可能退出 1（如 findings 部分拒绝或回归失败），不能将核心五命令的退出政策推广到所有接口。
 
 ## 版本与 Skill 导出
 

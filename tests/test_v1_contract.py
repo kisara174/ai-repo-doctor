@@ -35,7 +35,11 @@ class CLIHarness:
         status, out, err = self.run_cli(*argv, '--json')
         self.assertEqual(status, 0, err)
         self.assertEqual(err, '')
-        return json.loads(out)
+        data = json.loads(out)
+        self.assertEqual(data['resource_limits'], {
+            'max_file_bytes': 2097152, 'max_total_bytes': 67108864, 'max_files': 5000,
+            'git_timeout_seconds': 15, 'index_timeout_seconds': 60, 'timeout_kind': 'cooperative'})
+        return data
 
     def symbol(self, name):
         result = self.data('symbols', self.repo, '--query', name)
