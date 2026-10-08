@@ -106,4 +106,12 @@ map.json 的 schema_version=1，含 repository、coverage、nodes、edges、file
 
 现有字段类型、ID 和证据含义保持，新增字段/关系说明可忽略。删除字段、改变类型或将未知改为确定证据须评估兼容并按主版本管理。不为统一数字重编号各命令 schema_version。
 
-1.0 资源边界/Skill 绑定将在对应阶段补入合同。旧 Python 案件不批量重写。其他历史命令可能退出 1（如 findings 部分拒绝或回归失败），不能将核心五命令的退出政策推广到所有接口。
+1.0 资源边界将在对应阶段补入合同。旧 Python 案件不批量重写。其他历史命令可能退出 1（如 findings 部分拒绝或回归失败），不能将核心五命令的退出政策推广到所有接口。
+
+## 版本与 Skill 导出
+
+`repo-doctor --version` 输出 `repo-doctor VERSION` 并退出 0，不建立目标索引。`skill export --out NEW_DIR [--cli ABS_CLI]` 成功退出 0（人类可读 stdout），操作错误退出 2，不支持 --json。
+
+无 --cli 时保留通用 SKILL.md 导出；绑定后使用。指定 --cli 时先核对可执行文件和版本，成功生成 SKILL.md 与 installation.json。binding 为 `{schema_version: 1, cli: string, version: string}`；cli 为解析符号链接后的绝对路径，版本与导出包一致。版本核验以独立 argv 执行 --version，5 秒超时；不从 PATH 猜测替代 CLI。
+
+已有目录/符号链接拒绝覆盖，输入错误不创建导出目录，写入失败清理本次已写文件。新 Skill 名称 repo-doctor-v1，可与用户现有 repo-doctor 并存；真实加载成功由独立 Codex 会话验证，不由 JSON 导出成功替代。

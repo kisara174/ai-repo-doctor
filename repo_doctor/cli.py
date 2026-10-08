@@ -373,6 +373,7 @@ def _parser() -> argparse.ArgumentParser:
     skill_commands = skill.add_subparsers(dest='skill_action', required=True)
     skill_export = skill_commands.add_parser('export')
     skill_export.add_argument('--out', type=Path, required=True)
+    skill_export.add_argument('--cli', type=Path, help='Bind an absolute CLI path with the same package version')
     demo = subcommands.add_parser("demo", help="Create a controlled Python repository to try the full workflow")
     demo_commands = demo.add_subparsers(dest="demo_action", required=True)
     demo_create = demo_commands.add_parser("create", help="Write an intentionally broken Python sample")
@@ -522,7 +523,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(raw_argv)
     try:
         if args.command == 'skill':
-            export_skill(args.out)
+            export_skill(args.out, cli_path=args.cli)
             print(f'Skill exported: {args.out}')
             return 0
         if args.command == "demo":

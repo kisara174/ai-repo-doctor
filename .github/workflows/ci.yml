@@ -51,6 +51,7 @@ jobs:
         shell: bash
         run: |
           python -m pip wheel --no-deps --wheel-dir dist .
+          RD_EXPECTED_VERSION="$(python -c 'from repo_doctor._version import __version__; print(__version__)')"
           python -m venv "$RUNNER_TEMP/repo-doctor-venv"
           "$RUNNER_TEMP/repo-doctor-venv/bin/python" -m pip install --no-index dist/*.whl
           mkdir "$RUNNER_TEMP/repo-doctor-sample"
@@ -81,10 +82,12 @@ jobs:
           "$RUNNER_TEMP/repo-doctor-venv/bin/python" "$RUNNER_TEMP/validate_release_install.py" \
             --python "$RUNNER_TEMP/repo-doctor-venv/bin/python" \
             --cli "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" \
+            --expected-version "$RD_EXPECTED_VERSION" \
             --out "$RUNNER_TEMP/installed-release-evidence"
           python "$GITHUB_WORKSPACE/tools/validate_js_ts_install.py" --mode base \
             --python "$RUNNER_TEMP/repo-doctor-venv/bin/python" \
             --cli "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" \
+            --expected-version "$RD_EXPECTED_VERSION" \
             --out "$RUNNER_TEMP/installed-base-preview-evidence"
 
   js-preview:
@@ -120,6 +123,7 @@ jobs:
         shell: bash
         run: |
           python -m pip wheel --no-deps --wheel-dir dist .
+          RD_EXPECTED_VERSION="$(python -c 'from repo_doctor._version import __version__; print(__version__)')"
           python -m venv "$RUNNER_TEMP/repo-doctor-js-venv"
           WHEEL=$(realpath dist/*.whl)
           "$RUNNER_TEMP/repo-doctor-js-venv/bin/python" -m pip install "$WHEEL[js]"
@@ -127,6 +131,7 @@ jobs:
           python "$GITHUB_WORKSPACE/tools/validate_js_ts_install.py" --mode js \
             --python "$RUNNER_TEMP/repo-doctor-js-venv/bin/python" \
             --cli "$RUNNER_TEMP/repo-doctor-js-venv/bin/repo-doctor" \
+            --expected-version "$RD_EXPECTED_VERSION" \
             --out "$RUNNER_TEMP/installed-js-preview-evidence"
 
   map-viewer:

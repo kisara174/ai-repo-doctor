@@ -1,3 +1,3 @@
 """Single source for the distribution and generated-record version."""
 
-__version__ = '0.8.0'
+__version__ = '1.0.0.dev1'

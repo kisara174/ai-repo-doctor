@@ -11,7 +11,7 @@ import subprocess
 import time
 from xml.etree import ElementTree as ET
 
-VERSION = "0.8.0"
+VERSION = "1.0.0.dev1"
 FIXTURES = {'bad.js': 'export function broken( {\n', 'consumer.ts': "import {inc as step} from './core.js';\nexport function run() {\n  return step(2);\n}\n", 'core.js': 'export function add(a, b) {\n  return a + b;\n}\nexport const twice = value => add(value, value);\nexport class Box {\n  get() { return this.value; }\n}\nexport default function main() {\n  return twice(2);\n}\n', 'core.ts': 'export function inc(value: number): number {\n  return value + 1;\n}\nexport function entry(value: number): number {\n  return inc(value);\n}\nexport function overloaded(value: string): string;\nexport function overloaded(value: number): number;\nexport function overloaded(value: string | number): string | number {\n  return value;\n}\nexport class Counter {\n  next(value: number): number { return inc(value); }\n}\n', 'declarations.d.ts': 'export declare function onlyType(): void;\n', 'duplicate.ts': 'export function same() { return 1; }\nexport function same() { return 2; }\n', 'dynamic.js': 'export function entry(obj) {\n  return obj.run();\n}\nexport function later(name) {\n  return import(name);\n}\n', 'shadow.js': 'function add(value) { return value + 1; }\nexport function entry(add) {\n  return add(1);\n}\n', 'type_only.ts': "import type {inc} from './core.js';\nexport function bad() {\n  return inc(1);\n}\n", 'unicode.js': '// 中文与 emoji 😀\nexport function café(value) {\n  return value;\n}\n', 'unsupported.cjs': 'module.exports = () => 1;\n', 'unsupported.tsx': 'export const View = () => <div />;\n'}
 
 
@@ -28,7 +28,7 @@ def write(path, value):
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def validate(mode, python, cli, out):
+def validate(mode, python, cli, out, expected_version=VERSION):
     require(all(p.is_absolute() for p in (python, cli, out)), "paths must be absolute")
     require(not out.exists() and not out.is_symlink(), "output already exists")
     out.mkdir(parents=True)
@@ -62,9 +62,9 @@ def validate(mode, python, cli, out):
         "'extras':{n:importlib.util.find_spec(n) is not None for n in "
         "('tree_sitter','tree_sitter_javascript','tree_sitter_typescript')},"
         "'loaded':[n for n in sys.modules if n.startswith('tree_sitter')]}))"]).stdout)
-    require(metadata["version"] == VERSION, "wrong installed version")
+    require(metadata["version"] == expected_version, "wrong installed version")
     require("site-packages" in Path(metadata["path"]).parts, "source checkout imported")
-    require(rd("version", "--version").stdout.strip() == "repo-doctor " + VERSION, "CLI version mismatch")
+    require(rd("version", "--version").stdout.strip() == "repo-doctor " + expected_version, "CLI version mismatch")
     rd("help", "--help")
     require(all(metadata["extras"].values()) if mode == "js" else not any(metadata["extras"].values()),
             "mode does not match actual optional dependencies")
@@ -283,7 +283,7 @@ def validate(mode, python, cli, out):
     require(before == {str(p.relative_to(repo)): digest(p) for p in repo.rglob("*") if p.is_file()}, "target source modified")
     require(frontend_before == {name: digest(frontend / name) for name in frontend_sources},
             'frontend fixture modified')
-    summary = dict(status="passed", mode=mode, version=VERSION, installed_metadata=metadata,
+    summary = dict(status="passed", mode=mode, version=expected_version, installed_metadata=metadata,
                    python=str(python), cli=str(cli), commands=commands, maps_sha256=maps,
                    source_fingerprint=overview["source_fingerprint"] if "source_fingerprint" in overview
                    else json.loads((out / ("mixed-map" if mode == "js" else "python-map") / "map.json").read_text())["repository"]["source_fingerprint"],
@@ -298,12 +298,13 @@ def main():
     parser.add_argument("--python", type=Path, required=True)
     parser.add_argument("--cli", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--expected-version", default=VERSION)
     args = parser.parse_args()
     try:
-        summary = validate(args.mode, args.python, args.cli, args.out)
+        summary = validate(args.mode, args.python, args.cli, args.out, args.expected_version)
     except (ValueError, OSError, subprocess.TimeoutExpired, KeyError, StopIteration) as exc:
         parser.exit(2, f"Installed validation failed: {exc}\n")
-    print(json.dumps({"status": summary["status"], "mode": args.mode, "version": VERSION}))
+    print(json.dumps({"status": summary["status"], "mode": args.mode, "version": summary["version"]}))
     return 0
 
 
