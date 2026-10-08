@@ -23,8 +23,8 @@ Codex 负责判断和修复。工具提供静态证据和关系图，不扩展�
 | V3 | 文件/源码/时间/深度边界及可用规模证据 | V1；顺序在 V2 后 | 已完成 |
 | V4 | macOS/Linux 的明确平台支持及 CI | V2、V3 | 已完成 |
 | V5 | 三个新真实调查、一个干净 Codex 会话、实际收益与缺陷闭环 | V4 | 已完成 |
-| V6 | 许可、包元数据、用户文档、兼容与维护政策 | V5；许可可提前收集 | 进行中；许可已确定，待 wheel 核验 |
-| V7 | 精确提交 RC、独立安装和发布阻塞清零 | V6 | 待开始 |
+| V6 | 许可、包元数据、用户文档、兼容与维护政策 | V5；许可可提前收集 | 已完成 |
+| V7 | 精确提交 RC、独立安装和发布阻塞清零 | V6 | 进行中 |
 | V8 | 正式 1.0.0 产物、公开发行、本机部署与回滚实演 | V7 | 待开始 |
 | V9 | 最终使用链复核、保护审计、交付报告和 Goal 完成 | V8 | 待开始 |
 
@@ -53,7 +53,7 @@ Codex 负责判断和修复。工具提供静态证据和关系图，不扩展�
 - [ ] A8 许可、维护、反馈、兼容和发布说明齐全。
 - [ ] 无未解决的发布阻塞；报告与实际产物一致后更新 Goal 为 complete。
 
-下一执行点：详细计划 **V6.1–V6.10**（MIT 已获用户明确确认）。V0 证据：`~/.local/share/ai-repo-doctor/evaluations/v1-product-closure-v1/baseline/`；155,745 个保护路径、15 个既有未提交文件，75 个符号链接口径差异已逐项核对，未发现内容变化。
+下一执行点：详细计划 **V7 RC 构建与发布阻塞清零**。V0 证据：`~/.local/share/ai-repo-doctor/evaluations/v1-product-closure-v1/baseline/`；155,745 个保护路径、15 个既有未提交文件，75 个符号链接口径差异已逐项核对，未发现内容变化。
 
 V1 证据：`~/.local/share/ai-repo-doctor/evaluations/v1-product-closure-v1/v1/`；10 项核心合同、11 项既有 agent workflow、无 extra 的实际退出 2 均已核对。
 
@@ -65,6 +65,5 @@ V4 证据：同根目录 `v4/verified-ci.json`、`v4/push-artifacts/`；实施�
 
 V5 证据：同根目录 `v5/completion.json`、`v5/codex-consumer-r2/primary-review.json`；3 个新固定仓库、18 条核心链命令、352 行源码精确比对、3 份实际 Chrome 地图/SVG；第二次独立会话 295.53 秒成功，首轮 420 秒超时保留。82 个目标跟踪路径、4,887 个非历史保护路径不变；pretty-ms 的嵌套调用影响收益不足已写明。
 
-V6 无许可依赖部分已准备：11 份公开文档门禁、8 项门禁回归、问题模板和包 URL/描述；真实新 wheel 非许可 metadata 通过，许可字段/文件仍为空，V6.9 未通过。V7.3 回执字段仅提前补齐，33 条既有 installed dev1 生命周期匹配；未创建 RC、未发布或切换全局入口。
 
-V6 安装文档已修复 zsh wheel extra 丢参（`${RD_WHEEL}[js]`），新增红/绿门禁并直接执行文档安装块：新 venv 安装、版本、绑定 Skill 和自建源码概览通过。仍缺用户许可输入，正式发布条件未满足。
+V6 完成：MIT / kisara174 已获明确确认，精确提交 c767c98 新 wheel 的许可字段、标准 LICENSE 和全部元数据通过；35 个 runtime 与 V3 一致。11 份公开文档门禁、8 项门禁回归通过。旧的无许可 wheel 失败回执保留；新证据见 v6/license-approved/wheel-validation/summary.json。zsh 安装例子已直接验收，V7.3 回执字段提前修复。RC/正式发布仍按后续门禁执行。

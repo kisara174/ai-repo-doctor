@@ -220,10 +220,10 @@ git diff --check
 - [x] **V6.6** 写 CHANGELOG 的 1.0 条目和已发布 0.8 参考；写 SUPPORT/问题模板，要求版本、系统、语言、最小源码/命令、预期/实际、退出码和限制说明，不要求密钥或完整私人仓库。
 - [x] **V6.7** 写兼容政策：1.x 稳定 CLI/JSON；内部 API 无稳定承诺；支持边界和弃用流程；维护由 GitHub Issues/Release 承接，不虚构 SLA。
 - [x] **V6.8** Readiness 表逐项列 A1–A8 的状态、回执位置和未关闭缺陷；区分准备完成与正式产物发布完成。
-- [ ] **V6.9** 构建临时 wheel 读取 METADATA/许可文件，核对 Name/Version/Summary/Requires-Python/Project-URL/License-Expression/License-File；未声明或未打包许可则不能通过。
+- [x] **V6.9** 构建临时 wheel 读取 METADATA/许可文件，核对 Name/Version/Summary/Requires-Python/Project-URL/License-Expression/License-File；未声明或未打包许可则不能通过。
 - [x] **V6.10** 运行公开文档门禁，主代理核对安装例子可复制且无维护者路径；提交更新。
 
-**当前：**V6.3–V6.8/V6.10 的无许可依赖文档与元数据已准备并通过公开文档门禁。V6.1/V6.2 已按用户确认采用 MIT、版权署名 kisara174；V6.9 等待含许可的新 wheel 实测，不提前勾选。
+**实际：**V6 全部完成。用户确认 MIT / kisara174；精确提交 `c767c98` 的实际 wheel 具备 License-Expression MIT、License-File LICENSE，标准许可逐字节一致，35 个 runtime 与 V3 一致。见 v6/license-approved/wheel-validation/summary.json。RC1 已设置；RC 门禁尚待执行。
 
 **验证：**`"$RD_PY" tools/check_public_docs.py --root .`；读取真实 wheel zip 内 metadata；A1–A8 readiness 无虚假完成。缺许可时本阶段不完整，禁止进入正式发行。
 
@@ -233,8 +233,8 @@ git diff --check
 
 **文件：**Modify `repo_doctor/_version.py`、`tools/validate_release_install.py`、`tools/validate_js_ts_install.py`、V2 新验证器中的版本处理、当前用户文档版本示例；RC 产物/回执放 `v7/rc1/`，重建使用 rc2 等新目录。
 
-- [ ] **V7.1** 主代理逐项检查 V0–V6，缺陷账本中发布阻塞归零；缺许可/新会话/地图实用验收/平台门禁不能以“以后补”跳过。
-- [ ] **V7.2** 设置 `1.0.0rc1`；安装验证器通过明确的候选版本核对实际 metadata/CLI，去掉散落的旧版本号。旧历史证据不改。
+- [x] **V7.1** 主代理逐项检查 V0–V6，缺陷账本中发布阻塞归零；缺许可/新会话/地图实用验收/平台门禁不能以“以后补”跳过。
+- [x] **V7.2** 设置 `1.0.0rc1`；安装验证器通过明确的候选版本核对实际 metadata/CLI，去掉散落的旧版本号。旧历史证据不改。
 - [x] **V7.3** 给旧生命周期验证器的逐命令回执补齐 `expected_exit_code`，保留既有预期失败语义；不得全量把负向用例改成 0。已在许可等待期间提前准备：红/绿回执及现有 installed dev1 生命周期 33 条匹配，见 v7-preparation；尚不是 RC 发行验收。
 - [ ] **V7.4** 在已安装 JS extra 的开发环境跑一次完整 unittest；记录实际总数、失败、跳过及解释。预期不能存在未解释的 JS 缺依赖跳过，不硬编码沿用 498。
 - [ ] **V7.5** 跑现有 viewer/search/DOM 门禁，并构建受控超 200 节点地图覆盖搜索选中祖先链；保持 200/500 投影上限。

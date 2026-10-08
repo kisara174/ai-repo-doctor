@@ -1,10 +1,10 @@
 # 安装、Codex 接入、升级与回滚
 
-<!-- repo-doctor-install-versions: 1.0.0.dev1, 1.0.0 -->
+<!-- repo-doctor-install-versions: 1.0.0rc1, 1.0.0 -->
 
 适用范围：macOS/Linux，Python 3.11+。1.0 尚在实施；实际平台组合见 [支持矩阵](SUPPORT_MATRIX.md)，正式承诺由精确提交的 CI 与发行报告确认，Windows 暂不承诺。
 
-**以下 1.0.0 公共下载步骤仅在正式 Release 发布后可用。** 开发候选应使用维护者提供的本地 wheel，并将 RD_VERSION 设为实际版本（当前为 1.0.0.dev1）；不能把开发候选称为正式 1.0。
+**以下 1.0.0 公共下载步骤仅在正式 Release 发布后可用。** 开发候选应使用维护者提供的本地 wheel，并将 RD_VERSION 设为实际版本（当前为 1.0.0rc1）；不能把开发候选称为正式 1.0。
 
 ## 1. 选择来源与安装目录
 
