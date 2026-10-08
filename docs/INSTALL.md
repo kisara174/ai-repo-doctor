@@ -35,7 +35,7 @@ curl --fail --location "$RD_URL/SHA256SUMS" --output "$RD_ROOT/SHA256SUMS"
 
 ```sh
 python3 -m venv "$RD_ROOT/venv"
-"$RD_ROOT/venv/bin/python" -m pip install "$RD_WHEEL[js]"
+"$RD_ROOT/venv/bin/python" -m pip install "${RD_WHEEL}[js]"
 RD_CLI="$RD_ROOT/venv/bin/repo-doctor"
 "$RD_CLI" --version
 ```

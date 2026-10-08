@@ -40,3 +40,5 @@ V5 独立消费者首轮在 420 秒外层时限结束，保留为失败；第二
 V6 技术文档提交 `80f25ec8e26b1ff8be93eab630689c08f65e5e2e` 已从精确 archive 构建新 dev1 wheel：Name、Version、Summary、Requires-Python、4 个 Project-URL 和 3 个可选依赖字段匹配；35 个 runtime 文件与 V3 安装一致。License-Expression 为空、License-File 为空，门禁实际返回 2，明确不是发行准备成功。回执位于 v6/metadata/summary.json。
 
 V7.3 仅提前补齐旧生命周期回执的 expected_exit_code，最小负向检查修复前缺字段、修复后通过；现有 installed dev1 的 33 条生命周期命令实际/预期退出码逐条匹配，预期失败未改成 0。它不代替 RC 的全套精确提交验收。
+
+安装文档另发现并修复 zsh 对未加花括号的 wheel extra 变量展开问题：改用 `"${RD_WHEEL}[js]"`。实际 zsh 复现旧命令丢参，文档门禁新增回归（红→绿，现 8 项）；随后直接提取文档 shell 块，在新虚拟环境安装上述精确 dev1 wheel，核对版本、导出新绑定 Skill、完成自建源码概览。bash/zsh 的带空格参数也分别核对。证据在 v6/zsh-expansion、zsh-doc-red/green、zsh-install；无目标程序执行。

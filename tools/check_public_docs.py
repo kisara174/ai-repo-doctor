@@ -36,6 +36,8 @@ def check_document(root: Path, path: Path, source_version: str) -> list[str]:
             continue
         if re.search(r'/(?:Users|home)/[^\s/]+/', line):
             errors.append(f'{display}:{number}: maintainer home path in runnable example')
+        if 'pip install' in line and re.search(r'\$[A-Za-z_][A-Za-z0-9_]*\[[^\]]+\]', line):
+            errors.append(f'{display}:{number}: unbraced extra suffix is a zsh variable subscript; use ${{VARIABLE}}[extra]')
         literals = []
         for pattern in (rf'ai_repo_doctor-({_VERSION})-py3-none-any\.whl',
                         rf'/releases/download/v({_VERSION})(?:/|$)',

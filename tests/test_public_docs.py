@@ -48,6 +48,11 @@ class PublicDocsTests(unittest.TestCase):
         self.assertTrue(any('development' in row for row in self.check('<!-- repo-doctor-development-version: 0.9.0 -->')))
         self.assertEqual(self.check('<!-- repo-doctor-development-version: 1.0.0.dev1 -->'), [])
 
+    def test_wheel_extra_variable_is_portable_to_zsh(self):
+        errors = self.check('```sh\npython -m pip install "$RD_WHEEL[js]"\n```')
+        self.assertTrue(any('unbraced' in row for row in errors))
+        self.assertEqual(self.check('```sh\npython -m pip install "${RD_WHEEL}[js]"\n```'), [])
+
     def test_complete_public_set_is_required_and_version_is_read_without_import(self):
         version = self.root / 'repo_doctor/_version.py'
         version.parent.mkdir()
