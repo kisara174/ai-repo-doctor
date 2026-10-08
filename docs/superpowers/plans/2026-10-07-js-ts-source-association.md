@@ -286,12 +286,12 @@ RD_SOURCE_TAR、三个 RECEIPTS 路径位于相同 candidate attempt 下；RD_WH
 
 **Files:** 三处正式版本号、README 发行链接、packaged Skill 的版本路径、支持矩阵、`docs/delivery/2026-10-08-v0.7.0-source-association.md`；发行证据位于新的 releases/v0.7.0。
 
-- [ ] 只有 S0–S5 全部满足后才准备正式 0.7.0。候选到正式的每个 runtime 差异列清，禁止假设只差版本；正式冻结 SHA 必须重做独立安装、字节一致和精确提交 CI。
-- [ ] 发布前报告包含：新增功能、保守边界、八仓库逐条结果、实际命令计数、Python 兼容、已知限制、源码/wheel/安装身份、旧证据归属和回滚路径。prepared、blocked、failed 与 passed 分开，失败尝试保留。
-- [ ] 按会话已有授权处理合并和 GitHub wheel 发行；如果新的用户指令缩小授权，遵循最新指令。Luna/Harness 不得执行 push、合并、tag 或 release。
-- [ ] 正式 wheel 与 SHA256SUMS 可下载且摘要相符；独立 JS 安装路径版本为 0.7.0。保持全局 0.5.3 不切换，不覆盖用户 Skill；需要切换时单独按明确用户意图办理。
-- [ ] 复核主目录既有 14 个文件、受保护旧候选 runtime、旧评估证据与安装 Skill 摘要；沿用原保护清单，报告实际覆盖数量与 mismatch，不能只看 Git status。
-- [ ] graphflow_index 增量刷新；更新本清单完成勾选和交付状态。只有发行可下载、安装可运行、功能闭环、原状态受保护时才称正式交付完成。
+- [x] 只有 S0–S5 全部满足后才准备正式 0.7.0。候选到正式的每个 runtime 差异列清，禁止假设只差版本；正式冻结 SHA 必须重做独立安装、字节一致和精确提交 CI。
+- [x] 发布前报告包含：新增功能、保守边界、八仓库逐条结果、实际命令计数、Python 兼容、已知限制、源码/wheel/安装身份、旧证据归属和回滚路径。prepared、blocked、failed 与 passed 分开，失败尝试保留。
+- [x] 按会话已有授权处理合并和 GitHub wheel 发行；如果新的用户指令缩小授权，遵循最新指令。Luna/Harness 不得执行 push、合并、tag 或 release。
+- [x] 正式 wheel 与 SHA256SUMS 可下载且摘要相符；独立 JS 安装路径版本为 0.7.0。保持全局 0.5.3 不切换，不覆盖用户 Skill；需要切换时单独按明确用户意图办理。
+- [x] 复核主目录既有 14 个文件、受保护旧候选 runtime、旧评估证据与安装 Skill 摘要；沿用原保护清单，报告实际覆盖数量与 mismatch，不能只看 Git status。
+- [x] graphflow_index 增量刷新；更新本清单完成勾选和交付状态。只有发行可下载、安装可运行、功能闭环、原状态受保护时才称正式交付完成。
 
 ## 自审与执行顺序
 
@@ -299,4 +299,4 @@ S0 来源 → S1 解析 → S2 来源接口 → S3 地图和公开说明 → S4 
 
 每个任务的后续执行者必须拿到本计划和设计全文。没有独立可验证输出的事项由主代理处理，不为了使用简单模型而把判断压进机械任务。
 
-当前状态：S0–S5 已完成，候选 516c354、487 项单元、110 项相关合同、65 条安装命令、八仓库安装后定向调查及精确 SHA 七项 CI 通过。证据根目录为 /Users/kisara/.local/share/ai-repo-doctor/evaluations/js-ts-source-association-v1。S6 正式版构建、CI 和公开交付正在推进；尚未将正式版标为已发布。
+当前状态：S0–S6 已完成。0.7.0 已公开发布，来源提交 `552b23f7e26462b084b0ac3744a801e66ab26bad`，PR #41 已合并。正式独立安装65条命令（含预期非零负例）、110项相关合同、八仓库13条定向命令及合并提交七项CI通过；公开下载wheel逐字节等于验收产物。全局0.5.3、用户Skill及原14文件/150789份证据/65旧runtime不变。最终证据与报告：`/Users/kisara/.local/share/ai-repo-doctor/releases/v0.7.0/delivery-report.md`、`/Users/kisara/.local/share/ai-repo-doctor/releases/v0.7.0/completion.json`。
