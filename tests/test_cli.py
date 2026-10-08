@@ -532,6 +532,30 @@ class CliTests(unittest.TestCase):
         self.assertEqual(len(json.loads(stdout)["rejected"]), 1)
 
 class LanguageCliTests(unittest.TestCase):
+    def test_extensionless_index_cli_returns_binding_provenance(self):
+        from tests.test_js_ts import HAS_EXTRA
+        if not HAS_EXTRA:
+            self.skipTest('requires optional js extra')
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve()
+            (root/'dir').mkdir()
+            (root/'dir/index.ts').write_text('export function inc() { return 1; }\n')
+            (root/'app.ts').write_text("import {inc} from './dir';\nexport function run() { return inc(); }\n")
+            result=self.run_cli('symbols',root,'--query','inc','--languages','typescript','--json')
+            self.assertEqual(result.returncode,0,result.stderr)
+            sid=json.loads(result.stdout)['matches'][0]['id']
+            self.assertEqual(sid,'dir/index.ts::inc')
+            for cmd in ('context','impact'):
+                result=self.run_cli(cmd,root,sid,'--languages','typescript','--json')
+                self.assertEqual(result.returncode,0,result.stderr)
+                data=json.loads(result.stdout)
+                self.assertFalse(data['analysis']['esm_source_resolution']['runtime_resolution'])
+                edge=(data['call_evidence'][0] if cmd=='context'
+                      else data['affected_symbols'][0]['call_path_evidence'][0])
+                self.assertEqual((edge['caller'],edge['line']),('app.ts::run',2))
+                self.assertEqual(edge['via_esm_import']['specifier'],'./dir')
+                self.assertEqual(edge['via_esm_import']['resolution_kind'],'unique-directory-index-source')
+
     def run_cli(self, *args, no_site=False):
         return subprocess.run([sys.executable, *(['-S'] if no_site else []), '-m', 'repo_doctor',
                                *map(str, args)], cwd=PROJECT_ROOT, capture_output=True, text=True, timeout=30)

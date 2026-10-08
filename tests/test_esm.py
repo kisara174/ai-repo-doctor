@@ -9,6 +9,121 @@ from tests.test_js_ts import HAS_EXTRA
 
 
 @unittest.skipUnless(HAS_EXTRA, 'requires optional js extra')
+class SourceAssociationTests(unittest.TestCase):
+    def make_index(self, root, specifier, files, *, languages=('javascript', 'typescript'),
+                   consumer=None, app='app.ts'):
+        for filename, source in files.items():
+            path = root / filename
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(source, encoding='utf-8')
+        path = root / app
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(consumer or f"import {{inc}} from '{specifier}';\n"
+                        'export function run() { return inc(); }\n', encoding='utf-8')
+        return build_index(root, languages=languages)
+
+    def test_unique_file_index_and_normalized_parent_preserve_safe_calls(self):
+        source = 'export function inc() { return 1; }\n'
+        cases = [('./core', 'core'+ext, 'app.ts', 'unique-extensionless-source')
+                 for ext in ('.js', '.ts', '.mjs')]
+        cases += [('./dir', 'dir/index'+ext, 'app.ts', 'unique-directory-index-source')
+                  for ext in ('.js', '.ts')]
+        cases += [('../core', 'core.ts', 'nested/app.ts', 'unique-extensionless-source'),
+                  ('../.', 'index.ts', 'nested/app.ts', 'unique-directory-index-source')]
+        for specifier, target, app, kind in cases:
+            with self.subTest(specifier=specifier, target=target), tempfile.TemporaryDirectory() as d:
+                index = self.make_index(Path(d).resolve(), specifier, {target: source}, app=app)
+                self.assertEqual([(r.resolved_file,r.resolution_kind) for r in index.esm_imports],
+                                 [(target,kind)])
+                self.assertEqual([(e.source,e.target,e.line) for e in index.import_edges], [(app,target,1)])
+                self.assertEqual([(e.caller,e.callee,e.line) for e in index.call_edges],
+                                 [(app+'::run',target+'::inc',2)])
+
+    def test_ambiguity_includes_unselected_unsupported_exact_and_index_candidates(self):
+        source = 'export function inc() { return 1; }\n'
+        cases = [('./core', ['core.ts','core.js']), ('./core',['core.ts','core.d.ts']),
+                 ('./dir',['dir.ts','dir/index.ts']), ('./core',['core','core.ts']),
+                 ('./dir',['dir/index.ts','dir/index.tsx']),
+                 ('./core',['core.ts','core.json']), ('./core',['core.ts','core.node'])]
+        for specifier, candidates in cases:
+            with self.subTest(candidates=candidates), tempfile.TemporaryDirectory() as d:
+                index = self.make_index(Path(d).resolve(), specifier,
+                                        {p:source for p in candidates}, languages=('typescript',))
+                self.assertEqual(index.import_edges, [])
+                self.assertEqual(index.call_edges, [])
+                self.assertIn('ambiguous-local-source-candidates', {r.reason for r in index.analysis_limits})
+
+    def test_missing_ineligible_parse_failed_configured_and_special_paths_are_refused(self):
+        source = 'export function inc() { return 1; }\n'
+        cases = [('./core', {}, 'no-local-source-candidate'),
+                 ('./core', {'core.js':source}, 'unselected-or-unsupported-local-source'),
+                 ('./core', {'core.ts':'export function broken( {\n'}, 'parse-error-local-source'),
+                 ('./dir', {'dir/index.ts':source,'dir/package.json':'{}'}, 'directory-package-configuration'),
+                 ('./core', {'core.ts':source,'core/package.json':'{}'}, 'directory-package-configuration'),
+                 ('../../../outside', {}, 'outside-source-root')]
+        cases += [('./core', {'core'+ext:source}, 'unselected-or-unsupported-local-source')
+                  for ext in ('.d.ts','.tsx','.jsx','.mts','.cts','.cjs','.d.mts','.d.cts','.json','.node')]
+        cases += [(spec, {'core.ts':source}, 'unsupported-source-specifier')
+                  for spec in ('./core?x','./core#x','./core%x','./core/')]
+        for specifier, files, reason in cases:
+            with self.subTest(specifier=specifier, files=list(files)), tempfile.TemporaryDirectory() as d:
+                index = self.make_index(Path(d).resolve(), specifier, files, languages=('typescript',))
+                self.assertEqual(index.import_edges, [])
+                self.assertEqual(index.call_edges, [])
+                self.assertIn(reason, {r.reason for r in index.analysis_limits})
+
+    def test_new_file_dependencies_do_not_relax_type_namespace_shadow_or_reexport_calls(self):
+        cases = ["import type {inc} from './core';\nexport function run() { return inc(); }\n",
+                 "import * as ns from './core';\nexport function run() { return ns.inc(); }\n",
+                 "import {inc} from './core';\nexport function run(inc) { return inc(); }\n",
+                 "import {inc} from './core';\ninc = replacement;\nexport function run() { return inc(); }\n",
+                 "import {inc} from './core';\nexport function run() { return [1].map(() => inc()); }\n",
+                 "import {inc} from './barrel';\nexport function run() { return inc(); }\n"]
+        for consumer in cases:
+            with self.subTest(consumer=consumer), tempfile.TemporaryDirectory() as d:
+                index = self.make_index(Path(d).resolve(), './core',
+                    {'core.ts':'export function inc() { return 1; }\n',
+                     'barrel.ts':"export {inc} from './core';\n"}, consumer=consumer)
+                self.assertTrue(index.import_edges)
+                self.assertEqual(index.call_edges, [])
+
+    def test_ignored_generated_and_symlink_targets_are_not_read(self):
+        import subprocess
+        for target in ('core.ts', 'node_modules/core.ts', 'build/core.ts', 'linked.ts'):
+            with self.subTest(target=target), tempfile.TemporaryDirectory() as d:
+                root = Path(d).resolve() / 'repo'
+                root.mkdir()
+                subprocess.run(['git','init','-q',str(root)], check=True, capture_output=True)
+                if target == 'core.ts':
+                    (root/'.gitignore').write_text('core.ts\n')
+                if target == 'linked.ts':
+                    outside = Path(d)/'outside.ts'
+                    outside.write_text('export function inc() {}')
+                    (root/target).symlink_to(outside)
+                    files = {}
+                else:
+                    files = {target:'export function inc() {}'}
+                index = self.make_index(root, './'+target[:-3], files)
+                self.assertEqual(index.import_edges, [])
+                self.assertEqual(index.call_edges, [])
+
+    def test_repeated_bindings_resolve_once_and_repeated_graph_has_no_duplicates(self):
+        from unittest.mock import patch
+        from repo_doctor.esm import _resolve_source, resolve_esm_graph
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d).resolve()
+            (root/'core.ts').write_text('export function inc() {}\nexport function dec() {}\n')
+            (root/'app.ts').write_text("import {inc,dec} from './core';\nexport {inc} from './core';\n"
+                                       'export function run() { inc(); dec(); missing(); }\n')
+            with patch('repo_doctor.esm._resolve_source', wraps=_resolve_source) as resolver:
+                index = build_index(root, languages=('typescript',))
+            self.assertEqual(resolver.call_count, 1, 'work must scale by declaration path, not binding count')
+            before = (list(index.import_edges),list(index.call_edges),list(index.analysis_limits))
+            resolve_esm_graph(index)
+            self.assertEqual((index.import_edges,index.call_edges,index.analysis_limits), before)
+
+
+@unittest.skipUnless(HAS_EXTRA, 'requires optional js extra')
 class ESMTests(unittest.TestCase):
     def test_limit_dedup_work_is_bounded_and_preserves_existing_order(self):
         from unittest.mock import patch
@@ -63,7 +178,7 @@ class ESMTests(unittest.TestCase):
             index = build_index(root, languages=('typescript',))
             self.assertTrue(index.esm_imports[0].type_only)
             self.assertEqual(index.call_edges, [])
-            self.assertNotIn(('app.ts', 'core.ts', 3), [(e.source, e.target, e.line) for e in index.import_edges])
+            self.assertIn(('app.ts', 'core.ts', 3), [(e.source, e.target, e.line) for e in index.import_edges])
             self.assertTrue(any(l.reason == 'external-or-alias' for l in index.analysis_limits))
             self.assertTrue(any(l.reason == 'unresolved-call' for l in index.analysis_limits))
 @unittest.skipUnless(HAS_EXTRA, 'requires optional js extra')
@@ -170,7 +285,7 @@ class DirectCallTests(unittest.TestCase):
             self.assertTrue(any(l.file == 'app.js' and l.line == 2 and
                                 l.reason == 'unresolved-call' for l in index.analysis_limits))
 
-    def test_extensionless_directory_index_stays_unknown(self):
+    def test_extensionless_directory_index_resolves_unique_source(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             (root / 'dir').mkdir()
@@ -178,11 +293,10 @@ class DirectCallTests(unittest.TestCase):
             (root / 'app.ts').write_text(
                 "import {target} from './dir';\nexport function entry() { return target(); }\n")
             index = build_index(root, languages=('typescript',))
-            self.assertEqual(index.import_edges, [])
-            self.assertEqual(index.call_edges, [])
-            limits = {(l.file, l.line, l.reason) for l in index.analysis_limits}
-            self.assertIn(('app.ts', 1, 'ambiguous-or-unsupported-local-source'), limits)
-            self.assertIn(('app.ts', 2, 'unresolved-call'), limits)
+            self.assertEqual([(e.source,e.target,e.line) for e in index.import_edges],
+                             [('app.ts','dir/index.ts',1)])
+            self.assertEqual([(e.caller,e.callee,e.line) for e in index.call_edges],
+                             [('app.ts::entry','dir/index.ts::target',2)])
 
     def test_alias_and_node_modules_stay_external(self):
         with tempfile.TemporaryDirectory() as directory:

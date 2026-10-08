@@ -198,6 +198,16 @@ class ESMExportRef:
 
 
 @dataclass(frozen=True, slots=True)
+class ESMSourceAssociation:
+    file: str
+    specifier: str
+    target: str
+    start_line: int
+    end_line: int
+    resolution_kind: str
+
+
+@dataclass(frozen=True, slots=True)
 class IdentifierUse:
     file: str
     name: str
@@ -245,3 +255,5 @@ class RepoIndex:
     class_header_spans: dict[str, tuple[int, int]] = field(default_factory=dict)
     js_top_level_symbols: set[str] = field(default_factory=set)
     js_calls_resolved: bool = False
+    esm_source_associations: dict[tuple[str, str, int], ESMSourceAssociation] = field(default_factory=dict)
+    js_call_imports: dict[tuple[str, str, int], ESMImportRef] = field(default_factory=dict)

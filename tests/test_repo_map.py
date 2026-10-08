@@ -11,6 +11,37 @@ from repo_doctor.cli import main
 
 
 class RepoMapTests(unittest.TestCase):
+    def test_unique_index_file_relations_and_type_only_boundary_reach_offline_artifacts(self):
+        from tests.test_js_ts import HAS_EXTRA
+        if not HAS_EXTRA:
+            self.skipTest('requires optional js extra')
+        (self.repo/'dir').mkdir()
+        (self.repo/'dir/index.ts').write_text('export function inc() { return 1; }\n')
+        (self.repo/'app.ts').write_text("import {inc} from './dir';\nexport function run() { return inc(); }\n")
+        (self.repo/'types.ts').write_text("import type {inc} from './dir';\nexport function bad() { return inc(); }\n")
+        status,output,err=self.generate('--languages','typescript')
+        self.assertEqual(status,0,err)
+        data=json.loads((output/'map.json').read_text())
+        edges={(e['kind'],e['source'],e['target']):e for e in data['edges']}
+        self.assertEqual(edges[('import','file:app.ts','file:dir/index.ts')]['evidence'],
+                         [{'file':'app.ts','line':1}])
+        self.assertIn(('import','file:types.ts','file:dir/index.ts'),edges)
+        self.assertIn(('call','symbol:app.ts::run','symbol:dir/index.ts::inc'),edges)
+        self.assertNotIn(('call','symbol:types.ts::bad','symbol:dir/index.ts::inc'),edges)
+        self.assertIn(('call','file:app.ts','file:dir/index.ts'),
+                      {(e['kind'],e['source'],e['target']) for e in data['file_edges']})
+        self.assertEqual(data['limits'],{'nodes':200,'edges':500})
+        self.assertFalse(data['analysis']['esm_source_resolution']['runtime_resolution'])
+        ns={'s':'http://www.w3.org/2000/svg'}
+        for name,view in data['views'].items():
+            ids={n['id'] for n in view['nodes']}
+            self.assertTrue(all(e['source'] in ids and e['target'] in ids for e in view['edges']))
+            svg=ET.parse(output/(name+'.svg'))
+            actual={e.get('data-edge-id') for e in svg.findall('.//s:path',ns)
+                    if e.get('data-edge-id') is not None}
+            self.assertEqual(actual,{e['id'] for e in view['edges']})
+        self.assertTrue((output/'map.html').is_file())
+
     def test_mixed_relation_projection_uses_analyzed_and_preserves_legacy(self):
         from tests.test_js_ts import HAS_EXTRA, FIXTURES
         if not HAS_EXTRA:

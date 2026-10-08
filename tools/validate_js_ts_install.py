@@ -11,7 +11,7 @@ import subprocess
 import time
 from xml.etree import ElementTree as ET
 
-VERSION = "0.6.0"
+VERSION = "0.7.0"
 FIXTURES = {'bad.js': 'export function broken( {\n', 'consumer.ts': "import {inc as step} from './core.js';\nexport function run() {\n  return step(2);\n}\n", 'core.js': 'export function add(a, b) {\n  return a + b;\n}\nexport const twice = value => add(value, value);\nexport class Box {\n  get() { return this.value; }\n}\nexport default function main() {\n  return twice(2);\n}\n', 'core.ts': 'export function inc(value: number): number {\n  return value + 1;\n}\nexport function entry(value: number): number {\n  return inc(value);\n}\nexport function overloaded(value: string): string;\nexport function overloaded(value: number): number;\nexport function overloaded(value: string | number): string | number {\n  return value;\n}\nexport class Counter {\n  next(value: number): number { return inc(value); }\n}\n', 'declarations.d.ts': 'export declare function onlyType(): void;\n', 'duplicate.ts': 'export function same() { return 1; }\nexport function same() { return 2; }\n', 'dynamic.js': 'export function entry(obj) {\n  return obj.run();\n}\nexport function later(name) {\n  return import(name);\n}\n', 'shadow.js': 'function add(value) { return value + 1; }\nexport function entry(add) {\n  return add(1);\n}\n', 'type_only.ts': "import type {inc} from './core.js';\nexport function bad() {\n  return inc(1);\n}\n", 'unicode.js': '// 中文与 emoji 😀\nexport function café(value) {\n  return value;\n}\n', 'unsupported.cjs': 'module.exports = () => 1;\n', 'unsupported.tsx': 'export const View = () => <div />;\n'}
 
 
@@ -141,8 +141,71 @@ def validate(mode, python, cli, out):
            "--snapshot-out", forbidden, "--json", expected=2)
         require(not forbidden.parent.exists(), "rejected snapshot wrote artifacts")
 
+        association = out / 'association'
+        sources = {
+            'core.ts': 'export function inc() { return 1; }\n',
+            'dir/index.ts': 'export function next() { return 2; }\n',
+            'consumer.ts': "import {inc} from './core';\nimport {next} from './dir';\n"
+                           'export function run() { return next()+inc(); }\n',
+            'types.ts': "import type {inc} from './core';\nexport function bad() { return inc(); }\n",
+            'ambiguous/core.ts': 'export function inc() { return 1; }\n',
+            'ambiguous/core.d.ts': 'export declare function inc(): number;\n',
+            'ambiguous/consumer.ts': "import {inc} from './core';\nexport function bad() { return inc(); }\n",
+        }
+        for filename, text in sources.items():
+            path = association / filename
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding='utf-8')
+        association_before = {name: digest(association / name) for name in sources}
+        matches = data('association-symbols', 'symbols', association, '--query', 'inc',
+                       '--languages', 'typescript')['matches']
+        require('core.ts::inc' in {m['id'] for m in matches}, 'association target missing')
+        sid = next(m['id'] for m in matches if m['id'] == 'core.ts::inc')
+        context = data('association-context', 'context', association, sid, '--max-lines', '120',
+                       '--languages', 'typescript')
+        edge = next(e for e in context['call_evidence'] if e['caller'] == 'consumer.ts::run')
+        require((edge['line'], edge['via_esm_import']['specifier'], edge['via_esm_import']['start_line'],
+                 edge['via_esm_import']['resolved_file'], edge['via_esm_import']['resolution_kind']) ==
+                (3, './core', 1, 'core.ts', 'unique-extensionless-source'), 'incorrect actual import provenance')
+        require(context['analysis']['esm_source_resolution']['runtime_resolution'] is False,
+                'source association misrepresented as runtime resolution')
+        count = 0
+        for block in context['blocks']:
+            lines = (association / block['file']).read_text(encoding='utf-8').splitlines()
+            for line in block['lines']:
+                require(lines[line['line']-1] == line['text'], 'association context quote mismatch')
+                count += 1
+        require(count <= 120, 'association context exceeded source budget')
+        impact = data('association-impact', 'impact', association, sid, '--depth', '2', '--languages', 'typescript')
+        require({r['symbol'] for r in impact['affected_symbols']} == {'consumer.ts::run'},
+                'type-only or ambiguous call invented')
+        require(impact['affected_symbols'][0]['call_path_evidence'] == [edge], 'impact provenance mismatch')
+        refused = data('association-ambiguity', 'impact', association, 'ambiguous/core.ts::inc',
+                       '--languages', 'typescript')
+        require(not refused['affected_symbols'] and not refused['import_evidence'], 'ambiguous import connected')
+        mapping = data('association-map', 'map', association, '--languages', 'typescript',
+                       '--out', out / 'association-map')
+        graph = json.loads(Path(mapping['map_json']).read_text(encoding='utf-8'))
+        triples = {(e['kind'], e['source'], e['target']) for e in graph['edges']}
+        require(('import', 'file:consumer.ts', 'file:dir/index.ts') in triples, 'index source dependency missing')
+        require(('call', 'symbol:consumer.ts::run', 'symbol:dir/index.ts::next') in triples,
+                'safe index direct call missing')
+        require(('call', 'symbol:types.ts::bad', 'symbol:core.ts::inc') not in triples, 'type-only call in map')
+        require(('import', 'file:ambiguous/consumer.ts', 'file:ambiguous/core.ts') not in triples,
+                'ambiguous file dependency in map')
+        for mode_name, view in graph['views'].items():
+            nodes = {n['id'] for n in view['nodes']}
+            require(all(e['source'] in nodes and e['target'] in nodes for e in view['edges']),
+                    'association map dangling endpoint')
+            svg = ET.parse(out / 'association-map' / (mode_name + '.svg'))
+            actual = {e.get('data-edge-id') for e in svg.findall('.//{http://www.w3.org/2000/svg}path')
+                      if e.get('data-edge-id') is not None}
+            require(actual == {e['id'] for e in view['edges']}, 'association SVG projection mismatch')
+        require(association_before == {name: digest(association / name) for name in sources},
+                'association fixture modified')
+
     maps = {}
-    for directory in (out / "python-map", out / "mixed-map"):
+    for directory in (out / "python-map", out / "mixed-map", out / 'association-map'):
         if not directory.exists():
             continue
         require({p.name for p in directory.iterdir()} == {"map.json", "map.html", "structure.svg", "relations.svg"}, "wrong map files")
