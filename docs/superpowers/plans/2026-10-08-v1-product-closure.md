@@ -86,27 +86,27 @@ git diff --check
 
 **文件：**Modify `repo_doctor/_version.py`、`repo_doctor/skills.py`、`repo_doctor/cli.py`、`repo_doctor/resources/skill/SKILL.md`、`tools/validate_release_install.py`、`tools/validate_js_ts_install.py`、`.github/workflows/ci.yml`（仅预期版本传参）、`tests/test_agent_tools.py`、`docs/CODEX_AND_MAP.md`；Create `docs/INSTALL.md`、`tests/test_skill_binding.py`、`tools/validate_v1_install.py`。工具使用标准库，不新增依赖。
 
-- [ ] **V2.0** 设置内部版本 `1.0.0.dev1`。安装验证器增加 `--expected-version VERSION`，调用者明确传入；旧验证器可保留与源码当前版本一致的默认值供既有调用兼容，但不能用“读到什么就期待什么”的方式自我验证。同步 CI 调用需要的预期版本，旧发行证据不改。
+- [x] **V2.0** 设置内部版本 `1.0.0.dev1`。安装验证器增加 `--expected-version VERSION`，调用者明确传入；旧验证器可保留与源码当前版本一致的默认值供既有调用兼容，但不能用“读到什么就期待什么”的方式自我验证。同步 CI 调用需要的预期版本，旧发行证据不改。
 
 ### V2A Skill 绑定
 
-- [ ] **V2.1** 给现有 `skill export` 增加可选 `--cli`，对应 `export_skill(destination, *, cli_path=None)`；保留已有无参数调用方式和拒绝覆盖行为。
-- [ ] **V2.2** 先写失败测试：相对路径、缺失/不可执行 CLI、版本不匹配、已有目录、已有符号链接目标。失败后原文件不变，不能留下完整导出假象。
-- [ ] **V2.3** 绑定时以 argv 数组运行显式 CLI 的 `--version`，使用短超时；只接受与当前包版本完全匹配的安装。禁止 shell 拼接和偷偷查找 PATH 替代。
-- [ ] **V2.4** 在新导出目录写 `installation.json`：`schema_version=1`、`cli` 为核验的绝对路径、`version` 为包版本。先完成输入验证再创建目录；写入失败由主代理处理本轮新建的残留，不碰已有目录。
-- [ ] **V2.5** 将 Skill 名称设为 `repo-doctor-v1`，移除维护者路径与旧发行专用文案。写明读取绑定、核对版本、使用返回 ID、明确语言、预算/未知、只输出结构图给人类。
-- [ ] **V2.6** 无绑定的导出仍可生成通用模板，但明确需要绑定后使用；当前安装合同测试继续验证旧调用不被破坏。
-- [ ] **V2.7** 覆盖含空格/中文路径和重复导出。不要依赖 shell 对路径的隐式解释。
+- [x] **V2.1** 给现有 `skill export` 增加可选 `--cli`，对应 `export_skill(destination, *, cli_path=None)`；保留已有无参数调用方式和拒绝覆盖行为。
+- [x] **V2.2** 先写失败测试：相对路径、缺失/不可执行 CLI、版本不匹配、已有目录、已有符号链接目标。失败后原文件不变，不能留下完整导出假象。
+- [x] **V2.3** 绑定时以 argv 数组运行显式 CLI 的 `--version`，使用短超时；只接受与当前包版本完全匹配的安装。禁止 shell 拼接和偷偷查找 PATH 替代。
+- [x] **V2.4** 在新导出目录写 `installation.json`：`schema_version=1`、`cli` 为核验的绝对路径、`version` 为包版本。先完成输入验证再创建目录；写入失败由主代理处理本轮新建的残留，不碰已有目录。
+- [x] **V2.5** 将 Skill 名称设为 `repo-doctor-v1`，移除维护者路径与旧发行专用文案。写明读取绑定、核对版本、使用返回 ID、明确语言、预算/未知、只输出结构图给人类。
+- [x] **V2.6** 无绑定的导出仍可生成通用模板，但明确需要绑定后使用；当前安装合同测试继续验证旧调用不被破坏。
+- [x] **V2.7** 覆盖含空格/中文路径和重复导出。不要依赖 shell 对路径的隐式解释。
 
 ### V2B 安装与部署说明
 
-- [ ] **V2.8** 写标准 Mac/Linux 安装流程：新 venv、固定 wheel URL/SHA、纯 Python 与 `js` extra 两条命令、显式 CLI `--version`、绑定导出、一次五步例子。
-- [ ] **V2.9** 用户示例使用其自己的版本目录，不包含 `/Users/kisara`。区分“安装依赖需要联网”和“安装后的只读分析不需要 API/网络”。
-- [ ] **V2.10** 写升级/回滚：保留旧环境 → 新环境验证 → 保存旧入口 → 切换链接 → 核对版本 → 恢复链接再核对 → 再切到新版。遇到原入口是普通文件时保留文件并由主代理处理，不能强制覆盖。
-- [ ] **V2.11** 新 Skill 另行导出到 `~/.agents/skills/repo-doctor-v1` 或用户指定的新目录；保留现有 `repo-doctor` 内容。明确在新会话使用 `$repo-doctor-v1`，验证时不依赖自动匹配。
-- [ ] **V2.12** 编写安装验证器，参数固定为 `--mode base|js --python ABS --cli ABS --expected-version VERSION --out NEW_ABS`。在仓库外运行，去除 PYTHONPATH/API 环境，核对安装包来源、版本、Skill 绑定和五步产物；输出 `summary.json` 和逐命令回执。测试实际包，不导入工作树冒充安装。
-- [ ] **V2.13** 使用临时候选 wheel 的两个新环境跑验证器；暂不切换全局入口。所有临时路径写到 `v2/products.json`，不得写进用户模板。
-- [ ] **V2.14** 主代理查看真实 diff、回执和绑定 JSON，提交并更新状态。
+- [x] **V2.8** 写标准 Mac/Linux 安装流程：新 venv、固定 wheel URL/SHA、纯 Python 与 `js` extra 两条命令、显式 CLI `--version`、绑定导出、一次五步例子。
+- [x] **V2.9** 用户示例使用其自己的版本目录，不包含 `/Users/kisara`。区分“安装依赖需要联网”和“安装后的只读分析不需要 API/网络”。
+- [x] **V2.10** 写升级/回滚：保留旧环境 → 新环境验证 → 保存旧入口 → 切换链接 → 核对版本 → 恢复链接再核对 → 再切到新版。遇到原入口是普通文件时保留文件并由主代理处理，不能强制覆盖。
+- [x] **V2.11** 新 Skill 另行导出到 `~/.agents/skills/repo-doctor-v1` 或用户指定的新目录；保留现有 `repo-doctor` 内容。明确在新会话使用 `$repo-doctor-v1`，验证时不依赖自动匹配。
+- [x] **V2.12** 编写安装验证器，参数固定为 `--mode base|js --python ABS --cli ABS --expected-version VERSION --out NEW_ABS`。在仓库外运行，去除 PYTHONPATH/API 环境，核对安装包来源、版本、Skill 绑定和五步产物；输出 `summary.json` 和逐命令回执。测试实际包，不导入工作树冒充安装。
+- [x] **V2.13** 使用临时候选 wheel 的两个新环境跑验证器；暂不切换全局入口。所有临时路径写到 `v2/products.json`，不得写进用户模板。
+- [x] **V2.14** 主代理查看真实 diff、回执和绑定 JSON，提交并更新状态。
 
 **验证命令：**
 
@@ -317,6 +317,7 @@ DOM 按现有 CI 的 fixture/依赖路径命令执行并保存回执；无需临
 - [x] 已写设计、阶段总清单及详细执行步骤。
 - [x] V0 保护基线及已知文档断链修复已完成，见总清单证据入口。
 - [x] V1 核心合同及错误语义已完成，资源字段在 V3 回填。
-- [ ] V2–V9 产品实施待完成。
+- [x] V2 开发候选、版本绑定、安装指南及独立安装已完成，V5 新会话与 V8 正式部署未提前计入。
+- [ ] V3–V9 产品实施待完成。
 
-下一动作：V2.0。阶段通过不等于 1.0 产品完成。
+下一动作：V3.1。阶段通过不等于 1.0 产品完成。
