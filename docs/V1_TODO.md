@@ -64,3 +64,5 @@ V3 证据：同根目录 `v3/completion.json`、`v3/review.md`、`v3/scale/summa
 V4 证据：同根目录 `v4/verified-ci.json`、`v4/push-artifacts/`；实施提交 `88392c1` 的 push/PR 各 11 个任务通过，12 份独立安装回执/162 条命令已核对。平台承诺仅限支持矩阵中的实际组合，PR #43 保持草稿。
 
 V5 证据：同根目录 `v5/completion.json`、`v5/codex-consumer-r2/primary-review.json`；3 个新固定仓库、18 条核心链命令、352 行源码精确比对、3 份实际 Chrome 地图/SVG；第二次独立会话 295.53 秒成功，首轮 420 秒超时保留。82 个目标跟踪路径、4,887 个非历史保护路径不变；pretty-ms 的嵌套调用影响收益不足已写明。
+
+V6 无许可依赖部分已准备：11 份公开文档门禁、7 项门禁回归、问题模板和包 URL/描述；真实新 wheel 非许可 metadata 通过，许可字段/文件仍为空，V6.9 未通过。V7.3 回执字段仅提前补齐，33 条既有 installed dev1 生命周期匹配；未创建 RC、未发布或切换全局入口。

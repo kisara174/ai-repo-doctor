@@ -50,10 +50,12 @@ class InstalledValidation:
         result = subprocess.run(argv, cwd=self.out, env=self.env, capture_output=True,
                                 text=True, encoding='utf-8', timeout=120, check=False)
         record = dict(name=name, argv=argv, cwd=str(self.out), exit_code=result.returncode,
+                      expected_exit_code=expected,
                       stdout=result.stdout, stderr=result.stderr)
         log = f'{len(self.commands) + 1:02d}-{name}.json'
         write_json(self.out / log, record)
-        self.commands.append(dict(name=name, exit_code=result.returncode, log=log))
+        self.commands.append(dict(name=name, exit_code=result.returncode,
+                                  expected_exit_code=expected, log=log))
         require(result.returncode == expected,
                 f'{name}: expected exit {expected}, got {result.returncode}; see {log}')
         return result.stdout

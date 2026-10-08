@@ -13,7 +13,7 @@
 | A5 规模与超限清楚 | V3 文件/字节/Git/协作时间/深度门禁；100/1000 文件参考样本 | 正式安装资源拒绝复核，不扩写为所有仓库性能承诺 |
 | A6 升级回滚可完成 | 安装、Skill 绑定及回滚文档，旧入口/Skill 保留 | 实际全局切换、旧版查询和恢复新版演练 |
 | A7 公开产物可下载并使用 | 0.8.0 既有公开发行；1.0 技术准备 | 1.0 发布、匿名下载 SHA、安装下载件并走通核心链 |
-| A8 许可、反馈和维护 | 本轮补齐 metadata URL、CHANGELOG/SUPPORT/兼容政策/问题模板 | 用户许可决定、LICENSE/包 metadata 和真实 wheel 许可核验 |
+| A8 许可、反馈和维护 | 本轮补齐 metadata URL、CHANGELOG/SUPPORT/兼容政策/问题模板 | 用户许可决定及 LICENSE；实际新 wheel 的许可字段/文件仍缺失，许可门禁未通过 |
 
 ## 发布阻塞
 
@@ -34,3 +34,9 @@ V5 独立消费者首轮在 420 秒外层时限结束，保留为失败；第二
 本机证据根为 `~/.local/share/ai-repo-doctor/evaluations/v1-product-closure-v1/`：V3 completion/products/scale，V4 verified-ci/completion，V5 各调查/source-verification/browser/consumer。历史 200 仓库证据不改候选归属，不声称新 1.0 全量评估。
 
 按 [指导清单](../V1_TODO.md) 和 [执行计划](../superpowers/plans/2026-10-08-v1-product-closure.md) 推进。收到许可后先完成许可文件与 wheel 核验，再进入 RC；Goal 仅在 A1–A8 和正式交付全部完成时关闭。
+
+## 本轮包核验与提前准备
+
+V6 技术文档提交 `80f25ec8e26b1ff8be93eab630689c08f65e5e2e` 已从精确 archive 构建新 dev1 wheel：Name、Version、Summary、Requires-Python、4 个 Project-URL 和 3 个可选依赖字段匹配；35 个 runtime 文件与 V3 安装一致。License-Expression 为空、License-File 为空，门禁实际返回 2，明确不是发行准备成功。回执位于 v6/metadata/summary.json。
+
+V7.3 仅提前补齐旧生命周期回执的 expected_exit_code，最小负向检查修复前缺字段、修复后通过；现有 installed dev1 的 33 条生命周期命令实际/预期退出码逐条匹配，预期失败未改成 0。它不代替 RC 的全套精确提交验收。
