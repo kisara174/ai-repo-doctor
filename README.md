@@ -2,89 +2,75 @@
 
 <!-- repo-doctor-install-versions: 0.8.0 -->
 
-1.0 开发候选正在完成闭环验收，尚未正式发行。本文下载示例继续指向已公开的 0.8.0；新候选接入、升级回滚见 [安装指导](docs/INSTALL.md)，当前平台门禁见 [平台矩阵](docs/SUPPORT_MATRIX.md)。
+为 Codex 提供 Python、JavaScript、TypeScript 仓库的静态源码证据，为人提供离线结构关系图。Codex 负责判断和修改代码。主要流程无需 API key、服务或 Node，不运行目标仓库代码。
 
-为 Codex 提供本地 Python、JavaScript、TypeScript 仓库的结构、静态调用证据和有界源码上下文，并生成供人查看的离线交互 HTML 与 SVG 关系图。Codex 负责问题判断和代码修改；Repo Doctor 提供可核对的源码证据。主要流程无需 API Key，不运行目标仓库代码。
+**当前公开版本为 [0.8.0](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.8.0)**。1.0 正在完成交付验收，尚未发布；以下下载示例属于 0.8.0。1.0 候选的版本绑定 Skill、安装、升级和回滚见 [安装指南](docs/INSTALL.md)，进度见 [1.0 指导清单](docs/V1_TODO.md)。
 
-**0.8.0 支持范围**：Python 默认启用；JS/TS 通过可选 `[js]` 安装并显式选择语言。需要 Python 3.11+，JS/TS 分析不需要 Node。详细支持范围见 [支持矩阵](docs/JS_TS_SUPPORT.md)，验证证据见 [J5 报告](docs/evaluations/2026-10-07-js-ts-support-validation.md)。
+## 安装固定版本
 
-支持 `.jsx` / `.tsx` 组件搜索、源码上下文、文件依赖和安全直接调用；`.ts` 与 `.tsx` 分别使用对应方言。JSX 标签、属性引用及匿名回调不建立推测函数边。修复匿名 MISSING 错误文件泄漏部分证据的问题。
+需要 Python 3.11+；[1.0 平台矩阵](docs/SUPPORT_MATRIX.md)明确实际验证的系统与解释器组合。选择尚不存在的虚拟环境目录，不修改系统 Python。
 
-保留无后缀/index 的唯一源码关联及实际导入来源输出，方便 Codex 继续调查。多候选、目录配置或不合格实现保持未知；关联不证明运行时模块解析。见 [设计与边界](docs/superpowers/specs/2026-10-07-js-ts-source-association-design.md)。
-
-## 安装
-
-发行方式为 [GitHub wheel](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.8.0)，目前没有 PyPI 发行。两种安装使用同一个 wheel。
-
-仅使用 Python（没有无条件运行依赖）：
+仅使用 Python：
 
 ```sh
-python3 -m venv .venv
-.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.8.0/ai_repo_doctor-0.8.0-py3-none-any.whl'
-.venv/bin/repo-doctor --version
+python3 -m venv .venv-repo-doctor
+.venv-repo-doctor/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.8.0/ai_repo_doctor-0.8.0-py3-none-any.whl'
+.venv-repo-doctor/bin/repo-doctor --version
 ```
 
-同时使用 JS/TS（安装三个固定版本的 Tree-sitter 可选依赖）：
+同时分析 JS/TS，改用独立环境及同一 wheel 的可选依赖：
 
 ```sh
-python3 -m venv .venv-js
-.venv-js/bin/python -m pip install 'ai-repo-doctor[js] @ https://github.com/kisara174/ai-repo-doctor/releases/download/v0.8.0/ai_repo_doctor-0.8.0-py3-none-any.whl'
-.venv-js/bin/repo-doctor --version
+python3 -m venv .venv-repo-doctor-js
+.venv-repo-doctor-js/bin/python -m pip install 'ai-repo-doctor[js] @ https://github.com/kisara174/ai-repo-doctor/releases/download/v0.8.0/ai_repo_doctor-0.8.0-py3-none-any.whl'
+.venv-repo-doctor-js/bin/repo-doctor --version
 ```
 
-以下 `repo-doctor` 表示所选环境中的完整 CLI 路径，或已加入 PATH 的入口。默认扫描遵循目标仓库 ignore 规则；没有安装 extra 时，显式 JS/TS 选择会报错并提示安装方式。
+当前以 GitHub wheel 分发，没有 PyPI 发行。Python 基础安装无运行依赖；JS/TS extra 安装三个固定版本 Tree-sitter 包。安装后核心调查无需联网。
 
-本机原有全局 Python 入口继续使用 [0.5.3](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.5.3)，其维护线和回滚包保留。0.8.0 独立部署路径见 [交付记录](docs/delivery/2026-10-08-v0.8.0-js-ts-completion.md)。
+## 五步调查
 
-## Codex 调查仓库
+`RD_CLI` 设置为刚安装的 CLI 绝对路径。`REPO` 是目标仓库；ID 必须来自本轮搜索结果；地图使用新目录。
 
 ```sh
-repo-doctor overview /path/to/repo --json
-repo-doctor symbols /path/to/repo --query NAME --json
-# 从搜索结果复制真实 ID，替换 REAL_ID
-repo-doctor context /path/to/repo REAL_ID --max-lines 120 --json
-repo-doctor impact /path/to/repo REAL_ID --depth 2 --json
-repo-doctor map /path/to/repo --out ./new-repo-map
+RD_CLI="$PWD/.venv-repo-doctor/bin/repo-doctor"
+REPO='/absolute/path/to/repository'
+"$RD_CLI" overview "$REPO" --json
+"$RD_CLI" symbols "$REPO" --query NAME --json
+ID='ID_RETURNED_BY_SYMBOLS'
+"$RD_CLI" context "$REPO" "$ID" --max-lines 120 --json
+"$RD_CLI" impact "$REPO" "$ID" --depth 2 --json
+"$RD_CLI" map "$REPO" --out NEW_MAP_DIRECTORY --json
 ```
 
-JS/TS 必须在每个命令中选择语言：
+默认只分析 Python。JS/TS 每条命令增加 `--languages javascript,typescript` 并选用安装 extra 的 CLI；混合仓库选择 `python,javascript,typescript`。缺 extra 会明确失败。使用 `--include-symbol REAL_ID` 加入相关源码，共享行预算。
+
+打开地图目录中的 `map.html`：可以搜索、展开路径、切换结构/关系、筛选测试、聚焦与缩放，并导出当前视图 SVG。同目录的 `structure.svg`、`relations.svg` 可直接查看，`map.json` 可供工具读取。页面完全离线，只展示结构关系；详细结论交给 Codex。
+
+## 接入 Codex
+
+公开 0.8.0 可从选定环境导出原 Skill：
 
 ```sh
-repo-doctor overview REPO --languages javascript,typescript --json
-repo-doctor symbols REPO --query NAME --languages javascript,typescript --json
-repo-doctor context REPO REAL_ID --max-lines 120 --languages javascript,typescript --json
-repo-doctor impact REPO REAL_ID --depth 2 --languages javascript,typescript --json
-repo-doctor map REPO --languages javascript,typescript --out NEW_MAP
+"$RD_CLI" skill export --out NEW_SKILL_DIRECTORY
 ```
 
-JavaScript 覆盖 `.js .mjs .jsx`，TypeScript 覆盖 `.ts .tsx`；使用搜索返回的组件 ID 即可执行上述流程。JSX 表达式中的安全直接 `helper()` 调用可以返回证据，组件渲染和事件绑定仍需 Codex 查阅源码。
+导出目录必须不存在；保留已有自定义 Skill。1.0 候选应按 [安装指南](docs/INSTALL.md) 导出带 `--cli` 的 `repo-doctor-v1`，新会话核对 installation.json 和实际 `--version`。不要混用两套版本说明或默默回退到 PATH 中的旧 CLI。
 
-混合仓库可选 `--languages python,javascript,typescript`；默认仍仅 Python，不自动猜测语言。用 `--include-symbol REAL_ID` 补充上下文；行预算和截断标识始终有效。空影响结果只说明没有返回已解析的调用者，不能证明没有影响。
+## 支持与边界
 
-打开地图目录中的 `map.html`，可搜索、展开、筛选、聚焦和缩放；另有 `structure.svg`、`relations.svg`、`map.json`。页面可导出当前视图 SVG，无需服务或联网。地图只展示结构关系，详细问题由 Codex 解读。
+- Python 支持结构、源码上下文和保守静态关系。JS/TS 实现后缀为 `.js .mjs .jsx .ts .tsx`，支持安全直接函数绑定与有限本地 ESM 源码关联。
+- 关系存在只证明静态依据；空影响、未解析调用、零解析错误都不能证明无缺陷或无运行时影响。JS/TS 嵌套函数、对象方法、匿名回调、JSX 标签、动态调用和仓库外调用存在明确限制。
+- context 可能截断，analysis 示例和限制列表也会省略；地图每视图上限为 200 节点/500 边，并显示隐藏数量。1.0 的文件、总量、时间和深度边界见 [资源说明](docs/RESOURCE_LIMITS.md)。
+- JS/TS 不支持 snapshot、case/findings、诊断或自动修复。Python 的旧案件保存和可选接口保持兼容，见 [次级使用参考](docs/LEGACY_USAGE.md) 和 [调查教程](docs/CODEX_AND_MAP.md)。
 
-## 安装 Codex Skill
+## 文档入口
 
-```sh
-repo-doctor skill export --out NEW_SKILL_DIRECTORY
-```
+- [安装、绑定、升级和回滚](docs/INSTALL.md)
+- [Codex 调查与地图教程](docs/CODEX_AND_MAP.md)
+- [CLI/JSON 合同](docs/CLI_CONTRACT.md)、[兼容政策](docs/COMPATIBILITY.md)
+- [JS/TS 支持范围](docs/JS_TS_SUPPORT.md)、[平台支持](docs/SUPPORT_MATRIX.md)
+- [变化记录](CHANGELOG.md)、[问题反馈与维护](SUPPORT.md)
+- [1.0 准备状态](docs/delivery/2026-10-08-v1-readiness.md)
 
-导出目录必须尚不存在。选择并明确使用所需安装环境的 CLI；保留已有 Skill，新增 JS/TS Skill 可放到独立目录。不要用导出操作覆盖现有设置。已有 Python 调查方式继续适用。
-
-## 按需保存 Python 调查
-
-```sh
-repo-doctor report create REPO --out NEW_CASE --json
-repo-doctor context REPO REAL_ID --snapshot-out NEW_CONTEXT.json --json
-repo-doctor findings import CASE --from FINDINGS.json --context NEW_CONTEXT.json --producer codex --json
-repo-doctor report show CASE
-```
-
-此流程仅支持 Python。引用通过只说明出处正确，问题判断和修复结论仍需 Codex 分析和针对性检查。只有显式 `reproduce` / `verify` 才执行指定命令。
-
-- [Codex 调查教程、JSON 格式与容量限制](docs/CODEX_AND_MAP.md)
-- [JS/TS 支持范围及下一步](docs/JS_TS_SUPPORT.md)
-- [产品目标与指导书](docs/PRODUCT_GUIDE.md)
-- [历史与可选接口](docs/LEGACY_USAGE.md)
-
-动态绑定、方法、回调和仓库外调用不构成完整运行时影响清单；解析失败、未知关系和省略数量均需结合源码复核。JS/TS 不支持 snapshot、case/findings、诊断或自动修复流程。
+许可尚待项目所有者确定；没有 LICENSE 不能解释为获得再分发或商用授权。1.0 正式发行前必须完成许可声明和实际 wheel 核验。

@@ -113,3 +113,7 @@ repo-doctor --version
 ## 1.0 调查边界
 
 升级后请先查看 [资源说明](RESOURCE_LIMITS.md)。五命令 JSON 新增 resource_limits，可忽略新增字段；impact 深度为 1–10。源码预算包含同次指纹/上下文再次读取，超限返回 2，不是完整扫描的成功结果。旧案件不自动改写。
+
+## 升级前核对
+
+从 0.8 升级时，旧的 repo-doctor Skill 和新 repo-doctor-v1 可并存；明确加载一套，避免根据 PATH 猜版本。先核对 [兼容政策](COMPATIBILITY.md) 的变更表和 [CHANGELOG](../CHANGELOG.md)。本轮候选已通过独立消费者和真实地图使用验收，但正式下载、全局切换及回滚演练仍须等正式发行阶段；不能把候选查询成功当作已部署 1.0。问题反馈见 [SUPPORT](../SUPPORT.md)。

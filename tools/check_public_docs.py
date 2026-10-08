@@ -7,7 +7,9 @@ import re
 from urllib.parse import unquote, urlsplit
 
 PUBLIC_DOCS = ('README.md', 'docs/INSTALL.md', 'docs/CODEX_AND_MAP.md', 'docs/JS_TS_SUPPORT.md',
-               'docs/CLI_CONTRACT.md', 'docs/RESOURCE_LIMITS.md', 'docs/SUPPORT_MATRIX.md')
+               'docs/CLI_CONTRACT.md', 'docs/RESOURCE_LIMITS.md', 'docs/SUPPORT_MATRIX.md',
+               'CHANGELOG.md', 'SUPPORT.md', 'docs/COMPATIBILITY.md',
+               'docs/delivery/2026-10-08-v1-readiness.md')
 _VERSION = r'[0-9]+(?:\.[0-9]+)+(?:[a-zA-Z0-9.]+)?'
 
 

@@ -6,7 +6,7 @@
 
 五个只读调查命令的参数、JSON、退出码与兼容规则见 [CLI 合同](CLI_CONTRACT.md)。
 
-1.0 开发候选增加版本绑定 Skill；可移植安装、接入与回滚见 [安装指南](INSTALL.md)。该流程尚待正式发行与新会话验收，以下 0.8.0 说明保留其已发布版本归属。
+1.0 开发候选增加版本绑定 Skill；可移植安装、接入与回滚见 [安装指南](INSTALL.md)。候选的新会话验收已完成，见 [真实使用记录](evaluations/2026-10-08-v1-user-workflow.md)；正式发行与部署仍待完成。以下 0.8.0 说明保留其已发布版本归属。
 
 v0.8.0 使用说明。Codex 获取本地Python及显式选择的JS/TS结构与来源证据，人查看离线HTML/SVG。正式版本、安装验收与公开下载身份见[0.8.0交付记录](delivery/2026-10-08-v0.8.0-js-ts-completion.md)。历史Python流程保持兼容。
 
@@ -174,8 +174,8 @@ verify/reproduce 只运行显式参数数组，不经隐式 shell；默认 120 �
 ```sh
 # 按上面的 .venv 安装时
 .venv/bin/python -m repo_doctor.case_recovery OLD_CASE --out NEW_ARCHIVE
-# 这台 Mac 的持久安装
-~/.local/share/ai-repo-doctor/venv/bin/python -m repo_doctor.case_recovery OLD_CASE --out NEW_ARCHIVE
+# 或显式选择安装环境中的 Python
+"$RD_PY" -m repo_doctor.case_recovery OLD_CASE --out NEW_ARCHIVE
 ```
 
 两条命令择一。输出目录必须不存在且在源任务外；工具保留原件，生成 original-case.json（完整原字节）、recovered-report.md 和 recovery.json（来源和产物哈希）。完整成功才有 recovery.json；出错返回 2，并可能留下部分产物供人工查看。
@@ -184,7 +184,7 @@ verify/reproduce 只运行显式参数数组，不经隐式 shell；默认 120 �
 
 ## JS/TS 正式版的 Codex 调用路径
 
-0.8.0已正式发布，安装同一wheel的`[js]` extra后显式选择语言。Mac独立CLI为 `/Users/kisara/.local/share/ai-repo-doctor/releases/v0.8.0/candidate/venvs/js/bin/repo-doctor`，先检查`--version`。安装方法及完整边界见[README](../README.md)和[支持矩阵](JS_TS_SUPPORT.md)。旧0.6预览及0.7发行保留为历史版本，不代表当前范围。
+0.8.0已正式发布，安装同一wheel的`[js]` extra后显式选择语言。选择自己安装环境的绝对 CLI 并先检查 `--version`。安装方法及完整边界见[README](../README.md)和[支持矩阵](JS_TS_SUPPORT.md)。旧0.6预览及0.7发行保留为历史版本，不代表当前范围。
 
 使用该绝对 CLI 依次调用 `overview REPO --languages javascript,typescript --json`、`symbols REPO --languages javascript,typescript --query NAME --json`。从本轮返回结果选择真实 ID，再调用 `context REPO REAL_ID --languages javascript,typescript --max-lines 120 --json` 和 `impact REPO REAL_ID --languages javascript,typescript --depth 2 --json`。缺少证据时补读源码，明确区分源码可见关系和工具已解析关系。
 

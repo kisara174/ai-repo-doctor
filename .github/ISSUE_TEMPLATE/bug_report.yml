@@ -1,0 +1,36 @@
+name: Bug report
+description: Provide actual version, a minimal example, and observed evidence.
+title: "[Bug] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: "请勿提交 API key、认证文件、个人数据或完整私有仓库。静态未知不等于运行时没有影响。"
+  - type: textarea
+    id: environment
+    attributes:
+      label: 实际版本与环境
+      description: CLI --version、安装方式、系统/架构、Python、js extra、Skill binding 版本（个人路径可脱敏）。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 最小复现与命令
+      description: 语言选择、完整参数、最小脱敏源码或公开固定提交；保留必要相对路径结构。
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: 预期与实际
+      description: 预期行为、实际 stdout/stderr、退出码；地图附视图/筛选/选择及 SVG。
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 范围与限制
+      description: analysis 解析错误/未知/省略计数、context 截断、impact 深度、超限错误；尚未确认可填未知。
+    validations:
+      required: true
