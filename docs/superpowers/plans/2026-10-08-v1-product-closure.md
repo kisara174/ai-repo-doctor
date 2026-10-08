@@ -223,7 +223,7 @@ git diff --check
 - [x] **V6.9** 构建临时 wheel 读取 METADATA/许可文件，核对 Name/Version/Summary/Requires-Python/Project-URL/License-Expression/License-File；未声明或未打包许可则不能通过。
 - [x] **V6.10** 运行公开文档门禁，主代理核对安装例子可复制且无维护者路径；提交更新。
 
-**实际：**V6 全部完成。用户确认 MIT / kisara174；精确提交 `c767c98` 的实际 wheel 具备 License-Expression MIT、License-File LICENSE，标准许可逐字节一致，35 个 runtime 与 V3 一致。见 v6/license-approved/wheel-validation/summary.json。RC1 已设置；RC 门禁尚待执行。
+**实际：**V6 全部完成。用户确认 MIT / kisara174；精确提交 `c767c98` 的实际 wheel 具备 License-Expression MIT、License-File LICENSE，标准许可逐字节一致，35 个 runtime 与 V3 一致。见 v6/license-approved/wheel-validation/summary.json。随后 RC1 门禁已在 V7 完成，见下文实测。
 
 **验证：**`"$RD_PY" tools/check_public_docs.py --root .`；读取真实 wheel zip 内 metadata；A1–A8 readiness 无虚假完成。缺许可时本阶段不完整，禁止进入正式发行。
 
@@ -265,17 +265,17 @@ DOM 按现有 CI 的 fixture/依赖路径命令执行并保存回执；无需临
 
 **文件：**Modify `_version.py`、当前用户文档/CHANGELOG；Create `docs/delivery/2026-10-08-v1.0.0-product-closure.md`；正式产物放新目录 `~/.local/share/ai-repo-doctor/releases/v1.0.0/`。实际交付若跨日，报告文件日期按真实日期，并统一引用，不伪造完成日期。
 
-- [ ] **V8.1** 将版本设为 `1.0.0`，更新所有当前用户示例和 CHANGELOG；历史文件原样保留。提交并记录精确源码 SHA。
-- [ ] **V8.2** 重新构建正式 wheel 和 SHA256SUMS；不可将 rc1 wheel 改名。比对正式 wheel 与最终 RC 的 runtime 差异，预期只允许明确的版本/最终说明变化；出现分析器变化则回到 V7。
-- [ ] **V8.3** 从正式 wheel 建新的 base/js 环境，运行安装验证器、关键合同和地图门禁。即使 RC 已通过，也要确认正式 artifact 版本和 runtime 身份。
-- [ ] **V8.4** 等待正式提交必需 CI 全通过再合并 PR；获取合并后 SHA/树，确认与验收 runtime 一致。创建精确提交的 `v1.0.0` tag 和 GitHub Release，附 wheel、SHA256SUMS、发布说明。PR 创建后必须 attach 到本任务。
-- [ ] **V8.5** 检查 tag 指向、Release 非草稿/非预发布、资产名称/大小/SHA；匿名重新下载 wheel 与 checksum，记录 HTTP 状态并逐字节校验。
-- [ ] **V8.6** **直接使用公开下载件**安装到另一个新环境，跑 V2 核心链/Skill 绑定；不只以“与本地 wheel 相等”代替安装事实。
-- [ ] **V8.7** 在本机保留旧环境和原入口信息，部署带 js extra 的版本化 1.0 环境；导出新 `repo-doctor-v1` Skill 到未存在的目录，旧用户 Skill 字节不变。
-- [ ] **V8.8** 切换全局入口后在普通新终端检查 `command -v repo-doctor` 与 `--version`；既有 shell hash 需要刷新时写明操作。Skill 绑定仍用绝对路径，不依赖这个链接。
-- [ ] **V8.9** 实演恢复旧入口，检查旧版可运行，再恢复 1.0；留下操作回执和原链接信息。不得删除旧环境来证明新版独立。
-- [ ] **V8.10** 新 Codex 会话明确加载 `repo-doctor-v1`，确认绑定的正式 1.0 CLI；用一个 V5 目标完成实际最小调查。旧会话未重载不能作为失败或成功的唯一依据。
-- [ ] **V8.11** 交付报告列精确版本、提交、下载、安装、Skill 路径、支持范围、已知局限和回滚入口；如公开下载或最终部署失败，明确写“发行未闭环”，继续修复，不更新 Goal 完成。
+- [x] **V8.1** 将版本设为 `1.0.0`，更新所有当前用户示例和 CHANGELOG；历史文件原样保留。提交并记录精确源码 SHA。
+- [x] **V8.2** 重新构建正式 wheel 和 SHA256SUMS；不可将 rc1 wheel 改名。比对正式 wheel 与最终 RC 的 runtime 差异，预期只允许明确的版本/最终说明变化；出现分析器变化则回到 V7。
+- [x] **V8.3** 从正式 wheel 建新的 base/js 环境，运行安装验证器、关键合同和地图门禁。即使 RC 已通过，也要确认正式 artifact 版本和 runtime 身份。
+- [x] **V8.4** 等待正式提交必需 CI 全通过再合并 PR；获取合并后 SHA/树，确认与验收 runtime 一致。创建精确提交的 `v1.0.0` tag 和 GitHub Release，附 wheel、SHA256SUMS、发布说明。PR 创建后必须 attach 到本任务。
+- [x] **V8.5** 检查 tag 指向、Release 非草稿/非预发布、资产名称/大小/SHA；匿名重新下载 wheel 与 checksum，记录 HTTP 状态并逐字节校验。
+- [x] **V8.6** **直接使用公开下载件**安装到另一个新环境，跑 V2 核心链/Skill 绑定；不只以“与本地 wheel 相等”代替安装事实。
+- [x] **V8.7** 在本机保留旧环境和原入口信息，部署带 js extra 的版本化 1.0 环境；导出新 `repo-doctor-v1` Skill 到未存在的目录，旧用户 Skill 字节不变。
+- [x] **V8.8** 切换全局入口后在普通新终端检查 `command -v repo-doctor` 与 `--version`；既有 shell hash 需要刷新时写明操作。Skill 绑定仍用绝对路径，不依赖这个链接。
+- [x] **V8.9** 实演恢复旧入口，检查旧版可运行，再恢复 1.0；留下操作回执和原链接信息。不得删除旧环境来证明新版独立。
+- [x] **V8.10** 新 Codex 会话明确加载 `repo-doctor-v1`，确认绑定的正式 1.0 CLI；用一个 V5 目标完成实际最小调查。旧会话未重载不能作为失败或成功的唯一依据。
+- [x] **V8.11** 交付报告列精确版本、提交、下载、安装、Skill 路径、支持范围、已知局限和回滚入口；如公开下载或最终部署失败，明确写“发行未闭环”，继续修复，不更新 Goal 完成。
 
 **预期：**用户在本机直接使用 1.0，公开下载件也能独立安装；旧安装/Skill 可恢复且未被覆盖。发布权限/远端失败不得由执行器绕过，交给主代理定位。
 
@@ -285,13 +285,13 @@ DOM 按现有 CI 的 fixture/依赖路径命令执行并保存回执；无需临
 
 **文件：**Modify `docs/V1_TODO.md`、1.0 delivery report、readiness；Create 外部 `completion.json`、`preservation-after.json`、`open-items.json`、`deployment.json`。
 
-- [ ] **V9.1** 按 A1–A8 逐条关联最后的正式产物证据，不能用旧候选的测试计数代替。最终使用链缺一环就仍未完成。
-- [ ] **V9.2** 比较 V0 保护清单：主目录既有文件/Git 状态、旧 runtime、原用户 Skill、历史发行/benchmark。允许变化只包括有授权且被记录的全局入口切换和本轮新增文件。
-- [ ] **V9.3** 盘点本轮新增的参数、模块、工具与文档。每个都关联实际目标；删除本轮无用途的临时仓库内文件。不得借精简删除旧功能或历史证据。
-- [ ] **V9.4** 记录尚未支持的能力和非阻塞问题；只有真实证据必要才列 1.0.1 修复项，不立即开启新语言、MCP 或其他产品线。
-- [ ] **V9.5** 保存 completion：正式版本、tag/source/CI、下载/安装回执、A1–A8 状态、保护审计、已知限制。任何必需项缺失则 `complete=false` 并列下一动作。
-- [ ] **V9.6** 更新总清单真实状态、提交最后报告、GraphFlow index；向用户交付中文简报和一条可运行的正式入口。
-- [ ] **V9.7** 只有 A1–A8 全通过、无发布阻塞、公开产物及本机正式版都已核验时，调用 Goal update 为 `complete`。否则保持 active 并继续具体未完成工作。
+- [x] **V9.1** 按 A1–A8 逐条关联最后的正式产物证据，不能用旧候选的测试计数代替。最终使用链缺一环就仍未完成。
+- [x] **V9.2** 比较 V0 保护清单：主目录既有文件/Git 状态、旧 runtime、原用户 Skill、历史发行/benchmark。允许变化只包括有授权且被记录的全局入口切换和本轮新增文件。
+- [x] **V9.3** 盘点本轮新增的参数、模块、工具与文档。每个都关联实际目标；删除本轮无用途的临时仓库内文件。不得借精简删除旧功能或历史证据。
+- [x] **V9.4** 记录尚未支持的能力和非阻塞问题；只有真实证据必要才列 1.0.1 修复项，不立即开启新语言、MCP 或其他产品线。
+- [x] **V9.5** 保存 completion：正式版本、tag/source/CI、下载/安装回执、A1–A8 状态、保护审计、已知限制。任何必需项缺失则 `complete=false` 并列下一动作。
+- [x] **V9.6** 更新总清单真实状态、提交最后报告、GraphFlow index；向用户交付中文简报和一条可运行的正式入口。
+**V9.7（会话管理收尾；实际状态以 Goal 工具回执为准）** 只有 A1–A8 全通过、无发布阻塞、公开产物及本机正式版都已核验时，调用 Goal update 为 `complete`。否则保持 active 并继续具体未完成工作。
 
 **验证：**JSON 可解析、路径/下载链接可核对、`git diff --check`、保护比较无未经授权差异。若最终 runtime 没有变化，不重复全套测试。
 
@@ -329,8 +329,10 @@ DOM 按现有 CI 的 fixture/依赖路径命令执行并保存回执；无需临
 - [x] V3 边界、119 项冻结相关测试、独立安装和 100/1,000 文件规模实验已完成。
 - [x] V4 实施提交88392c1的push/PR各11个CI任务和162条安装命令通过；支持矩阵已记录真实系统/架构。
 - [x] V5 三份调查、3份真实Chrome交互和独立Codex消费者完成；首轮超时保留，第二次295.53秒成功。
-- [ ] V6–V9 产品交付待完成。
+- [x] V6–V9 产品交付实测完成；发布后的收尾文档集成后由本轮会话工具关闭 Goal。
 
 下一动作：V6.9 新 wheel 许可核验，再进入 V7 RC。阶段通过不等于 1.0 产品完成。
 
 V7 实际完成：RC1 63a148d，549项完整单测无跳过，35个runtime两安装一致，MIT实际wheel核对；旧/新安装101条命令逐条匹配、地图viewer/search/DOM/SVG及scule链通过，push/PR各11项成功，主代理review.md无发布阻塞。证据 v7/rc1/completion.json。V8 正式版本准备中，不提前勾选发布/部署。
+
+V8 实际完成：正式源码0ed013b / merge-tag48b7903，公开v1.0.0 wheel匿名下载安装通过；全局入口和新用户Skill为1.0，0.5.3回滚查询/恢复已演练。独立消费者184.96秒正常结束，112行源码与7条影响主代理核对通过。V9保护155,745路径仅授权链接变化、15既有文件和82目标路径不变；A1–A8完整证据见正式交付记录。V9.7 Goal 在最后文档集成完成后关闭，以会话工具回执为准。
