@@ -30,7 +30,7 @@ python3 -m venv .venv-js
 
 以下 `repo-doctor` 表示所选环境中的完整 CLI 路径，或已加入 PATH 的入口。默认扫描遵循目标仓库 ignore 规则；没有安装 extra 时，显式 JS/TS 选择会报错并提示安装方式。
 
-本机原有全局 Python 入口继续使用 [0.5.3](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.5.3)，其维护线和回滚包保留。0.8.0 独立部署路径见 [交付记录](docs/delivery/2026-10-08-v0.8.0-source-association.md)。
+本机原有全局 Python 入口继续使用 [0.5.3](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.5.3)，其维护线和回滚包保留。0.8.0 独立部署路径见 [交付记录](docs/delivery/2026-10-08-v0.8.0-js-ts-completion.md)。
 
 ## Codex 调查仓库
 

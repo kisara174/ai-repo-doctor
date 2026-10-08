@@ -2,7 +2,7 @@
 
 > 执行要求：主代理逐项推进和验收。不得把计划交给简单模型自由设计；仅把已经明确的机械小任务按 AGENTS 规则交给执行器。
 
-日期：2026-10-08。状态：待实施。规划基线：`b4ed82191a7dfd1ccbf8f06e75ea66bcd5760ec8` / 已公开 `0.8.0`。
+日期：2026-10-08。状态：实施中。规划基线：`b4ed82191a7dfd1ccbf8f06e75ea66bcd5760ec8` / 已公开 `0.8.0`。
 
 **Goal：**构建并正式交付闭环、完整、稳定的 `AI Repo Doctor 1.0.0`。
 
@@ -14,7 +14,7 @@
 
 ## 全局约束与执行变量
 
-- 所有未勾选条目都是未来工作，本轮不实施产品修改。
+- 未勾选条目尚未完成；阶段状态以真实回执更新。
 - 使用现有干净隔离工作树 `/Users/kisara/.codex/worktrees/js-ts-support-closure/AI Repo Doctor`，规划分支 `codex/v1-product-closure`。先检查身份，不移动或清理主目录的既有改动。
 - 每阶段前 GraphFlow context；多步设计变更先 plan；变更提交后 index。
 - 所有外部目标只读取源码：不安装目标依赖、不导入目标模块、不执行目标测试/构建/脚本。自有受控测试和 Repo Doctor 自身测试不受此限制。
@@ -43,13 +43,13 @@ export RD_PY='/Users/kisara/.local/share/ai-repo-doctor/releases/v0.8.0/candidat
 
 **文件：**Modify `README.md`、`docs/V1_TODO.md`；Create 运行证据 `baseline/identity.json`、`baseline/preservation.json`、`defects.json`（仓库外）。
 
-- [ ] **V0.1** 检查 `git status --short`、`git branch --show-current`、`git rev-parse HEAD`、worktree/common-dir；确认只在隔离树修改。工作树意外有他人改动时保留，先判断归属再工作。
-- [ ] **V0.2** 读取 0.8.0 的 delivery/completion/deployment，记录源码、公开产物和现有入口版本。核对全局 0.5.3 是否仍成立，不能把规划时事实当作执行时事实。
-- [ ] **V0.3** 建立新证据根目录；如果已存在则创建 `run-002` 等新的子目录，不能覆盖旧 receipt。
-- [ ] **V0.4** 保存保护清单：主目录所有既有未提交文件字节与 Git 状态、旧全局入口类型/链接目标、旧安装 runtime、用户现有 Skill、0.8.0 发行及历史 benchmark 证据。基线后新增的本轮证据不纳入“旧文件不变”比较。
-- [ ] **V0.5** 修复 README 的已知断链，指向 `docs/delivery/2026-10-08-v0.8.0-js-ts-completion.md`；保留旧报告的原版本归属。
-- [ ] **V0.6** 建立缺陷账本。初始记录：README 断链、Skill 维护者路径/版本混用、包描述过时、许可/URL 缺失；资源边界和平台缺口标记为待完善能力，不能伪装成已复现 bug。
-- [ ] **V0.7** 在总清单标记 V0 完成，写入基线回执路径和提交 SHA；仅提交本阶段明确文件。
+- [x] **V0.1** 检查 `git status --short`、`git branch --show-current`、`git rev-parse HEAD`、worktree/common-dir；确认只在隔离树修改。工作树意外有他人改动时保留，先判断归属再工作。
+- [x] **V0.2** 读取 0.8.0 的 delivery/completion/deployment，记录源码、公开产物和现有入口版本。核对全局 0.5.3 是否仍成立，不能把规划时事实当作执行时事实。
+- [x] **V0.3** 建立新证据根目录；如果已存在则创建 `run-002` 等新的子目录，不能覆盖旧 receipt。
+- [x] **V0.4** 保存保护清单：主目录所有既有未提交文件字节与 Git 状态、旧全局入口类型/链接目标、旧安装 runtime、用户现有 Skill、0.8.0 发行及历史 benchmark 证据。基线后新增的本轮证据不纳入“旧文件不变”比较。
+- [x] **V0.5** 修复 README 的已知断链，指向 `docs/delivery/2026-10-08-v0.8.0-js-ts-completion.md`；保留旧报告的原版本归属。
+- [x] **V0.6** 建立缺陷账本。初始记录：README 断链、Skill 维护者路径/版本混用、包描述过时、许可/URL 缺失；资源边界和平台缺口标记为待完善能力，不能伪装成已复现 bug。
+- [x] **V0.7** 在总清单标记 V0 完成，写入基线回执路径和提交 SHA；仅提交本阶段明确文件。
 
 **验证：**`git diff --check`；逐一检查上述部署链接目标存在；保护清单可读取且记录实际入口版本。文档改动不跑完整产品测试。
 
@@ -315,6 +315,7 @@ DOM 按现有 CI 的 fixture/依赖路径命令执行并保存回执；无需临
 - [x] 已建立 active Goal，并确定 A1–A8 的闭环完成条件。
 - [x] 已记录 0.8.0 的真实基线和当前缺口。
 - [x] 已写设计、阶段总清单及详细执行步骤。
-- [ ] V0–V9 产品实施尚未开始。
+- [x] V0 保护基线及已知文档断链修复已完成，见总清单证据入口。
+- [ ] V1–V9 产品实施待完成。
 
-下一动作：V0.1。不要把本轮计划文档提交误报为 1.0 产品完成。
+下一动作：V1.1。阶段通过不等于 1.0 产品完成。
