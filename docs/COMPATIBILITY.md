@@ -1,6 +1,6 @@
 # 1.x 兼容与升级政策
 
-本页是 1.0 的交付合同；正式版本尚未发布。实际安装和平台边界见 [安装指南](INSTALL.md)、[平台矩阵](SUPPORT_MATRIX.md)。
+本页是正式 1.0 的交付合同；发行身份见 [交付记录](delivery/2026-10-08-v1.0.0-product-closure.md)。实际安装和平台边界见 [安装指南](INSTALL.md)、[平台矩阵](SUPPORT_MATRIX.md)。
 
 ## 稳定接口
 
