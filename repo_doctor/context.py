@@ -6,7 +6,7 @@ from dataclasses import asdict
 
 from .model import CallEdge, RepoIndex, SemanticEdge, Symbol
 from .limits import AnalysisLimitError
-from .source import read_source
+from .source import read_source, split_source_lines
 from .languages import analysis_metadata
 
 
@@ -34,8 +34,10 @@ def _require_symbol(index: RepoIndex, symbol_id: str) -> Symbol:
 
 
 def _read_lines(index: RepoIndex, path: str) -> list[str]:
-    return read_source(index.root, path, index.root_identity,
-                       language=index.file_languages.get(path, "python"), budget=index.budget).splitlines()
+    language = index.file_languages.get(path, "python")
+    source = read_source(index.root, path, index.root_identity,
+                         language=language, budget=index.budget)
+    return split_source_lines(source, language=language)
 
 
 def _semantic_edge_data(edge: SemanticEdge, symbol_id: str) -> dict:

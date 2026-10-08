@@ -43,7 +43,7 @@ from .index import build_index
 from .languages import analysis_metadata, normalize_languages
 from .model import RepoIndex, Symbol
 from .limits import AnalysisLimitError
-from .source import read_source
+from .source import read_source, split_source_lines
 from .symbols import search_symbols
 from .skills import export_skill
 from .repo_map import write_map
@@ -253,7 +253,7 @@ def _verify_selected_source(index: RepoIndex, context: dict) -> None:
         for block in context["blocks"]:
             path = block["file"]
             if path not in source_cache:
-                source_cache[path] = read_source(index.root, path, index.root_identity, budget=index.budget).splitlines()
+                source_cache[path] = split_source_lines(read_source(index.root, path, index.root_identity, budget=index.budget))
             source = source_cache[path]
             for line in block["lines"]:
                 number = line["line"]

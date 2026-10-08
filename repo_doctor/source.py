@@ -9,6 +9,21 @@ from pathlib import Path, PurePosixPath
 from .limits import AnalysisBudget
 
 
+def split_source_lines(source: str, *, language: str = "python") -> list[str]:
+    """Match parser line coordinates without splitting on source control characters."""
+    # Python's AST accepts universal newlines. The JS/TS byte-offset backend
+    # counts LF only; a bare CR or Unicode separator must stay within its row.
+    source = source.replace("\r\n", "\n")
+    if language == "python":
+        source = source.replace("\r", "\n")
+    if not source:
+        return []
+    lines = source.split("\n")
+    if lines[-1] == "":
+        lines.pop()
+    return lines
+
+
 def _open_no_follow(
     root: Path, parts: tuple[str, ...], root_identity: tuple[int, int] | None
 ) -> int:

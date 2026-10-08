@@ -4,7 +4,7 @@ from pathlib import PurePosixPath
 
 from .limits import AnalysisLimitError
 from .model import RepoIndex
-from .source import read_source
+from .source import read_source, split_source_lines
 
 
 _REQUIRED_TEXT = ("title", "category", "reasoning", "impact", "suggested_fix")
@@ -32,7 +32,7 @@ def _validate_evidence(index: RepoIndex, item: object, number: int, known_files:
         reasons.append(f"{prefix} line range must contain integers")
     else:
         try:
-            lines = read_source(index.root, path, index.root_identity, budget=index.budget).splitlines()
+            lines = split_source_lines(read_source(index.root, path, index.root_identity, budget=index.budget))
         except AnalysisLimitError:
             raise
         except ValueError:

@@ -19,7 +19,7 @@ from .model import (
     Symbol,
 )
 from .limits import AnalysisBudget, AnalysisLimitError
-from .source import read_source
+from .source import read_source, split_source_lines
 
 
 def _bindings(node: ast.FunctionDef | ast.AsyncFunctionDef) -> frozenset[str]:
@@ -928,7 +928,7 @@ def parse_python_file(
     path = root / relative_path
     try:
         source = read_source(root, relative_path, root_identity, budget=budget)
-        lines = source.splitlines()
+        lines = split_source_lines(source)
         file = FileRecord(
             path=relative_path,
             lines=len(lines),
