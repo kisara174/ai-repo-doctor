@@ -129,26 +129,26 @@ git diff --check
 
 ### V3A 最小边界实现
 
-- [ ] **V3.1** 新建内部 `AnalysisLimits`（不可变 dataclass）与每次查询独立 `AnalysisBudget`。默认：单文件 2 MiB、累计 64 MiB、选中 5,000 文件、Git 15 秒、索引检查点 60 秒。测试允许注入小预算和时钟，不新增用户配置系统。
-- [ ] **V3.2** 定义 `AnalysisLimitError(ValueError)`，错误包含边界名、上限与当前文件（适用时）。不在异常中倾倒源码。
-- [ ] **V3.3** 先写边界测试：恰好上限成功，多 1 字节/文件失败；按原始字节计数；文件扫描顺序不改变整体失败结果；不同分析不共享预算。
-- [ ] **V3.4** 源码读取改为最多剩余预算+1 的有界读取，并保持现有安全打开、编码检测和路径限制。不能只看 stat 后再无界 read；不能为预算放松符号链接/根目录检查。
-- [ ] **V3.5** `build_index(root, *, languages=("python",), limits=None)` 增加内部可选参数，解析前检查选中文件数；Python 与 JS 共用单次累计预算，不将限制只加到一种语言。
-- [ ] **V3.6** Python parser 在普通 ValueError 捕获前重新抛出 `AnalysisLimitError`；JS 路径同样向上抛出。任何整体超限都不生成部分成功 JSON、快照或 map 目录。
-- [ ] **V3.7** Git rev-parse/ls-files 设置 15 秒 timeout；TimeoutExpired 转为明确操作错误，不把超时当作非 Git 仓库后静默回退。用 mock 验证超时，不真实等待 15 秒。
-- [ ] **V3.8** 索引阶段和文件边界用 monotonic 时钟检查预算。文档和错误明确 cooperative；不要声称能中断单次 native parse。
-- [ ] **V3.9** `impact --depth` 限为 1–10，默认 2，map 的既有 1/2 选择不变。补参数边界与深度结果测试。
-- [ ] **V3.10** 五个核心 JSON 顶层追加 `resource_limits`，固定键 `max_file_bytes`、`max_total_bytes`、`max_files`、`git_timeout_seconds`、`index_timeout_seconds`、`timeout_kind`。现有 `analysis.limits` 列表和 schema_version 不改。map 数据携带相同资源说明。
-- [ ] **V3.11** 补合同断言：新增字段准确，错误退出 2/stdout 空，普通解析错误仍计数；检查所有旧读取调用点，防止案件流程因签名变化失效。
+- [x] **V3.1** 新建内部 `AnalysisLimits`（不可变 dataclass）与每次查询独立 `AnalysisBudget`。默认：单文件 2 MiB、累计 64 MiB、选中 5,000 文件、Git 15 秒、索引检查点 60 秒。测试允许注入小预算和时钟，不新增用户配置系统。
+- [x] **V3.2** 定义 `AnalysisLimitError(ValueError)`，错误包含边界名、上限与当前文件（适用时）。不在异常中倾倒源码。
+- [x] **V3.3** 先写边界测试：恰好上限成功，多 1 字节/文件失败；按原始字节计数；文件扫描顺序不改变整体失败结果；不同分析不共享预算。
+- [x] **V3.4** 源码读取改为最多剩余预算+1 的有界读取，并保持现有安全打开、编码检测和路径限制。不能只看 stat 后再无界 read；不能为预算放松符号链接/根目录检查。
+- [x] **V3.5** `build_index(root, *, languages=("python",), limits=None)` 增加内部可选参数，解析前检查选中文件数；Python 与 JS 共用单次累计预算，不将限制只加到一种语言。
+- [x] **V3.6** Python parser 在普通 ValueError 捕获前重新抛出 `AnalysisLimitError`；JS 路径同样向上抛出。任何整体超限都不生成部分成功 JSON、快照或 map 目录。
+- [x] **V3.7** Git rev-parse/ls-files 设置 15 秒 timeout；TimeoutExpired 转为明确操作错误，不把超时当作非 Git 仓库后静默回退。用 mock 验证超时，不真实等待 15 秒。
+- [x] **V3.8** 索引阶段和文件边界用 monotonic 时钟检查预算。文档和错误明确 cooperative；不要声称能中断单次 native parse。
+- [x] **V3.9** `impact --depth` 限为 1–10，默认 2，map 的既有 1/2 选择不变。补参数边界与深度结果测试。
+- [x] **V3.10** 五个核心 JSON 顶层追加 `resource_limits`，固定键 `max_file_bytes`、`max_total_bytes`、`max_files`、`git_timeout_seconds`、`index_timeout_seconds`、`timeout_kind`。现有 `analysis.limits` 列表和 schema_version 不改。map 数据携带相同资源说明。
+- [x] **V3.11** 补合同断言：新增字段准确，错误退出 2/stdout 空，普通解析错误仍计数；检查所有旧读取调用点，防止案件流程因签名变化失效。
 
 ### V3B 规模证据与决策
 
-- [ ] **V3.12** 编写 profiler：`--cli ABS --out NEW_ABS --sizes 100,1000 --runs 4`，仅生成自有静态 Python/JS/TS 文件；为每个规模执行一次首次和三次重复五步调查，记录单命令和总耗时，不执行样本代码。
-- [ ] **V3.13** 使用 subprocess 外部 timeout 为实验兜底，区分 profiler 截止与产品 cooperative 超限；不将被杀死的查询计为通过。
-- [ ] **V3.14** 从 V3 精确源码重建内部 wheel 到新环境并核对 runtime，更新 RD_CLI 后在当前参考机运行一次 profiler。标准查询每条 <60 秒，五步总计 ≤120 秒；记录机器/Python/规模/符号数与首次/重复差异，不只提供平均值。
-- [ ] **V3.15** 若未达标，主代理分析最慢阶段并只解决已证实瓶颈。若必须引入缓存/进程隔离或扩大默认边界，先更新本设计和计划，再实施；执行器禁止临场扩展架构。
-- [ ] **V3.16** 写资源说明，包含超限示例、如何缩小调查范围、支持范围、协作超时和 RSS 的限制；同步 V1 合同和迁移说明。
-- [ ] **V3.17** 主代理复核正确性/安全打开逻辑，提交并更新状态。
+- [x] **V3.12** 编写 profiler：`--cli ABS --out NEW_ABS --sizes 100,1000 --runs 4`，仅生成自有静态 Python/JS/TS 文件；为每个规模执行一次首次和三次重复五步调查，记录单命令和总耗时，不执行样本代码。
+- [x] **V3.13** 使用 subprocess 外部 timeout 为实验兜底，区分 profiler 截止与产品 cooperative 超限；不将被杀死的查询计为通过。
+- [x] **V3.14** 从 V3 精确源码重建内部 wheel 到新环境并核对 runtime，更新 RD_CLI 后在当前参考机运行一次 profiler。标准查询每条 <60 秒，五步总计 ≤120 秒；记录机器/Python/规模/符号数与首次/重复差异，不只提供平均值。
+- [x] **V3.15** 若未达标，主代理分析最慢阶段并只解决已证实瓶颈。若必须引入缓存/进程隔离或扩大默认边界，先更新本设计和计划，再实施；执行器禁止临场扩展架构。
+- [x] **V3.16** 写资源说明，包含超限示例、如何缩小调查范围、支持范围、协作超时和 RSS 的限制；同步 V1 合同和迁移说明。
+- [x] **V3.17** 主代理复核正确性/安全打开逻辑，提交并更新状态。
 
 **验证命令：**
 
@@ -320,6 +320,7 @@ DOM 按现有 CI 的 fixture/依赖路径命令执行并保存回执；无需临
 - [x] V0 保护基线及已知文档断链修复已完成，见总清单证据入口。
 - [x] V1 核心合同及错误语义已完成，资源字段在 V3 回填。
 - [x] V2 开发候选、版本绑定、安装指南及独立安装已完成，V5 新会话与 V8 正式部署未提前计入。
-- [ ] V3–V9 产品实施待完成。
+- [x] V3 边界、119 项冻结相关测试、独立安装和 100/1,000 文件规模实验已完成。
+- [ ] V4–V9 产品实施待完成。
 
-下一动作：V3.1。阶段通过不等于 1.0 产品完成。
+下一动作：V4.1。阶段通过不等于 1.0 产品完成。

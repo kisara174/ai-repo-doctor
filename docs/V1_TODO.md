@@ -20,7 +20,7 @@ Codex 负责判断和修复。工具提供静态证据和关系图，不扩展�
 | V0 | 基线保护、确认范围、修复已确认的文档缺陷 | 无 | 已完成 |
 | V1 | 五个核心命令及 JSON/退出码兼容合同 | V0 | 已完成 |
 | V2 | 可移植安装、Skill 版本绑定、升级和回滚 | V1 | 已完成 |
-| V3 | 文件/源码/时间/深度边界及可用规模证据 | V1；顺序在 V2 后 | 待开始 |
+| V3 | 文件/源码/时间/深度边界及可用规模证据 | V1；顺序在 V2 后 | 已完成 |
 | V4 | macOS/Linux 的明确平台支持及 CI | V2、V3 | 待开始 |
 | V5 | 三个新真实调查、一个干净 Codex 会话、实际收益与缺陷闭环 | V4 | 待开始 |
 | V6 | 许可、包元数据、用户文档、兼容与维护政策 | V5；许可可提前收集 | 待开始 |
@@ -53,8 +53,10 @@ Codex 负责判断和修复。工具提供静态证据和关系图，不扩展�
 - [ ] A8 许可、维护、反馈、兼容和发布说明齐全。
 - [ ] 无未解决的发布阻塞；报告与实际产物一致后更新 Goal 为 complete。
 
-下一执行点：详细计划 **V3.1**。V0 证据：`~/.local/share/ai-repo-doctor/evaluations/v1-product-closure-v1/baseline/`；155,745 个保护路径、15 个既有未提交文件，75 个符号链接口径差异已逐项核对，未发现内容变化。
+下一执行点：详细计划 **V4.1**。V0 证据：`~/.local/share/ai-repo-doctor/evaluations/v1-product-closure-v1/baseline/`；155,745 个保护路径、15 个既有未提交文件，75 个符号链接口径差异已逐项核对，未发现内容变化。
 
 V1 证据：`~/.local/share/ai-repo-doctor/evaluations/v1-product-closure-v1/v1/`；10 项核心合同、11 项既有 agent workflow、无 extra 的实际退出 2 均已核对。
 
 V2 证据：同根目录 `v2/products.json`、`v2/completion.json`；开发版 1.0.0.dev1 / 源码 `6124dda`，34 个 runtime 文件一致，40 项冻结源码回归、base 11 / js 16 条安装命令通过（含 6 条预期拒绝）。旧入口与用户 Skill 未替换，独立 Codex 会话验收仍为 V5 待办。
+
+V3 证据：同根目录 `v3/completion.json`、`v3/review.md`、`v3/scale/summary.json`。源码 `50a97b8`，35 个 runtime 文件一致；119 项冻结相关回归、base/js 27 条安装命令和 40 条规模查询通过。参考 Mac 的 100 文件五步 0.53–0.59s、1,000 文件 1.64–1.68s。无硬实时/RSS 或所有仓库性能承诺。
