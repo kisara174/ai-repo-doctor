@@ -1,16 +1,16 @@
 # 安装、Codex 接入、升级与回滚
 
-<!-- repo-doctor-install-versions: 1.0.0rc1, 1.0.0 -->
+<!-- repo-doctor-install-versions: 1.0.0 -->
 
-适用范围：macOS/Linux，Python 3.11+。1.0 尚在实施；实际平台组合见 [支持矩阵](SUPPORT_MATRIX.md)，正式承诺由精确提交的 CI 与发行报告确认，Windows 暂不承诺。
+适用范围：macOS/Linux，Python 3.11+。1.0 正式版本通过 GitHub Release wheel 分发；实际平台组合见 [支持矩阵](SUPPORT_MATRIX.md)，正式承诺由精确提交的 CI 与发行报告确认，Windows 暂不承诺。
 
-**以下 1.0.0 公共下载步骤仅在正式 Release 发布后可用。** 开发候选应使用维护者提供的本地 wheel，并将 RD_VERSION 设为实际版本（当前为 1.0.0rc1）；不能把开发候选称为正式 1.0。
+以下步骤安装固定正式版本 1.0.0，下载后先核对 SHA256，再安装到新环境。
 
 ## 1. 选择来源与安装目录
 
 确认 `python3 --version` 至少为 3.11；若系统默认较旧，使用已经安装的合适解释器绝对路径替换 python3。安装不修改系统 Python。
 
-正式版本发布后，在新终端下载 wheel 和校验文件到**新目录**：
+在新终端下载 wheel 和校验文件到**新目录**：
 
 ```sh
 set -e
@@ -27,7 +27,7 @@ curl --fail --location "$RD_URL/SHA256SUMS" --output "$RD_ROOT/SHA256SUMS"
 
 校验失败立即停止，不能继续安装。已有同名目录则保留并调查其版本，不清空重试。Linux 若无 shasum，可使用 `sha256sum -c SHA256SUMS`。
 
-开发候选将 RD_WHEEL 设为本地 wheel 的绝对路径，另选一个新 RD_ROOT，核对随附 SHA256 和源码提交后进入下一步；不要访问尚未发布的下载 URL。
+其他版本应同时替换 RD_VERSION 和对应下载件；升级时选择新目录，先核对随附 SHA256 和源码提交。
 
 ## 2. 安装到独立环境
 

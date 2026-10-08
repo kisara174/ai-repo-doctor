@@ -1,36 +1,27 @@
 # Codex 调用与仓库结构关系图
 
-<!-- repo-doctor-install-versions: 0.8.0 -->
+<!-- repo-doctor-install-versions: 1.0.0 -->
 
-本页下载示例属于公开 0.8.0。1.0 候选使用 [可移植安装与绑定 Skill 指导](INSTALL.md)，两者的 Skill 名称和版本不可混用。
+本页使用正式 1.0.0；完整下载校验、版本绑定和回滚见 [安装指南](INSTALL.md)，实际发行身份见 [交付记录](delivery/2026-10-08-v1.0.0-product-closure.md)。五个只读调查命令的参数、JSON、退出码见 [CLI 合同](CLI_CONTRACT.md)。
 
-五个只读调查命令的参数、JSON、退出码与兼容规则见 [CLI 合同](CLI_CONTRACT.md)。
-
-1.0 开发候选增加版本绑定 Skill；可移植安装、接入与回滚见 [安装指南](INSTALL.md)。候选的新会话验收已完成，见 [真实使用记录](evaluations/2026-10-08-v1-user-workflow.md)；正式发行与部署仍待完成。以下 0.8.0 说明保留其已发布版本归属。
-
-v0.8.0 使用说明。Codex 获取本地Python及显式选择的JS/TS结构与来源证据，人查看离线HTML/SVG。正式版本、安装验收与公开下载身份见[0.8.0交付记录](delivery/2026-10-08-v0.8.0-js-ts-completion.md)。历史Python流程保持兼容。
-
-## 1. 一次安装
-
-其他机器使用 Python 3.11+ 安装发行 wheel；使用公开安装地址：
+## 1. 一次安装与绑定
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.8.0/ai_repo_doctor-0.8.0-py3-none-any.whl'
+.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v1.0.0/ai_repo_doctor-1.0.0-py3-none-any.whl'
 export PATH="$PWD/.venv/bin:$PATH"
-repo-doctor --version
-repo-doctor skill export --out NEW_SKILL_DIRECTORY
+RD_CLI="$PWD/.venv/bin/repo-doctor"
+"$RD_CLI" --version
+"$RD_CLI" skill export --cli "$RD_CLI" --out "$HOME/.agents/skills/repo-doctor-v1"
 ```
 
-使用选中虚拟环境的 CLI；实际版本以 `--version` 为准。已有用户 Skill 保留，新 Skill 另行导出到新目录。
-
-Skill 导出目录必须尚不存在。Codex 中可显式使用 `$repo-doctor`；如果当前会话尚未发现 Skill，重新启动客户端再调用。安装不新增 MCP 服务，也不修改全局配置。旧版与可选云端接口见 [兼容参考](LEGACY_USAGE.md)。
+Skill 目标目录必须不存在；保留原 Skill，在新会话显式指定 `$repo-doctor-v1`。先读取 installation.json 并核对绑定 CLI 的版本，下列 repo-doctor 命令在 Codex 中始终改用绑定的绝对 CLI。JS/TS 安装相同 wheel 的 js extra，见安装指南。不新增 MCP 或改客户端配置；历史 Python 接口见 [兼容参考](LEGACY_USAGE.md)。
 
 ## 2. 用 Codex 阅读仓库
 
 可以直接提出：
 
-> 使用 $repo-doctor 理解这个 Python 仓库，生成结构关系图，并分析指定函数的调用与影响。详细分析在对话中解释。
+> 使用 $repo-doctor-v1 理解这个 Python 仓库，生成结构关系图，并分析指定函数的调用与影响。详细分析在对话中解释。
 
 调用工具的基本顺序是：
 

@@ -1,8 +1,8 @@
 # 变化记录
 
-## 1.0.0 — 未发布
+## 1.0.0 — 2026-10-08
 
-当前开发版本为 1.0.0rc1。以下是实施分支的变化，不代表正式下载已可用。
+正式发行身份和公开下载核验见 [1.0 交付记录](docs/delivery/2026-10-08-v1.0.0-product-closure.md)。
 
 - 采用 MIT 许可，wheel 包含许可声明及标准 SPDX 元数据。
 - 固定 overview、symbols、context、impact、map 五命令的公共参数、JSON 和退出码合同，保留已有字段；新增 resource_limits 元数据。

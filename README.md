@@ -1,10 +1,10 @@
 # AI Repo Doctor
 
-<!-- repo-doctor-install-versions: 0.8.0 -->
+<!-- repo-doctor-install-versions: 1.0.0 -->
 
 为 Codex 提供 Python、JavaScript、TypeScript 仓库的静态源码证据，为人提供离线结构关系图。Codex 负责判断和修改代码。主要流程无需 API key、服务或 Node，不运行目标仓库代码。
 
-**当前公开版本为 [0.8.0](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.8.0)**。1.0 正在完成交付验收，尚未发布；以下下载示例属于 0.8.0。1.0 候选的版本绑定 Skill、安装、升级和回滚见 [安装指南](docs/INSTALL.md)，进度见 [1.0 指导清单](docs/V1_TODO.md)。
+**1.0.0 正式版本**通过 GitHub Release wheel 分发，下载入口见 [v1.0.0](https://github.com/kisara174/ai-repo-doctor/releases/tag/v1.0.0)。完整安装、版本绑定 Skill、升级和回滚见 [安装指南](docs/INSTALL.md)，发行身份与交付状态见 [1.0 交付记录](docs/delivery/2026-10-08-v1.0.0-product-closure.md)。
 
 ## 安装固定版本
 
@@ -14,7 +14,7 @@
 
 ```sh
 python3 -m venv .venv-repo-doctor
-.venv-repo-doctor/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.8.0/ai_repo_doctor-0.8.0-py3-none-any.whl'
+.venv-repo-doctor/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v1.0.0/ai_repo_doctor-1.0.0-py3-none-any.whl'
 .venv-repo-doctor/bin/repo-doctor --version
 ```
 
@@ -22,7 +22,7 @@ python3 -m venv .venv-repo-doctor
 
 ```sh
 python3 -m venv .venv-repo-doctor-js
-.venv-repo-doctor-js/bin/python -m pip install 'ai-repo-doctor[js] @ https://github.com/kisara174/ai-repo-doctor/releases/download/v0.8.0/ai_repo_doctor-0.8.0-py3-none-any.whl'
+.venv-repo-doctor-js/bin/python -m pip install 'ai-repo-doctor[js] @ https://github.com/kisara174/ai-repo-doctor/releases/download/v1.0.0/ai_repo_doctor-1.0.0-py3-none-any.whl'
 .venv-repo-doctor-js/bin/repo-doctor --version
 ```
 
@@ -49,13 +49,13 @@ ID='ID_RETURNED_BY_SYMBOLS'
 
 ## 接入 Codex
 
-公开 0.8.0 可从选定环境导出原 Skill：
+从选定环境导出绑定版本的 Skill（目标目录须不存在）：
 
 ```sh
-"$RD_CLI" skill export --out NEW_SKILL_DIRECTORY
+"$RD_CLI" skill export --cli "$RD_CLI" --out NEW_SKILL_DIRECTORY
 ```
 
-导出目录必须不存在；保留已有自定义 Skill。1.0 候选应按 [安装指南](docs/INSTALL.md) 导出带 `--cli` 的 `repo-doctor-v1`，新会话核对 installation.json 和实际 `--version`。不要混用两套版本说明或默默回退到 PATH 中的旧 CLI。
+保留已有自定义 Skill，按 [安装指南](docs/INSTALL.md) 将新 Skill 放到 `~/.agents/skills/repo-doctor-v1`。在新 Codex 会话指定 `$repo-doctor-v1`，先核对 installation.json 和实际 `--version`，每条命令使用绑定的绝对 CLI。
 
 ## 支持与边界
 
@@ -73,4 +73,4 @@ ID='ID_RETURNED_BY_SYMBOLS'
 - [变化记录](CHANGELOG.md)、[问题反馈与维护](SUPPORT.md)
 - [1.0 准备状态](docs/delivery/2026-10-08-v1-readiness.md)
 
-本项目采用 [MIT 许可](LICENSE)，版权署名 `kisara174`。1.0 正式发行仍须完成候选与公开产物验收。
+本项目采用 [MIT 许可](LICENSE)，版权署名 `kisara174`。发行与部署事实以交付记录为准。
