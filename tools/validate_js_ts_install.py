@@ -220,13 +220,12 @@ def validate(mode, python, cli, out):
         require(association_before == {name: digest(association / name) for name in sources},
                 'association fixture modified')
 
-
         frontend_languages = 'javascript,typescript'
         front = data('frontend-overview', 'overview', frontend, '--languages', frontend_languages)
         require(front['analysis'].get('source_extensions') == {
             'javascript': ['.js', '.mjs', '.jsx'], 'typescript': ['.ts', '.tsx']}, 'frontend scope missing')
         require(front['stats']['parse_errors'] == 1, 'MISSING token file not excluded')
-        matches = data('frontend-symbols', 'symbols', frontend, '--query', '',
+        matches = data('frontend-symbols', 'symbols', frontend, '--query', '::',
                        '--languages', frontend_languages)['matches']
         ids = {m['id'] for m in matches}
         require(ids == {'helper.ts::value', 'Card.tsx::Card', 'App.tsx::App',
@@ -260,7 +259,7 @@ def validate(mode, python, cli, out):
         for language, expected_ids in (
                 ('javascript', {'Legacy.jsx::Legacy', 'consumer.js::consume'}),
                 ('typescript', {'helper.ts::value', 'Card.tsx::Card', 'App.tsx::App'})):
-            selected = data('frontend-' + language, 'symbols', frontend, '--query', '', '--languages', language)
+            selected = data('frontend-' + language, 'symbols', frontend, '--query', '::', '--languages', language)
             require({m['id'] for m in selected['matches']} == expected_ids, 'unselected frontend language read')
         rd('frontend-bad-symbol', 'context', frontend, 'bad.js::leaked',
            '--languages', frontend_languages, '--json', expected=2)
