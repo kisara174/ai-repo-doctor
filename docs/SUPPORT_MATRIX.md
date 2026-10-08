@@ -2,14 +2,14 @@
 
 <!-- repo-doctor-development-version: 1.0.0.dev1 -->
 
-当前为 1.0.0.dev1 开发候选，公开版仍为 0.8.0。[安装指导](INSTALL.md) 与 [CLI 合同](CLI_CONTRACT.md) 规定新候选的使用方式。下表的新增远端组合等待精确提交 CI 回执；不能用本地 ARM Mac 结果代替其他系统/版本的运行证据。
+当前为 1.0.0.dev1 开发候选，公开版仍为 0.8.0。[安装指导](INSTALL.md) 与 [CLI 合同](CLI_CONTRACT.md) 规定新候选的使用方式。下表的远端组合已在实施提交 `88392c1` 验证；每个后续 RC/正式版本还需自己的精确提交门禁。不能用本地 ARM Mac 结果代替其他系统/版本的运行证据。
 
 ## 平台门禁
 
 | 系统/架构 | Python | Python-only 安装 | JS-extra 安装 | 证据状态 |
 | --- | --- | --- | --- | --- |
-| Ubuntu 24.04 / x86_64 | 3.11、3.12、3.13、3.14 | 各独立 venv，核心五步/绑定 Skill，保留旧生命周期门禁 | 各独立 venv，核心五步/绑定 Skill，原 JS 安装门禁 | 待本阶段远端 CI |
-| macOS 15 / arm64 | 3.11、3.14 | 各独立 venv，核心五步/绑定 Skill | 各独立 venv，核心五步/绑定 Skill | 待本阶段远端 CI |
+| Ubuntu 24.04 / x86_64 | 3.11、3.12、3.13、3.14 | 各独立 venv，核心五步/绑定 Skill，保留旧生命周期门禁 | 各独立 venv，核心五步/绑定 Skill，原 JS 安装门禁 | `88392c1` 远端安装通过 |
+| macOS 15 / arm64 | 3.11、3.14 | 各独立 venv，核心五步/绑定 Skill | 各独立 venv，核心五步/绑定 Skill | `88392c1` 远端安装通过 |
 | 本地 macOS 27.0.1 / arm64 | 3.14.5 | 独立安装 11 条命令 | 独立安装 16 条命令 | V3 源码 `50a97b8` 已通过，不等于正式发行 |
 | Windows、Intel Mac、其他 Linux 架构 | 未列入本轮 | 未验收 | 未验收 | 不承诺 |
 
@@ -34,3 +34,5 @@ CI 每个安装 runner 记录 uname、Python、实际平台/架构，并保留�
 ## 当前候选证据归属
 
 V3 精确构建 `50a97b84327860c86a33d4456285838e770bb399`：35 个 runtime 文件源码/wheel/两套安装一致，119 项冻结相关回归和 40 条自有规模查询通过。阶段新增 CI 和之后 RC/正式版须记录各自精确 SHA，历史 200 仓库结果不重标为当前候选全量验收。
+
+V4 平台门禁：[push 运行](https://github.com/kisara174/ai-repo-doctor/actions/runs/37771770415)与[PR 运行](https://github.com/kisara174/ai-repo-doctor/actions/runs/37771840654)均指向 `88392c131818c1d5e90cad9b859a70f1223bf69a`，各 11 个任务全部成功。下载并核对 push 的 10 份 runner artifacts，包含 12 份独立 base/js 安装 summary、162 条实际/预期退出码一致的命令（36 条预期拒绝）。Linux 实际 x86_64/glibc2.39，macOS 实际 15.7.9/arm64。既有生命周期和地图 DOM/SVG job 保留并通过。

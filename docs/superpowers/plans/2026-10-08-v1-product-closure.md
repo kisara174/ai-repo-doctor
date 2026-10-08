@@ -169,15 +169,15 @@ git diff --check
 
 实施决定：Ubuntu runner 固定 ubuntu-24.04；macOS 选 macos-15，实际架构以 machine.json 为准。七份文档对公开 0.8.0 下载示例与开发 1.0.0.dev1 使用显式版本标记，INSTALL 的正式 1.0.0 示例仍注明未发布。允许 README/CODEX_AND_MAP 补候选入口并移除维护者路径，不批量改历史报告。
 
-- [ ] **V4.1** 将 Linux Python 核心/JS-extra 矩阵补到 3.11/3.12/3.13/3.14。保留现有 viewer/search/DOM 验证，不能删掉旧门禁以减少失败。
-- [ ] **V4.2** 加 macOS Python 3.11/3.14 的 wheel 独立安装与 base/js 核心流程；每个 runner 记录 `uname`/Python/实际架构。不要把一台 ARM Mac 的结果宣传为所有架构通过。
-- [ ] **V4.3** CI 从构建 wheel 安装到新 venv，调用 installed CLI 并在源码目录外执行 V2 验证器；不能只通过 PYTHONPATH 运行源码。
-- [ ] **V4.4** 加公开文档检查工具：`--root .`；检查 README、INSTALL、CODEX_AND_MAP、JS_TS_SUPPORT、CLI_CONTRACT、RESOURCE_LIMITS、SUPPORT_MATRIX 的本地相对链接、标注代码块中的维护者绝对路径、当前版本示例一致性。历史报告允许保留历史路径，不做全历史替换。
-- [ ] **V4.5** 用缺失本地目标和正常链接写工具回归；不访问外网来验证普通 Markdown 链接，不把在线页面暂时失败变成产品测试。
-- [ ] **V4.6** 将上述文档门禁接入 CI。支持矩阵分别写 Python-only、JS-extra、地图和系统/版本组合；Windows 明确未验收。
-- [ ] **V4.7** 推送当前实现分支并创建/附加 PR。等待精确 HEAD 的所有必需 job 完成，记录 job 名、SHA 与结论；新矩阵数量按实际读取，不能继续硬编码“7项通过”。
-- [ ] **V4.8** 处理失败的首个根因；如果 native dependency 不支持某组合，主代理选择兼容修复或缩小承诺，同步元数据和矩阵，不允许 skip 后标绿。
-- [ ] **V4.9** 提交并更新状态。
+- [x] **V4.1** 将 Linux Python 核心/JS-extra 矩阵补到 3.11/3.12/3.13/3.14。保留现有 viewer/search/DOM 验证，不能删掉旧门禁以减少失败。
+- [x] **V4.2** 加 macOS Python 3.11/3.14 的 wheel 独立安装与 base/js 核心流程；每个 runner 记录 `uname`/Python/实际架构。不要把一台 ARM Mac 的结果宣传为所有架构通过。
+- [x] **V4.3** CI 从构建 wheel 安装到新 venv，调用 installed CLI 并在源码目录外执行 V2 验证器；不能只通过 PYTHONPATH 运行源码。
+- [x] **V4.4** 加公开文档检查工具：`--root .`；检查 README、INSTALL、CODEX_AND_MAP、JS_TS_SUPPORT、CLI_CONTRACT、RESOURCE_LIMITS、SUPPORT_MATRIX 的本地相对链接、标注代码块中的维护者绝对路径、当前版本示例一致性。历史报告允许保留历史路径，不做全历史替换。
+- [x] **V4.5** 用缺失本地目标和正常链接写工具回归；不访问外网来验证普通 Markdown 链接，不把在线页面暂时失败变成产品测试。
+- [x] **V4.6** 将上述文档门禁接入 CI。支持矩阵分别写 Python-only、JS-extra、地图和系统/版本组合；Windows 明确未验收。
+- [x] **V4.7** 推送当前实现分支并创建/附加 PR。等待精确 HEAD 的所有必需 job 完成，记录 job 名、SHA 与结论；新矩阵数量按实际读取，不能继续硬编码“7项通过”。
+- [x] **V4.8** 处理失败的首个根因；如果 native dependency 不支持某组合，主代理选择兼容修复或缩小承诺，同步元数据和矩阵，不允许 skip 后标绿。
+- [x] **V4.9** 提交并更新状态。
 
 **验证：**`"$RD_PY" tools/check_public_docs.py --root .`；`"$RD_PY" -m unittest discover -s tests -p test_public_docs.py -v`；精确提交 CI 无失败、取消或缺失必需 job。
 
@@ -323,6 +323,7 @@ DOM 按现有 CI 的 fixture/依赖路径命令执行并保存回执；无需临
 - [x] V1 核心合同及错误语义已完成，资源字段在 V3 回填。
 - [x] V2 开发候选、版本绑定、安装指南及独立安装已完成，V5 新会话与 V8 正式部署未提前计入。
 - [x] V3 边界、119 项冻结相关测试、独立安装和 100/1,000 文件规模实验已完成。
-- [ ] V4–V9 产品实施待完成。
+- [x] V4 实施提交88392c1的push/PR各11个CI任务和162条安装命令通过；支持矩阵已记录真实系统/架构。
+- [ ] V5–V9 产品实施待完成。
 
-下一动作：V4.1。阶段通过不等于 1.0 产品完成。
+下一动作：V5.1。阶段通过不等于 1.0 产品完成。
