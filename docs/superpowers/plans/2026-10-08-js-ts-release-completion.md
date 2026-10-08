@@ -125,21 +125,21 @@ files = {
 
 **Files:** 正式0.8.0三处版本、README发行URL、支持矩阵、packaged Skill版本路径、docs/delivery/2026-10-08-v0.8.0-js-ts-completion.md；R。
 
-- [ ] 列清候选→正式runtime diff；准备正式版本后冻结提交，重新独立构建/安装/字节验证/真实题和精确提交CI。
-- [ ] 主代理用精确head guard合并PR，核对merge tree与验收tree一致；正式wheel最终来源为merge SHA，七项CI必须对merge SHA绿色。
-- [ ] 正式wheel源码、安装、version与SHA记录；写Chinese release-notes、SHA256SUMS和可读发布前报告，分别列功能、保守限制、真实调查、安装计数和回滚路径。
-- [ ] 创建GitHub v0.8.0正式release，公开wheel与摘要文件。匿名下载并逐字节比对本机已验收wheel及所有安装runtime。不能用authenticated gh download代替公开下载验证。
-- [ ] 本机R/candidate/venvs/js/bin/repo-doctor实际返回0.8.0；从该CLI导出Skill到R/skill-export，并核对与包内一致。新独立入口的五步命令及map路径写部署文档；全局0.5.3和用户Skill不切换。
+- [x] 列清候选→正式runtime diff；准备正式版本后冻结提交，重新独立构建/安装/字节验证/真实题和精确提交CI。
+- [x] 主代理用精确head guard合并PR，核对merge tree与验收tree一致；正式wheel最终来源为merge SHA，七项CI必须对merge SHA绿色。
+- [x] 正式wheel源码、安装、version与SHA记录；写Chinese release-notes、SHA256SUMS和可读发布前报告，分别列功能、保守限制、真实调查、安装计数和回滚路径。
+- [x] 创建GitHub v0.8.0正式release，公开wheel与摘要文件。匿名下载并逐字节比对本机已验收wheel及所有安装runtime。不能用authenticated gh download代替公开下载验证。
+- [x] 本机R/candidate/venvs/js/bin/repo-doctor实际返回0.8.0；从该CLI导出Skill到R/skill-export，并核对与包内一致。新独立入口的五步命令及map路径写部署文档；全局0.5.3和用户Skill不切换。
 
 ## P7：完成审计（D1–D5）
 
 **Files:** R/completion.json、delivery-report.md、preservation.json、deployment.json、graphflow-index.json；本清单完成状态。
 
-- [ ] 对Goal逐项审计：P2修复有效、P3新覆盖、P4实际Codex调查与地图、P5/P6安装CI及公开发行都有来源证据。任何未知交付项保留pending，不改成功定义。
-- [ ] 原manifest完整核对14文件/150789证据/65旧runtime/用户Skill；本轮补充manifest核对0.7.0的2426文件和8链接；mismatch必须0。源仓库commit/源码摘要保持。
-- [ ] 更新清单实际完成状态、正式交付文档和中文最终报告，文档提交同步远端；发行tag保留精确已验收来源，不移动tag。
-- [ ] GraphFlow增量刷新并保存回执；只有全部门槛满足才update_goal complete。否则保持active并继续处理实际缺口。
+- [x] 对Goal逐项审计：P2修复有效、P3新覆盖、P4实际Codex调查与地图、P5/P6安装CI及公开发行都有来源证据。任何未知交付项保留pending，不改成功定义。
+- [x] 原manifest完整核对14文件/150789证据/65旧runtime/用户Skill；本轮补充manifest核对0.7.0的2426文件和8链接；mismatch必须0。源仓库commit/源码摘要保持。
+- [x] 更新清单实际完成状态、正式交付文档和中文最终报告，文档提交同步远端；发行tag保留精确已验收来源，不移动tag。
+- [x] GraphFlow增量刷新并保存回执；只有全部门槛满足才update_goal complete。否则保持active并继续处理实际缺口。
 
 ## 当前进度
 
-P0–P5完成；候选0.8.0a1精确SHA 23c84ea07360cc06861b3bbc3db5841dfdcb671e七项CI通过（run37720111835），独立base10/js31/Python生命周期33条验收通过，安装CLI三个真实仓库17条与源码语义JSON一致。失败attempt-001是验证器空查询错误，已修正且attempt-002通过。P6准备正式0.8.0，仍须正式源码/合并提交CI、安装、公开下载与部署；P7未完成。
+P0–P7完成。0.8.0正式发行来源9fc341ef1d707f6c6d0a5ef8736a3d386cebc012，tree8010645d64453c1bd31009998f510702d7dd1ca9；候选、正式头、合并来源三轮精确七项CI通过。正式独立base10/js31/Python生命周期33条按预期退出码通过，34个runtime与源码/安装逐字节一致；三个真实前端仓库17条语义JSON一致，三地图离线DOM与当前SVG投影通过。公开匿名下载与已验收wheel一致；新独立CLI和Skill导出可用。原14文件/150789证据/65runtime/用户Skill及0.7.0的2426文件/8链接核对0差异。最终交付记录及Mac证据报告给出全部来源；没有新200仓库全量或盲测声明。发行tag不移动，收尾仅同步文档。

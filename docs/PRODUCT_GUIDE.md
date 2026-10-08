@@ -1,6 +1,10 @@
 # AI Repo Doctor 产品闭环指导书
 
-更新日期：2026-10-03。当前状态：**v0.5.2 稳定版已公开发布并部署到 Mac。** Codex 获取结构与证据并负责详细判断，人查看离线交互 HTML 与 SVG；主要流程无需 API Key。三项审计缺陷的修复、安装验收和交付依据见 [v0.5.2 交付记录](delivery/2026-10-02-v0.5.2-reliability.md) 与 [D0–D8 计划](superpowers/plans/2026-10-02-v0-5-2-reliability-and-delivery.md)。此前 v0.5.1 的 T0–T8 和 v0.5.0 的 R1–R5 保持已交付，历史证据分别见 [v0.5.1](delivery/2026-10-02-v0.5.1-call-coverage.md)、[基础版收尾](delivery/2026-10-01-product-closure.md)。
+更新日期：2026-10-08。当前状态：**v0.8.0正式版已发布、公开下载核对通过，并在Mac独立部署。** 默认Python；可选[js]覆盖JS/TS及JSX/TSX。Codex调用overview、symbols、context、impact、map获取证据并负责判断；人查看离线交互HTML/SVG。主要流程无需API Key，不运行目标代码。当前范围及完成证据见[0.8.0交付记录](delivery/2026-10-08-v0.8.0-js-ts-completion.md)与[支持矩阵](JS_TS_SUPPORT.md)。全局0.5.3、用户Skill和历史证据保持；新入口见交付记录。
+
+**当前完成路线：** [JS/TS完善P0–P7](superpowers/plans/2026-10-08-js-ts-release-completion.md)。新增前端组件调查与错误隔离已落实；本轮闭环以精确发行CI、独立wheel安装、真实固定题、地图/SVG及匿名下载为依据。动态方法、回调、别名/包、渲染标签等未知不作为已解析关系。JS/TS仅有只读调查和地图，Python可按需保存调查；不以自动诊断/修复作为当前交付目标。
+
+下述带日期的交付与路线描述为历史记录，保留当时版本、失败和评分。后续工作从实际用户调查中已确认的缺口出发，不自动重启旧云端评估或扩大接口。
 
 **历史稳定版 v0.4.1：** [稳定性修复版](https://github.com/kisara174/ai-repo-doctor/releases/tag/v0.4.1)解决了后台子进程持有输出时超时无法及时返回，以及新一轮失败检查仍显示上一轮修复证据的问题。合并提交 `d7dd1df` 的 Python 3.11–3.13 CI 通过，385 个离线测试通过；最终 wheel 在干净环境完成了两轮修复、失败记录预览、超时记录保存和报告重开。修复保持在原有命令执行和报告机制内。
 
@@ -12,15 +16,17 @@
 
 v0.5.1 延续基础版闭环，补充保守的同文件模块实例调用关系。固定 schedule 样本的公共入口不再依赖 Codex 手工补边，7 条新增边的来源逐条核对；旧边全部保留。这改善影响分析和图的实用性，仍不承诺动态关系完整性。后续改进只由实际使用缺口驱动。
 
-**当前执行路线：** [v0.5.2 D0–D8](superpowers/plans/2026-10-02-v0-5-2-reliability-and-delivery.md) 已通过代码、来源、公开下载和 Mac 使用门槛。跨轮/跨命令回归误配、不可重开的大任务、新报告版本滞后三项问题已修复；旧任务可有界导出只读档案。最终文档整合提交与 CI 结果记录于 Mac 的 deployment-v0.5.2.json，正式 tag 始终固定在代码来源提交。[V1 两类仓库六题调查](evaluations/2026-10-02-v0.5.2-investigation-value.md)已完成：2 题回答完整、4 题边界明确，无产品阻断；原始命令、补读与四组关系图已归档。新仓库浏览器交互因 file URL 策略拒绝未验收。保持 v0.5.2，不启动 V2；后续从真实用户调查问题继续使用，仅在具体缺口阻塞目标时制定一项最小改进。不安排新的模型竞赛、MCP、数据库或图布局改造。
+**历史执行路线（2026-10-02）：** [v0.5.2 D0–D8](superpowers/plans/2026-10-02-v0-5-2-reliability-and-delivery.md) 已通过代码、来源、公开下载和 Mac 使用门槛。跨轮/跨命令回归误配、不可重开的大任务、新报告版本滞后三项问题已修复；旧任务可有界导出只读档案。最终文档整合提交与 CI 结果记录于 Mac 的 deployment-v0.5.2.json，正式 tag 始终固定在代码来源提交。[V1 两类仓库六题调查](evaluations/2026-10-02-v0.5.2-investigation-value.md)已完成：2 题回答完整、4 题边界明确，无产品阻断；原始命令、补读与四组关系图已归档。新仓库浏览器交互因 file URL 策略拒绝未验收。保持 v0.5.2，不启动 V2；后续从真实用户调查问题继续使用，仅在具体缺口阻塞目标时制定一项最小改进。不安排新的模型竞赛、MCP、数据库或图布局改造。
 
 **JS/TS 探索结论：** [详细执行清单](superpowers/plans/2026-10-02-js-ts-readonly-preview.md)与[范围规格](superpowers/specs/2026-10-02-js-ts-readonly-preview-design.md)的 A0–A4 已完成。[六题探索报告](evaluations/2026-10-02-js-ts-exploration.md)记录原型、真实故障修正、源码核对和四组 HTML/SVG。首次 decision=no-go：两仓库均未证明减少调查动作，B1–B4 未开始，未交付 0.6.0a1。Python 稳定入口仍为 v0.5.2。2026-10-03 已按用户授权完成[按需流程复核](evaluations/2026-10-03-js-ts-adaptive-workflow.md)：同六题动作从 30 降至 19，仍高于源码基线 18；两仓库的结构题均从 3 降至 2，满足每仓库至少一题受益的继续条件。独立 follow-up gate=go，首次 no-go 和原始证据保留。[B1 可选源码索引](evaluations/2026-10-03-js-ts-B1.md)已在隔离分支完成：语言参数、真实符号、上下文和本地 ESM 文件关系可调用。[B2–B3](evaluations/2026-10-03-js-ts-B2-B3.md) 已完成有限调用、反向影响与混合地图。[B4 交付](delivery/2026-10-03-v0.6.0a1-js-ts-preview.md)已完成：v0.6.0a1 公开 prerelease、合并 SHA 的七项 CI、base/extra 干净安装、固定六题与独立 Mac 预览均通过。Python 稳定入口仍为 v0.5.2；JS/TS 仅为只读有界预览，不支持快照或诊断修复闭环。B 阶段结束，下一步从实际使用缺口决定是否晋升稳定版。
 
 ## 1. 产品承诺
 
-用户给出一个 Python 仓库，Repo Doctor 应当提供可调用的结构、上下文与证据工具，以及供人查看的结构与调用关系图。Codex 负责问题判断、方案和代码修改；Repo Doctor 校验来源证据、保存必要的 issue 报告，并记录显式运行的修复前后检查。用户始终能分清**程序确认的事实**、**模型提出的假设**和**测试或人工确认的结论**。新的主要路径不需要 DeepSeek Key；既有云端诊断仍为可选能力。
+用户给出一个Python仓库（或安装extra后显式选择JS/TS仓库），Repo Doctor应当提供可调用的结构、上下文与证据工具，以及供人查看的结构与调用关系图。JS/TS调查止于只读证据与地图；下述issue保存与显式检查流程仅适用于Python。Codex 负责问题判断、方案和代码修改；Repo Doctor 校验来源证据、保存必要的 issue 报告，并记录显式运行的修复前后检查。用户始终能分清**程序确认的事实**、**模型提出的假设**和**测试或人工确认的结论**。新的主要路径不需要 DeepSeek Key；既有云端诊断仍为可选能力。
 
-产品的最小闭环是：
+只读调查闭环为：仓库路径 → overview → symbols选择真实ID → context/impact来源证据 → Codex解读 → 人类HTML/SVG结构图。
+
+Python按需保存调查的闭环是：
 
 ```text
 仓库路径 → 结构概览与关系图 → Codex 选择目标并读取有界上下文

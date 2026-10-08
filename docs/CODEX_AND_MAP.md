@@ -1,6 +1,6 @@
 # Codex 调用与仓库结构关系图
 
-v0.5.2 使用说明。离线结构和来源证据供 Codex 调查，HTML/SVG 供人查看项目结构。稳定版已发布并升级这台 Mac，公开下载、干净安装和持久安装均通过验收，见 [交付记录](delivery/2026-10-02-v0.5.2-reliability.md)。
+v0.8.0 使用说明。Codex 获取本地Python及显式选择的JS/TS结构与来源证据，人查看离线HTML/SVG。正式版本、安装验收与公开下载身份见[0.8.0交付记录](delivery/2026-10-08-v0.8.0-js-ts-completion.md)。历史Python流程保持兼容。
 
 ## 1. 一次安装
 
@@ -8,13 +8,13 @@ v0.5.2 使用说明。离线结构和来源证据供 Codex 调查，HTML/SVG 供
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.5.2/ai_repo_doctor-0.5.2-py3-none-any.whl'
+.venv/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v0.8.0/ai_repo_doctor-0.8.0-py3-none-any.whl'
 export PATH="$PWD/.venv/bin:$PATH"
 repo-doctor --version
-repo-doctor skill export --out ~/.agents/skills/repo-doctor
+repo-doctor skill export --out NEW_SKILL_DIRECTORY
 ```
 
-这台 Mac 的持久命令位于 `~/.local/bin/repo-doctor`，已部署 v0.5.2，无需激活环境。已有 Skill 保持原样。
+这台 Mac 的全局 `~/.local/bin/repo-doctor` 保留0.5.3。0.8.0独立入口为 `/Users/kisara/.local/share/ai-repo-doctor/releases/v0.8.0/candidate/venvs/js/bin/repo-doctor`；使用此完整路径可分析Python和JS/TS。已有用户Skill保持，新的Skill另行导出，不覆盖设置。
 
 Skill 导出目录必须尚不存在。Codex 中可显式使用 `$repo-doctor`；如果当前会话尚未发现 Skill，重新启动客户端再调用。安装不新增 MCP 服务，也不修改全局配置。旧版与可选云端接口见 [兼容参考](LEGACY_USAGE.md)。
 
@@ -57,13 +57,13 @@ repo-doctor map REPO --out NEW_FOCUSED_MAP --symbol SYMBOL --depth 1
 
 直接打开 HTML。默认先显示可展开的结构总览；页面支持搜索、目录/文件/类展开、测试文件和关系类型筛选、邻域深度、缩放、拖动或滚轮平移、当前视图 SVG 导出。搜索目录会展开目标及祖先、显示其直接子项并高亮定位；无关目录保持收起，即使有大量靠前的文件，也优先保留目标路径。文件级概览汇总跨文件关系，点击文件可聚焦相邻文件；集中在一个文件的项目可搜索函数或生成指定符号图，查看文件内部的关系。
 
-箭头从调用者、导入者或注册来源指向目标。目录包含、导入、调用、重导出和注册分开标识。图只反映已解析的静态 Python 关系，未解析调用和解析失败不等于 bug。默认隐藏测试，单视图最多 200 个节点、500 条边；图中明确显示未显示数量。仓库中的其他文件只呈现路径元数据，默认不嵌入源码内容。
+箭头从调用者、导入者或注册来源指向目标。目录包含、导入、调用、重导出和注册分开标识。图只反映已解析的所选语言静态关系，未解析调用和解析失败不等于 bug。默认隐藏测试，单视图最多 200 个节点、500 条边；图中明确显示未显示数量。仓库中的其他文件只呈现路径元数据，默认不嵌入源码内容。
 
 地图是生成时的快照；源码修改后重新生成到新目录。页面不展示诊断、修复方案或完整证据报告，这些交给 Codex 处理。
 
 ## 4. 保存 Codex 的发现
 
-结构问答不必创建 issue。有具体调查需要时：
+结构问答不必创建 issue。本节保存流程仅支持Python，有具体调查需要时：
 
 ```sh
 repo-doctor report create REPO --out NEW_CASE --json
@@ -174,12 +174,12 @@ verify/reproduce 只运行显式参数数组，不经隐式 shell；默认 120 �
 
 档案可直接阅读，不能作为可续写 case。旧 tool_version 和历史原样保留，当前导出器版本单独记录；后续调查另建普通 case 和新快照。
 
-## JS/TS 预览的 Codex 调用路径
+## JS/TS 正式版的 Codex 调用路径
 
-v0.6.0a1 是独立预览，Python 稳定入口保留 v0.5.2。安装方式见 README 的 JS/TS 章节。Mac 上预览 CLI 为 `/Users/kisara/.local/share/ai-repo-doctor/previews/v0.6.0a1/venv/bin/repo-doctor`，已完成安装验收；无需改 PATH 或稳定 Skill。详见 [预览交付记录](delivery/2026-10-03-v0.6.0a1-js-ts-preview.md)。
+0.8.0已正式发布，安装同一wheel的`[js]` extra后显式选择语言。Mac独立CLI为 `/Users/kisara/.local/share/ai-repo-doctor/releases/v0.8.0/candidate/venvs/js/bin/repo-doctor`，先检查`--version`。安装方法及完整边界见[README](../README.md)和[支持矩阵](JS_TS_SUPPORT.md)。旧0.6预览及0.7发行保留为历史版本，不代表当前范围。
 
 使用该绝对 CLI 依次调用 `overview REPO --languages javascript,typescript --json`、`symbols REPO --languages javascript,typescript --query NAME --json`。从本轮返回结果选择真实 ID，再调用 `context REPO REAL_ID --languages javascript,typescript --max-lines 120 --json` 和 `impact REPO REAL_ID --languages javascript,typescript --depth 2 --json`。缺少证据时补读源码，明确区分源码可见关系和工具已解析关系。
 
 `map REPO --languages javascript,typescript --out NEW_MAP` 生成离线交互 HTML、JSON 与两份 SVG。人类只看结构关系，页面不承担问题诊断。默认关系视图及文件/符号聚焦包含所选语言；旧 Python 地图仍可读取。每个输出目录必须尚不存在，单视图上限 200 节点、500 边。
 
-支持范围仅为 `.js/.mjs/.ts` 与有限直接 ESM 关系；类型导入不产生运行时调用，双候选路径保留未知。JS/TS 无 snapshot/case/findings 闭环，不执行目标代码，不调用云端 API。影响列表为有界静态结果，空结果不能解释为无影响。独立 preview Skill 可导出到新目录，勿覆盖现有 `~/.agents/skills/repo-doctor`。
+实现覆盖 `.js/.mjs/.jsx/.ts/.tsx` 与有限直接 ESM 关系；TS/TSX按扩展选择grammar。JSX标签、props/事件引用和匿名回调不猜测调用；实际表达式内安全helper直接调用可带import证据；类型导入不产生运行时调用，双候选路径保留未知。JS/TS 无 snapshot/case/findings 闭环，不执行目标代码，不调用云端 API。影响列表为有界静态结果，空结果不能解释为无影响。独立0.8.0 Skill 可导出到新目录，勿覆盖现有 `~/.agents/skills/repo-doctor`。
