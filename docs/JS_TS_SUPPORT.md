@@ -11,7 +11,7 @@
 | 文件选择 | 显式选择 javascript / typescript；实现文件 `.js`、`.mjs`、`.jsx`、`.ts`、`.tsx`；TS/TSX 使用不同 grammar；遵循 ignore、不追踪 node_modules |
 | 符号 | 具名函数、顶层 const 函数/箭头、类/方法位置；async、default；TS 重载与实现区分 |
 | 文件依赖 | 明确本地 ESM 路径及旧 TS `.js` 替换；新增无后缀文件/index 的唯一可见实现源码关联；先判断歧义再检查语言选择与解析状态 |
-| 调用 | 唯一、未遮蔽、未改写的直接函数绑定和直接 ESM 导出；每条提供 caller/callee/文件/物理行，导入调用另提供实际 `via_esm_import` 来源 |
+| 调用 | 顶层唯一、未遮蔽、未改写的直接函数绑定和直接 ESM 导出；每条提供 caller/callee/文件/物理行，导入调用另提供实际 `via_esm_import` 来源 |
 | 类型引用 | import type / type-only export 不形成运行调用；声明记录与运行关系区分 |
 | context | 目标优先、真实源码行、可选 include-symbol、预算和截断标识；歧义 ID 拒绝 |
 | impact | 已解析反向直接调用的有界遍历；depth=2 可核对逐跳证据；空结果不代表无影响 |
@@ -35,7 +35,7 @@ JS/TS 元数据 `source_extensions` 明确所选语言的实现后缀；实际 J
 - 无后缀/index 的歧义或不合格候选、路径别名、外部 package；不模拟 tsconfig、bundler 或 Node 的完整解析。
 - CommonJS、`.cjs/.mts/.cts`、`.d.ts` 声明实现分析。
 - JSX 标签、props/事件引用不作为函数调用；包装匿名组件不猜测符号。实际 JSX 表达式内安全直接 helper 调用可解析。
-- 对象/实例/this 方法、匿名回调、动态 import 调用、多跳 re-export 调用、运行时替换和仓库外调用。
+- 嵌套函数的调用边（即使符号和上下文可定位）、对象/实例/this 方法、匿名回调、动态 import 调用、多跳 re-export 调用、运行时替换和仓库外调用。
 - Tree-sitter 对部分较新或复杂 TS 语法的覆盖有限。解析错误说明当前后端拒绝了文件，不能据此直接断言目标代码无效。
 - JS/TS snapshot、case/findings、诊断和自动修复。源码判断与修改由 Codex 完成。
 
@@ -50,3 +50,7 @@ JS/TS 元数据 `source_extensions` 明确所选语言的实现后缀；实际 J
 ## 0.8.0 定向前端验证
 
 [固定题与执行器](../evaluation/js-ts-release-completion/README.md) 覆盖一个 JSX、两个 TSX 已见仓库，题目来源在产品运行前手工核对并固定 commit/tree/SHA。组件上下文按120行预算，两个 helper 调用及反向影响核对实际 import 来源，地图核对 SVG 与 JSON 投影。它不是新一轮200仓库回归或盲测；正式安装和公开发行结论以交付记录为准。
+
+## 1.0 新使用证据
+
+新固定提交的 wcmatch、pretty-ms、scule 调查记录见 [1.0 使用闭环](evaluations/2026-10-08-v1-user-workflow.md)。pretty-ms 能定位嵌套 helper，但其零已解析影响与源码可见调用必须区分；scule 的已解析两层调用有实际证据。范围外关系不因地图为空而成为无影响。资源和升级变化见 [兼容政策](COMPATIBILITY.md)。
