@@ -7,7 +7,7 @@ import unittest
 
 FIXTURES = Path(__file__).parent / 'fixtures/js_ts_contract'
 HAS_EXTRA = all(importlib.util.find_spec(name) for name in
-                ('tree_sitter', 'tree_sitter_javascript', 'tree_sitter_typescript'))
+                ('tree_sitter', 'ai_repo_doctor_grammars', 'tree_sitter_typescript'))
 
 
 @unittest.skipUnless(HAS_EXTRA, 'requires optional js extra')

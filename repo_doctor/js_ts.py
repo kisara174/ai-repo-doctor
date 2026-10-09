@@ -11,7 +11,8 @@ from .model import (AnalysisLimit, CallSite, ESMExportRef, ESMImportRef, FileRec
 from .limits import AnalysisBudget
 from .source import read_source, split_source_lines
 
-EXTRA_HELP = "JS/TS backend unavailable or incompatible; install ai-repo-doctor[js]"
+EXTRA_HELP = ("JS/TS backend unavailable or incompatible; install the selected Release's "
+              "native grammar wheels, then ai-repo-doctor[js]; see docs/INSTALL.md")
 
 
 @lru_cache(maxsize=3)
@@ -21,17 +22,20 @@ def _parser(language, *, tsx=False):
     if tsx and language != "typescript":
         raise ValueError("TSX grammar requires typescript")
     try:
-        for name, pinned in (("tree-sitter", "0.26.0"), ("tree-sitter-javascript", "0.25.0"),
+        for name, pinned in (("tree-sitter", "0.26.0"), ("ai-repo-doctor-grammars", "0.1.0"),
                              ("tree-sitter-typescript", "0.23.2")):
             if version(name) != pinned:
                 raise ValueError(EXTRA_HELP)
         from tree_sitter import Language, Parser
         if language == "javascript":
-            import tree_sitter_javascript as grammar
-            capsule = grammar.language()
+            from ai_repo_doctor_grammars import language_javascript
+            capsule = language_javascript()
+        elif tsx:
+            from ai_repo_doctor_grammars import language_tsx
+            capsule = language_tsx()
         else:
             import tree_sitter_typescript as grammar
-            capsule = grammar.language_tsx() if tsx else grammar.language_typescript()
+            capsule = grammar.language_typescript()
         return Parser(Language(capsule))
     except (ImportError, PackageNotFoundError, AttributeError, TypeError, ValueError) as exc:
         raise ValueError(EXTRA_HELP) from exc
