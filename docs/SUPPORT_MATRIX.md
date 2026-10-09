@@ -1,8 +1,8 @@
 # 1.0 平台与能力支持矩阵
 
-<!-- repo-doctor-development-version: 1.0.0 -->
+<!-- repo-doctor-development-version: 1.0.1rc1 -->
 
-当前版本为 1.0.0。[安装指导](INSTALL.md) 与 [CLI 合同](CLI_CONTRACT.md) 规定新候选的使用方式。下表的远端组合在 V4 实施和 RC1 `63a148d` 均通过；正式提交 CI 与产物身份见 [交付记录](delivery/2026-10-08-v1.0.0-product-closure.md)。不能用本地 ARM Mac 结果代替其他系统/版本的运行证据。
+当前开发候选为 1.0.1rc1，修复源码物理行取证；公开正式版本仍为 1.0.0。[安装指导](INSTALL.md) 与 [CLI 合同](CLI_CONTRACT.md) 规定使用方式。下表属于既有 1.0.0 及其前置候选的证据，不代表 1.0.1rc1 已通过这些远端组合；正式提交 CI 与产物身份见 [交付记录](delivery/2026-10-08-v1.0.0-product-closure.md)。不能用本地 ARM Mac 结果代替其他系统/版本的运行证据。
 
 ## 平台门禁
 

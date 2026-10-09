@@ -9,7 +9,7 @@ from .languages import language_for_path
 from .model import (AnalysisLimit, CallSite, ESMExportRef, ESMImportRef, FileRecord,
                     IdentifierUse, JSParsedFile, OverloadSignature, ParsedFile, ParseError, Symbol)
 from .limits import AnalysisBudget
-from .source import read_source
+from .source import read_source, split_source_lines
 
 EXTRA_HELP = "JS/TS backend unavailable or incompatible; install ai-repo-doctor[js]"
 
@@ -310,7 +310,7 @@ def parse_js_ts_file(root: Path, relative_path: str, *,
         parsed = ParsedFile(FileRecord(relative_path, 0, 0, is_test), [], [], [],
                             error=ParseError(relative_path, 1, "Invalid UTF-8 source: " + str(exc)))
         return JSParsedFile(parsed, [], [], [], set(), {}, [])
-    lines = source.splitlines()
+    lines = split_source_lines(source, language=language)
     data = extract(source, file=relative_path, language=language)
     symbols = [Symbol(**{**row, "local_bindings": frozenset(row["local_bindings"]),
                          "overloads": tuple(OverloadSignature(**sig) for sig in row["overloads"])})
