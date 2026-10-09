@@ -152,7 +152,7 @@ class CoreContractTests(CLIHarness, unittest.TestCase):
 
 
 HAS_JS = all(importlib.util.find_spec(name) is not None for name in
-             ('tree_sitter', 'tree_sitter_javascript', 'tree_sitter_typescript'))
+             ('tree_sitter', 'ai_repo_doctor_grammars', 'tree_sitter_typescript'))
 
 
 @unittest.skipUnless(HAS_JS, 'requires optional js extra; base installation rejection is checked separately')

@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "tree-sitter-cli": "0.25.10"
+  },
+  "allowScripts": {
+    "tree-sitter-cli@0.25.10": true
+  },
+  "private": true,
+  "name": "repo-doctor-grammar-generation",
+  "version": "0.1.0"
+}

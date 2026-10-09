@@ -28,7 +28,7 @@ Issues = "https://github.com/kisara174/ai-repo-doctor/issues"
 Changelog = "https://github.com/kisara174/ai-repo-doctor/blob/codex/repo-doctor-v1/CHANGELOG.md"
 
 [project.optional-dependencies]
-js = ["tree-sitter==0.26.0", "tree-sitter-javascript==0.25.0", "tree-sitter-typescript==0.23.2"]
+js = ["tree-sitter==0.26.0", "ai-repo-doctor-grammars==0.1.0", "tree-sitter-typescript==0.23.2"]
 
 [project.scripts]
 repo-doctor = "repo_doctor.cli:main"

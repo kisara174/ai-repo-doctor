@@ -1,0 +1,109 @@
+name: Native JSX grammars
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  sources:
+    name: Frozen grammar regeneration and upstream corpus
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.14'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '26.11.0'
+      - name: Verify fixed generation and unchanged upstream expectations
+        run: |
+          npm ci --prefix backends/jsx-grammars/tools --no-audit --no-fund
+          python tools/check_grammar_provenance.py --root backends/jsx-grammars
+          python backends/jsx-grammars/tools/regenerate.py --check
+          python tools/validate_grammar_upstream.py --cli backends/jsx-grammars/tools/node_modules/.bin/tree-sitter --out "$RUNNER_TEMP/grammar-upstream"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-grammar-upstream
+          path: ${{ runner.temp }}/grammar-upstream
+
+  wheels:
+    name: Native wheel ${{ matrix.platform }}
+    needs: sources
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux
+            arch: x86_64
+          - os: macos-15
+            platform: macos
+            arch: arm64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.14'
+      - name: Build and audit supported wheel
+        shell: bash
+        env:
+          CIBW_BUILD: 'cp311-manylinux_x86_64 cp311-macosx_arm64'
+          CIBW_ARCHS: ${{ matrix.arch }}
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_ENVIRONMENT_MACOS: 'MACOSX_DEPLOYMENT_TARGET=11.0'
+          CIBW_BEFORE_BUILD_LINUX: 'python -m pip install auditwheel==6.8.2'
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: 'python -m auditwheel repair -w {dest_dir} {wheel}'
+          CIBW_TEST_REQUIRES: 'tree-sitter==0.26.0'
+          CIBW_TEST_COMMAND: 'python -m unittest discover -s {package}/tests -v'
+        run: |
+          python -m pip install -r backends/jsx-grammars/requirements-build.txt
+          python -m cibuildwheel --print-build-identifiers backends/jsx-grammars
+          python -m cibuildwheel --output-dir native-wheelhouse backends/jsx-grammars 2>&1 | tee native-build.log
+          python tools/native_wheel_receipt.py --wheelhouse native-wheelhouse --platform "${{ matrix.platform }}" --out "native-evidence/${{ matrix.platform }}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-grammars-${{ matrix.platform }}
+          path: |
+            native-wheelhouse/*.whl
+            native-evidence/${{ matrix.platform }}
+            native-build.log
+
+  bundle:
+    name: Checked native wheel bundle
+    needs: wheels
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.14'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: native-grammars-*
+          path: native-download
+      - name: Bundle only matching audited platforms
+        run: |
+          python tools/build_grammar_bundle.py --wheelhouse native-download --source-commit "$(git rev-parse HEAD)" --out native-release/jsx-backend-wheels-0.1.0.zip
+          (cd native-release && sha256sum -c jsx-backend-wheels-0.1.0.zip.sha256)
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-grammar-bundle
+          path: native-release/*

@@ -16,7 +16,7 @@ FIXTURES = Path(__file__).parent / 'fixtures/js_ts_contract'
 
 
 @unittest.skipUnless(all(importlib.util.find_spec(name) is not None for name in
-                         ('tree_sitter', 'tree_sitter_javascript', 'tree_sitter_typescript')),
+                         ('tree_sitter', 'ai_repo_doctor_grammars', 'tree_sitter_typescript')),
                      'A3 experiment requires the isolated optional parser environment')
 class SpikeContractTests(unittest.TestCase):
     def test_large_source_position_access_does_not_crash_native_backend(self):
