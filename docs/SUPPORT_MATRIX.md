@@ -17,6 +17,8 @@ CI 每个安装 runner 记录 uname、Python、实际平台/架构，并保留�
 
 最低 Python 为 3.11；包元数据的最低要求不等于所有未来 Python 或操作系统已经验收。JS-extra 固定 Tree-sitter 0.26.0、JavaScript grammar 0.25.0、TypeScript grammar 0.23.2；这些属于工具依赖，安装不会安装目标仓库依赖。
 
+上句为正式 1.0.0 的依赖身份。1.0.1rc2 开发候选改为 Tree-sitter 0.26.0、独立 companion 0.1.0（JS/TSX）与官方 TypeScript grammar 0.23.2；companion 使用 CPython 3.11 abi3，JS 语言 ABI 15、TSX 语言 ABI 14。候选平台验证记录单独归档，不能将本表的旧结果自动转标。Windows、Intel Mac、Linux ARM/musl 和 free-threaded Python 不属于本次承诺。
+
 ## 功能门禁
 
 | 能力 | Python | JavaScript/JSX、TypeScript/TSX |

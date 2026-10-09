@@ -1,4 +1,4 @@
-include LICENSE README.md provenance.json
+include LICENSE README.md provenance.json requirements-build.txt
 recursive-include licenses *-LICENSE
 recursive-include vendor *.js *.json *.c *.h
 recursive-include patches *.patch

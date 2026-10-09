@@ -9,6 +9,9 @@ permissions:
   contents: read
 
 jobs:
+  native-grammars:
+    uses: ./.github/workflows/native-grammars.yml
+
   test:
     name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-24.04
@@ -22,6 +25,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
@@ -114,6 +118,7 @@ jobs:
             ${{ runner.temp }}/installed-v1-base-evidence
 
   js-preview:
+    needs: native-grammars
     name: JS extra Python ${{ matrix.python-version }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -126,6 +131,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
@@ -135,15 +141,25 @@ jobs:
           uname -a
           python -c "import json,platform,sys; print(json.dumps({'python':sys.version,'platform':platform.platform(),'machine':platform.machine()}))" > "$RUNNER_TEMP/machine.json"
           cat "$RUNNER_TEMP/machine.json"
+      - name: Download the checked native wheel bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: native-grammar-bundle
+          path: ${{ runner.temp }}/native-download
+      - name: Verify and extract native bundle
+        run: |
+          (cd "$RUNNER_TEMP/native-download" && if command -v sha256sum >/dev/null 2>&1; then sha256sum -c jsx-backend-wheels-0.1.0.zip.sha256; else shasum -a 256 -c jsx-backend-wheels-0.1.0.zip.sha256; fi)
+          python -m zipfile -e "$RUNNER_TEMP/native-download/jsx-backend-wheels-0.1.0.zip" "$RUNNER_TEMP/native-wheels"
       - name: Install and verify native optional backend
         run: |
+          python -m pip install --no-index --only-binary=:all: --find-links "$RUNNER_TEMP/native-wheels" ai-repo-doctor-grammars==0.1.0
           python -m pip install '.[js]'
-          python -c "import tree_sitter, tree_sitter_javascript, tree_sitter_typescript"
+          python -c "import tree_sitter, ai_repo_doctor_grammars, tree_sitter_typescript"
       - name: Run JS contracts without skipped tests
         run: |
           python - <<'PY'
           import unittest
-          modules = ['tests.test_languages', 'tests.test_js_ts', 'tests.test_esm', 'tests.test_index', 'tests.test_context', 'tests.test_cli', 'tests.test_agent_tools', 'tests.test_repo_map', 'tests.test_js_ts_spike', 'tests.test_js_ts_dialects', 'tests.test_source_lines', 'tests.test_analysis_limits', 'tests.test_v1_contract', 'tests.test_skill_binding', 'tests.test_public_docs']
+          modules = ['tests.test_languages', 'tests.test_js_ts', 'tests.test_esm', 'tests.test_index', 'tests.test_context', 'tests.test_cli', 'tests.test_agent_tools', 'tests.test_repo_map', 'tests.test_js_ts_spike', 'tests.test_js_ts_dialects', 'tests.test_jsx_ampersand', 'tests.test_source_lines', 'tests.test_analysis_limits', 'tests.test_v1_contract', 'tests.test_skill_binding', 'tests.test_public_docs']
           result = unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromNames(modules))
           assert result.wasSuccessful() and not result.skipped, 'JS contract gate failed or skipped'
           PY
@@ -154,6 +170,7 @@ jobs:
           RD_EXPECTED_VERSION="$(python -c 'from repo_doctor._version import __version__; print(__version__)')"
           python -m venv "$RUNNER_TEMP/repo-doctor-js-venv"
           WHEEL=$(realpath dist/*.whl)
+          "$RUNNER_TEMP/repo-doctor-js-venv/bin/python" -m pip install --no-index --only-binary=:all: --find-links "$RUNNER_TEMP/native-wheels" ai-repo-doctor-grammars==0.1.0
           "$RUNNER_TEMP/repo-doctor-js-venv/bin/python" -m pip install "$WHEEL[js]"
           cd "$RUNNER_TEMP"
           python "$GITHUB_WORKSPACE/tools/validate_js_ts_install.py" --mode js \
@@ -176,6 +193,7 @@ jobs:
             ${{ runner.temp }}/installed-v1-js-evidence
 
   mac-install:
+    needs: native-grammars
     name: macOS Python ${{ matrix.python-version }} (base + js)
     runs-on: macos-15
     timeout-minutes: 10
@@ -188,6 +206,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
@@ -197,6 +216,15 @@ jobs:
           uname -a
           python -c "import json,platform,sys; print(json.dumps({'python':sys.version,'platform':platform.platform(),'machine':platform.machine()}))" > "$RUNNER_TEMP/machine.json"
           cat "$RUNNER_TEMP/machine.json"
+      - name: Download the checked native wheel bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: native-grammar-bundle
+          path: ${{ runner.temp }}/native-download
+      - name: Verify and extract native bundle
+        run: |
+          (cd "$RUNNER_TEMP/native-download" && if command -v sha256sum >/dev/null 2>&1; then sha256sum -c jsx-backend-wheels-0.1.0.zip.sha256; else shasum -a 256 -c jsx-backend-wheels-0.1.0.zip.sha256; fi)
+          python -m zipfile -e "$RUNNER_TEMP/native-download/jsx-backend-wheels-0.1.0.zip" "$RUNNER_TEMP/native-wheels"
       - name: Build and validate separate base and JS installs
         shell: bash
         run: |
@@ -207,6 +235,7 @@ jobs:
             RD_ENV="$RUNNER_TEMP/repo-doctor-$RD_MODE"
             python -m venv "$RD_ENV"
             if [ "$RD_MODE" = js ]; then
+              "$RD_ENV/bin/python" -m pip install --no-index --only-binary=:all: --find-links "$RUNNER_TEMP/native-wheels" ai-repo-doctor-grammars==0.1.0
               "$RD_ENV/bin/python" -m pip install "$RD_WHEEL[js]"
             else
               "$RD_ENV/bin/python" -m pip install --no-index "$RD_WHEEL"
@@ -226,6 +255,7 @@ jobs:
             ${{ runner.temp }}/installed-v1-js-evidence
 
   map-viewer:
+    needs: native-grammars
     name: Offline map interaction and SVG
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -234,6 +264,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
@@ -242,6 +273,15 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "24"
+      - name: Download the checked native wheel bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: native-grammar-bundle
+          path: ${{ runner.temp }}/native-download
+      - name: Verify and extract native bundle
+        run: |
+          (cd "$RUNNER_TEMP/native-download" && if command -v sha256sum >/dev/null 2>&1; then sha256sum -c jsx-backend-wheels-0.1.0.zip.sha256; else shasum -a 256 -c jsx-backend-wheels-0.1.0.zip.sha256; fi)
+          python -m zipfile -e "$RUNNER_TEMP/native-download/jsx-backend-wheels-0.1.0.zip" "$RUNNER_TEMP/native-wheels"
       - name: Check projection and actual DOM behavior
         shell: bash
         run: |
@@ -251,6 +291,7 @@ jobs:
           python tests/make_map_fixture.py "$RUNNER_TEMP/map-fixture"
           python -m repo_doctor map "$RUNNER_TEMP/map-fixture" --out "$RUNNER_TEMP/map-artifacts"
           node tests/test_map_dom.js "$RUNNER_TEMP/map-artifacts/map.html" "$RUNNER_TEMP/map-dom-deps/node_modules/jsdom"
+          python -m pip install --no-index --only-binary=:all: --find-links "$RUNNER_TEMP/native-wheels" ai-repo-doctor-grammars==0.1.0
           python -m pip install '.[js]'
           python tests/make_map_fixture.py "$RUNNER_TEMP/mixed-map-fixture" --mixed
           python -m repo_doctor map "$RUNNER_TEMP/mixed-map-fixture" --languages python,javascript,typescript --out "$RUNNER_TEMP/mixed-map-artifacts"

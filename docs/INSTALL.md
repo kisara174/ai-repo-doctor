@@ -1,6 +1,6 @@
 # 安装、Codex 接入、升级与回滚
 
-<!-- repo-doctor-install-versions: 1.0.0 -->
+<!-- repo-doctor-install-versions: 1.0.0, 1.0.1rc2 -->
 
 适用范围：macOS/Linux，Python 3.11+。1.0 正式版本通过 GitHub Release wheel 分发；实际平台组合见 [支持矩阵](SUPPORT_MATRIX.md)，正式承诺由精确提交的 CI 与发行报告确认，Windows 暂不承诺。
 
@@ -43,6 +43,35 @@ RD_CLI="$RD_ROOT/venv/bin/repo-doctor"
 仅使用 Python 时，在一个单独的新环境将 pip 参数改为 `"$RD_WHEEL"`，不加 `[js]`。缺 extra 时显式选择 JS/TS 会报错并提示安装方式，不会默默只分析 Python。
 
 安装依赖可能需要联网；安装后的五个只读调查命令无需 API key、服务或网络，也不运行目标项目代码。分析 JS/TS 不需要 Node；开发产品的 DOM 验证环境另有 Node 依赖。
+
+### 1.0.1rc2 原生 grammar 候选（尚未正式发布）
+
+此候选修复 JSX/TSX 属性中的裸 `&`。它需要同批交付的独立后端包；不能直接套用上面 1.0.0 的 JS-extra 下载步骤，也不能假设 companion 已存在于 PyPI。
+
+先取得维护者提供的四个已验收文件：产品 wheel 及其 `.sha256`，`jsx-backend-wheels-0.1.0.zip` 及其 `.sha256`。进入只放置这些文件的新目录，执行：
+
+```sh
+set -e
+RD_CAND_DIR="$PWD"
+check_sha() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum -c "$1";
+  else shasum -a 256 -c "$1"; fi
+}
+check_sha ai_repo_doctor-1.0.1rc2-py3-none-any.whl.sha256
+check_sha jsx-backend-wheels-0.1.0.zip.sha256
+test ! -e "$RD_CAND_DIR/venv-js"
+test ! -e "$RD_CAND_DIR/backend-wheels"
+python3 -m zipfile -e jsx-backend-wheels-0.1.0.zip "$RD_CAND_DIR/backend-wheels"
+python3 -m venv "$RD_CAND_DIR/venv-js"
+"$RD_CAND_DIR/venv-js/bin/python" -m pip install --no-index --only-binary=:all: \
+  --find-links "$RD_CAND_DIR/backend-wheels" ai-repo-doctor-grammars==0.1.0
+"$RD_CAND_DIR/venv-js/bin/python" -m pip install "${RD_CAND_DIR}/ai_repo_doctor-1.0.1rc2-py3-none-any.whl[js]"
+"$RD_CAND_DIR/venv-js/bin/repo-doctor" --version
+```
+
+后端包中提供 Linux x86_64/glibc 和 Mac ARM 的兼容 wheel，由 pip 选择；本地后端安装失败就停止，不去公共索引找同名包，也不要求用户编译。Node、编译器和审计工具只属于维护构建环境。Python-only 候选安装只需验证产品 wheel 并在另一新 venv 安装它，无需解压或安装 companion。
+
+后续调查及 Skill 绑定使用该新 venv 的绝对 CLI 路径。此过程不切换全局入口；旧 1.0.0 环境与 Skill 可继续使用。实际候选产物身份、平台门禁和发布状态以维护者随附的交付记录为准。
 
 ## 3. 绑定并加载 Codex Skill
 

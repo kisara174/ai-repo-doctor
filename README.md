@@ -26,7 +26,7 @@ python3 -m venv .venv-repo-doctor-js
 .venv-repo-doctor-js/bin/repo-doctor --version
 ```
 
-当前以 GitHub wheel 分发，没有 PyPI 发行。Python 基础安装无运行依赖；JS/TS extra 安装三个固定版本 Tree-sitter 包。安装后核心调查无需联网。
+当前正式 1.0.0 以 GitHub wheel 分发，没有 PyPI 发行。Python 基础安装无运行依赖；该正式版 JS/TS extra 安装三个固定版本 Tree-sitter 包。1.0.1rc2 开发候选新增独立原生 grammar wheel，需使用[候选安装指导](docs/INSTALL.md)，不能只替换上面 URL 的版本号。安装后核心调查无需联网。
 
 ## 五步调查
 
