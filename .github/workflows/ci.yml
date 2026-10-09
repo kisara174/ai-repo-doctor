@@ -168,19 +168,27 @@ jobs:
         run: |
           python -m pip wheel --no-deps --wheel-dir dist .
           RD_EXPECTED_VERSION="$(python -c 'from repo_doctor._version import __version__; print(__version__)')"
-          python -m venv "$RUNNER_TEMP/repo-doctor-js-venv"
-          WHEEL=$(realpath dist/*.whl)
-          "$RUNNER_TEMP/repo-doctor-js-venv/bin/python" -m pip install --no-index --only-binary=:all: --find-links "$RUNNER_TEMP/native-wheels" ai-repo-doctor-grammars==0.1.0
-          "$RUNNER_TEMP/repo-doctor-js-venv/bin/python" -m pip install "$WHEEL[js]"
+          RD_CAND="$RUNNER_TEMP/candidate-release"
+          mkdir "$RD_CAND"
+          cp dist/*.whl "$RD_CAND/"
+          cp "$RUNNER_TEMP/native-download/"* "$RD_CAND/"
+          (cd "$RD_CAND" && sha256sum ai_repo_doctor-*.whl > "ai_repo_doctor-$RD_EXPECTED_VERSION-py3-none-any.whl.sha256")
+          python - <<'PY'
+          from pathlib import Path
+          import os, subprocess
+          section = Path('docs/INSTALL.md').read_text().split('### 1.0.1rc2 原生 grammar 候选', 1)[1]
+          script = section.split('```sh\n', 1)[1].split('```', 1)[0]
+          subprocess.run(['bash', '-e', '-c', script], cwd=Path(os.environ['RUNNER_TEMP']) / 'candidate-release', check=True)
+          PY
           cd "$RUNNER_TEMP"
           python "$GITHUB_WORKSPACE/tools/validate_js_ts_install.py" --mode js \
-            --python "$RUNNER_TEMP/repo-doctor-js-venv/bin/python" \
-            --cli "$RUNNER_TEMP/repo-doctor-js-venv/bin/repo-doctor" \
+            --python "$RUNNER_TEMP/candidate-release/venv-js/bin/python" \
+            --cli "$RUNNER_TEMP/candidate-release/venv-js/bin/repo-doctor" \
             --expected-version "$RD_EXPECTED_VERSION" \
             --out "$RUNNER_TEMP/installed-js-preview-evidence"
-          "$RUNNER_TEMP/repo-doctor-js-venv/bin/python" "$GITHUB_WORKSPACE/tools/validate_v1_install.py" --mode js \
-            --python "$RUNNER_TEMP/repo-doctor-js-venv/bin/python" \
-            --cli "$RUNNER_TEMP/repo-doctor-js-venv/bin/repo-doctor" \
+          "$RUNNER_TEMP/candidate-release/venv-js/bin/python" "$GITHUB_WORKSPACE/tools/validate_v1_install.py" --mode js \
+            --python "$RUNNER_TEMP/candidate-release/venv-js/bin/python" \
+            --cli "$RUNNER_TEMP/candidate-release/venv-js/bin/repo-doctor" \
             --expected-version "$RD_EXPECTED_VERSION" --out "$RUNNER_TEMP/installed-v1-js-evidence"
       - name: Preserve installed JS evidence
         if: always()

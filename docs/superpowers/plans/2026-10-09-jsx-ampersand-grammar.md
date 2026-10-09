@@ -34,7 +34,7 @@
 
 ## T1 — 固定源码、补丁及可重生成的 companion 源包
 
-**允许文件：** 新建 `backends/jsx-grammars/`；新增维护脚本 `tools/check_grammar_provenance.py`。此步不改产品 parser。
+**允许文件：** 新建 `backends/jsx-grammars/`；新增维护脚本 `tools/check_grammar_provenance.py`；`.gitattributes` 仅允许补丁文件保留 unified diff 必需的空白上下文。此步不改产品 parser。
 
 **产物布局：**
 
@@ -61,18 +61,18 @@ backends/jsx-grammars/
 
 只纳入编译、生成和来源核对所需文件；不提交 `.git`、`node_modules`、编译产物、缓存、绝对 symlink。完整上游 corpus 可由固定 commit 的临时 checkout 运行，不必把整个上游仓库复制进产品。
 
-- [ ] 记录主树、安装、历史证据和真实目标 baseline；核对本轮 T0 原型 SHA 清单。
-- [ ] 从规格中的三个 commit 获取源码，逐个验证 `git rev-parse HEAD`，保存上游 license；禁止直接复制原型 build 目录。
-- [ ] 在 JS 0.25.0 与 JS 0.23.1 两个 grammar 源应用规格第 3 节的四处改动；保存补丁。TSX common grammar 不做语义修改。
-- [ ] `provenance.json` 固定每个输入/生成文件 SHA256、三上游 commit、补丁 SHA、CLI/Node 版本、语言 ABI、包版本和许可证来源。
-- [ ] 实现 `regenerate.py --check`：在新临时目录放置固定输入；为 TSX 的 require 创建仅指向临时 JS 0.23.1 基底的本地链接；运行下列两条生成命令；与提交的输出逐字节比较；差异退出 1，不覆盖源码。
+- [x] 记录主树、安装、历史证据和真实目标 baseline；核对本轮 T0 原型 SHA 清单。
+- [x] 从规格中的三个 commit 获取源码，逐个验证 `git rev-parse HEAD`，保存上游 license；禁止直接复制原型 build 目录。
+- [x] 在 JS 0.25.0 与 JS 0.23.1 两个 grammar 源应用规格第 3 节的四处改动；保存补丁。TSX common grammar 不做语义修改。
+- [x] `provenance.json` 固定每个输入/生成文件 SHA256、三上游 commit、补丁 SHA、CLI/Node 版本、语言 ABI、包版本和许可证来源。
+- [x] 实现 `regenerate.py --check`：在新临时目录放置固定输入；为 TSX 的 require 创建仅指向临时 JS 0.23.1 基底的本地链接；运行下列两条生成命令；与提交的输出逐字节比较；差异退出 1，不覆盖源码。
 
 ```sh
 tree-sitter generate --abi 15  # 临时 JavaScript grammar 根目录
 tree-sitter generate --abi 14  # 临时 TypeScript 的 tsx 目录
 ```
 
-- [ ] `check_grammar_provenance.py --root backends/jsx-grammars`：检查所有受控文件、SHA、版本、生成 ABI、许可证和包内范围；篡改任一临时副本文件时必须退出 1。
+- [x] `check_grammar_provenance.py --root backends/jsx-grammars`：检查所有受控文件、SHA、版本、生成 ABI、许可证和包内范围；篡改任一临时副本文件时必须退出 1。
 
 **验证：**
 
@@ -89,8 +89,8 @@ python backends/jsx-grammars/tools/regenerate.py --check
 
 **接口：** `language_javascript()`、`language_tsx()` 返回名称为 `tree_sitter.Language` 的 capsule。模块不依赖 Node，不下载数据，不导入目标仓库。
 
-- [ ] 在未修补上游 grammar 上运行合法裸 & 反例，确认是解析断言失败而不是依赖缺失；保存红灯。
-- [ ] 两个函数按上游 Python capsule binding 的方式实现，分别调用 `tree_sitter_javascript()`、`tree_sitter_tsx()`。编译宏与 wheel tag 必须一致：
+- [x] 在未修补上游 grammar 上运行合法裸 & 反例，确认是解析断言失败而不是依赖缺失；保存红灯。
+- [x] 两个函数按上游 Python capsule binding 的方式实现，分别调用 `tree_sitter_javascript()`、`tree_sitter_tsx()`。编译宏与 wheel tag 必须一致：
 
 ```python
 Extension(
@@ -109,9 +109,9 @@ Extension(
 # setuptools 的 bdist_wheel 配置：py_limited_api = cp311。
 ```
 
-- [ ] 包版本为 0.1.0，`requires-python >=3.11`；companion 编译失败必须构建失败，不可产出没有 extension 的“成功包”。sdist 必须包含本地编译需要的所有 headers、scanner、原生源和 licenses。
-- [ ] companion 的 `build-system.requires` 固定 `setuptools==84.0.0`；这是本地试验 wheel 的实际 Generator。主产品原有 setuptools 下限不因本次更改。`package-lock.json` 同时固定 tree-sitter-cli 0.25.10 与 integrity，不能只在描述里固定而 manifest 使用浮动范围。
-- [ ] 原生测试逐个运行单双引号及 `?a=1&b=2`、`&`、`a&b`、`a& b`、`a&1`、实体、多行、中文 emoji、反斜杠。原型中的 52 组合可作为明确输入集合。
+- [x] 包版本为 0.1.0，`requires-python >=3.11`；companion 编译失败必须构建失败，不可产出没有 extension 的“成功包”。sdist 必须包含本地编译需要的所有 headers、scanner、原生源和 licenses。
+- [x] companion 的 `build-system.requires` 固定 `setuptools==84.0.0`；这是本地试验 wheel 的实际 Generator。主产品原有 setuptools 下限不因本次更改。`package-lock.json` 同时固定 tree-sitter-cli 0.25.10 与 integrity，不能只在描述里固定而 manifest 使用浮动范围。
+- [x] 原生测试逐个运行单双引号及 `?a=1&b=2`、`&`、`a&b`、`a& b`、`a&1`、实体、多行、中文 emoji、反斜杠。原型中的 52 组合可作为明确输入集合。
 
 ```python
 raw = b'export const View = () => <img src="?a=1&b=2" />;'
@@ -120,10 +120,10 @@ assert not tree.root_node.has_error
 assert tree.root_node.end_byte == len(raw)
 ```
 
-- [ ] 检查实体仍有 html_character_reference 节点，先前成功输入的 CST 与基线一致；检查 JS ABI 15 / TSX ABI 14。
-- [ ] 未闭合引号、未闭合函数体、坏调用仍 `has_error`；这些是不能以“修复更多”而修改期望的反例。
-- [ ] 构建 wheel 与 sdist，清洁目录中独立安装 wheel；从 sdist 另编译一次并核对 parser/provenance 内容。不能只在源码目录导入。
-- [ ] 严格审计：
+- [x] 检查实体仍有 html_character_reference 节点，先前成功输入的 CST 与基线一致；检查 JS ABI 15 / TSX ABI 14。
+- [x] 未闭合引号、未闭合函数体、坏调用仍 `has_error`；这些是不能以“修复更多”而修改期望的反例。
+- [x] 构建 wheel 与 sdist，清洁目录中独立安装 wheel；从 sdist 另编译一次并核对 parser/provenance 内容。不能只在源码目录导入。
+- [x] 严格审计：
 
 ```sh
 python -m pip wheel --no-deps --wheel-dir "$RD_EVIDENCE/native-wheelhouse" backends/jsx-grammars
@@ -137,9 +137,9 @@ abi3audit --strict --report --output "$RD_EVIDENCE/native-abi3.json" "$RD_NATIVE
 
 **修改：** `pyproject.toml`、`repo_doctor/js_ts.py`、`tests/test_js_ts.py`、`tests/test_js_ts_spike.py`、`tests/test_v1_contract.py`。**新增：** `tests/test_jsx_ampersand.py`。不改 context 取行算法。
 
-- [ ] 先在现有 1.0.1rc1 后端运行新测试，至少有一个合法 URL 的 symbol 断言失败；保存真实红灯。
-- [ ] 新测试覆盖 `.js/.jsx/.tsx`，具体合同：返回 `View`/helper 的真实符号 ID；span/引用等于手工物理行；直接 helper 调用可解析，组件标签和回调不新增虚假调用；错误文件整文件排除且消费它的文件不获得伪造导入或调用边。
-- [ ] `_parser` 依赖与分支改为：
+- [x] 先在现有 1.0.1rc1 后端运行新测试，至少有一个合法 URL 的 symbol 断言失败；保存真实红灯。
+- [x] 新测试覆盖 `.js/.jsx/.tsx`，具体合同：返回 `View`/helper 的真实符号 ID；span/引用等于手工物理行；直接 helper 调用可解析，组件标签和回调不新增虚假调用；错误文件整文件排除且消费它的文件不获得伪造导入或调用边。
+- [x] `_parser` 依赖与分支改为：
 
 ```python
 pins = (('tree-sitter', '0.26.0'),
@@ -157,9 +157,9 @@ else:
     capsule = tree_sitter_typescript.language_typescript()
 ```
 
-- [ ] 移除上游 JS grammar 的 extra 依赖；更新三个测试文件的可选模块检测为 `tree_sitter, ai_repo_doctor_grammars, tree_sitter_typescript`。检测不得吞掉 JS CI 的缺后端问题；native gate 仍要求零 skip。
-- [ ] 缺 companion、版本不符时明确拒绝，不 silently fallback。错误提示指向本版安装指导，因为本地 companion 不保证存在于公共索引。
-- [ ] 原有 `extract` 的 ERROR/MISSING 排除分支完整保留；不产生临时字符串，不增加“包含 & 放行”逻辑。
+- [x] 移除上游 JS grammar 的 extra 依赖；更新三个测试文件的可选模块检测为 `tree_sitter, ai_repo_doctor_grammars, tree_sitter_typescript`。检测不得吞掉 JS CI 的缺后端问题；native gate 仍要求零 skip。
+- [x] 缺 companion、版本不符时明确拒绝，不 silently fallback。错误提示指向本版安装指导，因为本地 companion 不保证存在于公共索引。
+- [x] 原有 `extract` 的 ERROR/MISSING 排除分支完整保留；不产生临时字符串，不增加“包含 & 放行”逻辑。
 
 **定向验证：**
 
@@ -174,14 +174,14 @@ python -B -m unittest discover -s tests -v
 
 **修改：** `tools/validate_js_ts_install.py`、`tools/validate_v1_install.py`、`repo_doctor/_version.py`、`CHANGELOG.md`、`docs/SUPPORT_MATRIX.md`。**新增：** `tools/validate_jsx_grammar_install.py`、`evaluation/jsx-ampersand/{cases.json,README.md}`。既有 `validate_release_install.py` 直接复用。
 
-- [ ] 候选升级 1.0.1rc2，支持矩阵只写实际证据，不把旧 CI/500 组当作新候选证明。
-- [ ] 两个安装验证器检查新可选模块及精确 metadata；base 模式没有 native，JS 模式真实存在 native。保留纯 Python import 懒加载断言。
-- [ ] 新安装验证器参数合同：`--python ABS --cli ABS --repo ABS --expected-version VERSION --out NEW_ABS`；禁止 import 源码 repo_doctor，只 subprocess 调用传入 CLI；所有真实源只读。
-- [ ] `cases.json` 固定 R051 commit/tree/源码 SHA、DownloadModal 符号 ID 与声明/URL物理行；先从原 manifest 和人工源码证据取得，不从候选结果反推预期。
-- [ ] 验证器顺序：version/metadata→overview→symbols→context(120行)→impact(depth2)→map；保存每条命令、实际/预期退出码和输出。符号 ID 必须经 symbols 确认。
-- [ ] 必须断言两个特定 parse_errors 消失、45 个符号、原有 42 符号记录不变、DownloadModal 从原源码引用、所有上下文行逐行匹配、SVG/JSON 投影一致。空 impact 保留“不证明无影响”，不用数量增加当正确率。
-- [ ] 另造自有坏文件 fixture，安装 CLI 验证零符号/边泄漏；相同源码只变化属性内容时保留调用证据位置。运行前后核对真实仓库全部 tracked 源 SHA 和 git 状态。
-- [ ] base/js 分开新 venv，安装路径和 cwd 都不能指向源码产品。运行以下出口：
+- [x] 候选升级 1.0.1rc2，支持矩阵只写实际证据，不把旧 CI/500 组当作新候选证明。
+- [x] 两个安装验证器检查新可选模块及精确 metadata；base 模式没有 native，JS 模式真实存在 native。保留纯 Python import 懒加载断言。
+- [x] 新安装验证器参数合同：`--python ABS --cli ABS --repo ABS --expected-version VERSION --out NEW_ABS`；禁止 import 源码 repo_doctor，只 subprocess 调用传入 CLI；所有真实源只读。
+- [x] `cases.json` 固定 R051 commit/tree/源码 SHA、DownloadModal 符号 ID 与声明/URL物理行；先从原 manifest 和人工源码证据取得，不从候选结果反推预期。
+- [x] 验证器顺序：version/metadata→overview→symbols→context(120行)→impact(depth2)→map；保存每条命令、实际/预期退出码和输出。符号 ID 必须经 symbols 确认。
+- [x] 必须断言两个特定 parse_errors 消失、45 个符号、原有 42 符号记录不变、DownloadModal 从原源码引用、所有上下文行逐行匹配、SVG/JSON 投影一致。空 impact 保留“不证明无影响”，不用数量增加当正确率。
+- [x] 另造自有坏文件 fixture，安装 CLI 验证零符号/边泄漏；相同源码只变化属性内容时保留调用证据位置。运行前后核对真实仓库全部 tracked 源 SHA 和 git 状态。
+- [x] base/js 分开新 venv，安装路径和 cwd 都不能指向源码产品。运行以下出口：
 
 ```sh
 python tools/validate_release_install.py --python "$RD_JS_PY" --cli "$RD_JS_CLI" --expected-version 1.0.1rc2 --out "$RD_EVIDENCE/lifecycle"
@@ -197,7 +197,7 @@ python tools/check_public_docs.py --root .
 
 ## T5 — 原生分发件、平台 CI 与实际安装
 
-**新增：** `.github/workflows/native-grammars.yml`、`backends/jsx-grammars/requirements-build.txt`、`tools/build_grammar_bundle.py`。**修改：** `.github/workflows/ci.yml`、`docs/INSTALL.md`、`docs/JS_TS_SUPPORT.md`、`docs/SUPPORT_MATRIX.md`。
+**新增：** `.github/workflows/native-grammars.yml`、`backends/jsx-grammars/requirements-build.txt`、`tools/build_grammar_bundle.py`、`tools/native_wheel_receipt.py`、`tools/validate_grammar_upstream.py`。**修改：** `README.md`、`backends/jsx-grammars/MANIFEST.in`、`.github/workflows/ci.yml`、`docs/INSTALL.md`、`docs/JS_TS_SUPPORT.md`、`docs/SUPPORT_MATRIX.md`。
 
 - [ ] `requirements-build.txt` 固定 `cibuildwheel==4.3.0`、`auditwheel==6.8.2`、`abi3audit==0.0.26`；companion build-system 固定 setuptools 84.0.0。版本来源见本轮 `build-tool-versions.json`；对新 Linux 组合仍须实际验证，失败由主代理调查，不盲目升级。复用现有 checkout/setup-python/upload-artifact 的固定 action commit，使用 `python -m cibuildwheel`，不新增浮动 action。普通用户不安装审计工具。
 - [ ] 原生 jobs 从同一个 product commit 构建：Linux x86_64 manylinux、Mac ARM，CPython 3.11 Limited API；不手工伪造平台 tag。Mac deployment target=11.0，但最终支持声明以 Mac 15 runner 实测为准。
@@ -229,3 +229,7 @@ python tools/check_public_docs.py --root .
 ## 机械执行与异常返回规则
 
 本清单的大多数任务涉及依赖、ABI、判断或发布，必须由主代理执行。若后续拆出纯文档替换等机械任务，先按 AGENTS 检查当前周配额，并给单个 bounded executor 提供 Objective、Allowed changes、Forbidden changes、Exact steps、Validation、Expected result、Stop conditions；返回后主代理看真实 diff 和新验证回执。原生失败、CST差异、源码/平台不符不得转交 Luna 猜测修复。
+
+## 本轮实施记录（2026-10-09）
+
+T1–T4 已以实际产品实现、独立安装和原 R051 验证通过；本地最后完整回归 563 项，无 skip。上游原有 corpus 116 + 112 全部通过。证据在本清单全局约束指定的新目录，原型和产品证据分开。T5 首次远端运行编译/repair/ABI 通过，但 `{project}/tests` 错误指向主项目；已改为 `{package}/tests`，从源码目录外的安装后原生测试 3 项通过。该失败保留在 `ci-initial-failure.txt`；T5 完成以修正后 exact-head CI 和最终分发安装为准。草稿 PR46 依赖未合并的 PR45。
