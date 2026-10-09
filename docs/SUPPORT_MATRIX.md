@@ -49,6 +49,16 @@ V4 平台门禁：[push 运行](https://github.com/kisara174/ai-repo-doctor/acti
 | macOS15.7.9 / arm64 | 3.11、3.14 | base与macosx_11_0_arm64 companion + JS-extra独立安装均通过 |
 | 本地macOS27 / arm64 | 3.14.5 | 四文件候选安装指导原样执行通过，原R051五命令闭环通过 |
 
-两平台companion严格abi3审计通过；Mac 11.0 tag仅为二进制最低目标，不作Mac11实机验收声明。用户不需要Node或编译器；不支持的平台在仅本地匹配wheel时拒绝。候选尚未正式发布，正式1.0.0仍为原安装入口。
+两平台companion严格abi3审计通过；Mac 11.0 tag仅为二进制最低目标，不作Mac11实机验收声明。用户不需要Node或编译器；不支持的平台在仅本地匹配wheel时拒绝。上面的结果保留rc2候选归属；正式1.0.1的独立验证与部署结果见下节。
 
-1.0.1 正式源需要自己的 exact-head CI 和公开发行件安装回执；不能重标上面的 rc2 产物。详见正式交付记录及 Release 的 release-receipt.json。
+## 1.0.1 正式发行门禁
+
+正式构建来源 `c016baacd36b071637313e2d1abaaa22cb0f01f3`，主包真实版本1.0.1，companion0.1.0，Tree-sitter0.26.0、官方TypeScript grammar0.23.2。独立 [push CI](https://github.com/kisara174/ai-repo-doctor/actions/runs/37884173195) 和 [PR CI](https://github.com/kisara174/ai-repo-doctor/actions/runs/37884224697) 各15任务通过。
+
+| 正式源实际运行环境 | Python | 已核验结果 |
+| --- | --- | --- |
+| Ubuntu24.04 / x86_64 / glibc2.39 | 3.11、3.12、3.13、3.14 | base/js独立安装、四文件文档安装及生命周期门禁通过 |
+| macOS15.7.9 / arm64 | 3.11、3.14 | base/js独立安装及原生ABI审计通过 |
+| 本地macOS27 / arm64 | 3.14.5 | 公开四文件匿名下载校验安装、R051调查、全局切换与回滚通过 |
+
+共20份安装summary、4份生命周期receipt、458条CI命令核对通过。主包35个runtime文件及3个native runtime文件与正式源码/wheel/公开安装一致。Mac11.0仅为wheel最低目标，未新增Mac11实机承诺。详见 [正式交付记录](delivery/2026-10-09-v1.0.1-release.md) 及 [公开回执](https://github.com/kisara174/ai-repo-doctor/releases/download/v1.0.1/release-receipt.json)。
