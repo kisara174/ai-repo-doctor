@@ -22,7 +22,7 @@
 
 JS/TS 元数据 `source_extensions` 明确所选语言的实现后缀；实际 JSX 节点产生 `jsx-render` 限制说明。错误树包含匿名 MISSING 标点时同样整文件排除，不返回恢复树的部分符号或关系。
 
-1.0.1rc2 开发候选使用独立的 `ai-repo-doctor-grammars` 0.1.0，修补 JS/TSX **带引号属性**中的裸 `&`，直接解析原始源码字节；普通 `.ts` 仍使用官方 grammar。安装需要同批后端 wheel 包，见[候选安装步骤](INSTALL.md)。上游来源、生成 ABI、补丁和发布出口见[原生修复设计](superpowers/specs/2026-10-09-jsx-ampersand-grammar-design.md)。当前正式 1.0.0 不含此修复；JSX 正文裸 `&`、Flow 仍可能被固定 grammar 拒绝，错误树仍整文件排除。
+1.0.1（继承 rc2 已验证修复）使用独立的 `ai-repo-doctor-grammars` 0.1.0，修补 JS/TSX **带引号属性**中的裸 `&`，直接解析原始源码字节；普通 `.ts` 仍使用官方 grammar。安装需要同批后端 wheel 包，见[正式安装步骤](INSTALL.md)。上游来源、生成 ABI、补丁和发布出口见[原生修复设计](superpowers/specs/2026-10-09-jsx-ampersand-grammar-design.md)。旧正式 1.0.0 不含此修复；JSX 正文裸 `&`、Flow 仍可能被固定 grammar 拒绝，错误树仍整文件排除。
 
 ## 新增路径的保守边界
 

@@ -1,8 +1,8 @@
 # 1.0 平台与能力支持矩阵
 
-<!-- repo-doctor-development-version: 1.0.1rc2 -->
+<!-- repo-doctor-development-version: 1.0.1 -->
 
-当前开发候选为 1.0.1rc2，继承源码物理行修复并接入独立 JSX grammar 后端；公开正式版本仍为 1.0.0。[安装指导](INSTALL.md) 与 [CLI 合同](CLI_CONTRACT.md) 规定使用方式。下表属于既有 1.0.0 及其前置候选的证据，1.0.1rc2 的独立证据列于下方候选小节；正式提交 CI 与产物身份见 [交付记录](delivery/2026-10-08-v1.0.0-product-closure.md)。不能用本地 ARM Mac 结果代替其他系统/版本的运行证据。
+当前源版本为 1.0.1，继承已验证 rc2 的源码物理行修复及独立 JSX grammar 后端。正式发行的精确提交及公开下载验收见 [1.0.1 交付记录](delivery/2026-10-09-v1.0.1-release.md)。[安装指导](INSTALL.md) 与 [CLI 合同](CLI_CONTRACT.md) 规定使用方式。下表属于既有 1.0.0 及其前置候选的证据，1.0.1rc2 的独立证据列于下方候选小节；正式提交 CI 与产物身份见 [交付记录](delivery/2026-10-08-v1.0.0-product-closure.md)。不能用本地 ARM Mac 结果代替其他系统/版本的运行证据。
 
 ## 平台门禁
 
@@ -50,3 +50,5 @@ V4 平台门禁：[push 运行](https://github.com/kisara174/ai-repo-doctor/acti
 | 本地macOS27 / arm64 | 3.14.5 | 四文件候选安装指导原样执行通过，原R051五命令闭环通过 |
 
 两平台companion严格abi3审计通过；Mac 11.0 tag仅为二进制最低目标，不作Mac11实机验收声明。用户不需要Node或编译器；不支持的平台在仅本地匹配wheel时拒绝。候选尚未正式发布，正式1.0.0仍为原安装入口。
+
+1.0.1 正式源需要自己的 exact-head CI 和公开发行件安装回执；不能重标上面的 rc2 产物。详见正式交付记录及 Release 的 release-receipt.json。

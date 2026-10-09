@@ -176,7 +176,7 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import os, subprocess
-          section = Path('docs/INSTALL.md').read_text().split('### 1.0.1rc2 原生 grammar 候选', 1)[1]
+          section = Path('docs/INSTALL.md').read_text().split('### 从四个已下载文件安装', 1)[1]
           script = section.split('```sh\n', 1)[1].split('```', 1)[0]
           subprocess.run(['bash', '-e', '-c', script], cwd=Path(os.environ['RUNNER_TEMP']) / 'candidate-release', check=True)
           PY

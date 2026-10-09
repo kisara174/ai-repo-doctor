@@ -1,32 +1,18 @@
 # AI Repo Doctor
 
-<!-- repo-doctor-install-versions: 1.0.0 -->
+<!-- repo-doctor-install-versions: 1.0.1 -->
 
 为 Codex 提供 Python、JavaScript、TypeScript 仓库的静态源码证据，为人提供离线结构关系图。Codex 负责判断和修改代码。主要流程无需 API key、服务或 Node，不运行目标仓库代码。
 
-**1.0.0 正式版本**通过 GitHub Release wheel 分发，下载入口见 [v1.0.0](https://github.com/kisara174/ai-repo-doctor/releases/tag/v1.0.0)。完整安装、版本绑定 Skill、升级和回滚见 [安装指南](docs/INSTALL.md)，发行身份与交付状态见 [1.0 交付记录](docs/delivery/2026-10-08-v1.0.0-product-closure.md)。
+**1.0.1 版本**通过 GitHub Release 分发，入口见 [v1.0.1](https://github.com/kisara174/ai-repo-doctor/releases/tag/v1.0.1)。它修复源码行号引用和 JSX 属性 URL 的裸 `&`。安装、版本绑定 Skill、升级和回滚见 [安装指南](docs/INSTALL.md)，精确发行身份与公开安装验收见 [交付记录](docs/delivery/2026-10-09-v1.0.1-release.md)。
 
 ## 安装固定版本
 
-需要 Python 3.11+；[1.0 平台矩阵](docs/SUPPORT_MATRIX.md)明确实际验证的系统与解释器组合。选择尚不存在的虚拟环境目录，不修改系统 Python。
+需要 Python 3.11+；[平台矩阵](docs/SUPPORT_MATRIX.md)列出实际验证组合。按照 [安装指南](docs/INSTALL.md) 下载并校验：产品 wheel、后端 zip 及各自的 `.sha256`，安装到尚不存在的虚拟环境目录。
 
-仅使用 Python：
-
-```sh
-python3 -m venv .venv-repo-doctor
-.venv-repo-doctor/bin/python -m pip install 'https://github.com/kisara174/ai-repo-doctor/releases/download/v1.0.0/ai_repo_doctor-1.0.0-py3-none-any.whl'
-.venv-repo-doctor/bin/repo-doctor --version
-```
-
-同时分析 JS/TS，改用独立环境及同一 wheel 的可选依赖：
-
-```sh
-python3 -m venv .venv-repo-doctor-js
-.venv-repo-doctor-js/bin/python -m pip install 'ai-repo-doctor[js] @ https://github.com/kisara174/ai-repo-doctor/releases/download/v1.0.0/ai_repo_doctor-1.0.0-py3-none-any.whl'
-.venv-repo-doctor-js/bin/repo-doctor --version
-```
-
-当前正式 1.0.0 以 GitHub wheel 分发，没有 PyPI 发行。Python 基础安装无运行依赖；该正式版 JS/TS extra 安装三个固定版本 Tree-sitter 包。1.0.1rc2 开发候选新增独立原生 grammar wheel，需使用[候选安装指导](docs/INSTALL.md)，不能只替换上面 URL 的版本号。安装后核心调查无需联网。
+- 仅分析 Python：安装已校验的产品 wheel，无运行依赖，无需后端包。
+- 分析 JS/TS：先仅本地安装后端包中的 companion wheel，再安装同一个产品 wheel 的 `[js]` extra。不能只对远端产品 URL 加 extra 后缀。
+- 没有 PyPI 发行；用户无需 Node、编译器或 API key。安装依赖可能联网，安装后的核心调查完全离线。
 
 ## 五步调查
 
