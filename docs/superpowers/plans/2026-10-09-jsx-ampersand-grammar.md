@@ -199,15 +199,15 @@ python tools/check_public_docs.py --root .
 
 **新增：** `.github/workflows/native-grammars.yml`、`backends/jsx-grammars/requirements-build.txt`、`tools/build_grammar_bundle.py`、`tools/native_wheel_receipt.py`、`tools/validate_grammar_upstream.py`。**修改：** `README.md`、`backends/jsx-grammars/MANIFEST.in`、`.github/workflows/ci.yml`、`docs/INSTALL.md`、`docs/JS_TS_SUPPORT.md`、`docs/SUPPORT_MATRIX.md`。
 
-- [ ] `requirements-build.txt` 固定 `cibuildwheel==4.3.0`、`auditwheel==6.8.2`、`abi3audit==0.0.26`；companion build-system 固定 setuptools 84.0.0。版本来源见本轮 `build-tool-versions.json`；对新 Linux 组合仍须实际验证，失败由主代理调查，不盲目升级。复用现有 checkout/setup-python/upload-artifact 的固定 action commit，使用 `python -m cibuildwheel`，不新增浮动 action。普通用户不安装审计工具。
-- [ ] 原生 jobs 从同一个 product commit 构建：Linux x86_64 manylinux、Mac ARM，CPython 3.11 Limited API；不手工伪造平台 tag。Mac deployment target=11.0，但最终支持声明以 Mac 15 runner 实测为准。
-- [ ] 所有 native wheel 严格 abi3audit，Linux repair 后核对依赖与 tags，Mac 核对 load commands；产物 artifact 包含每个 wheel、生成源身份、机型与工具链。不要跳过缺 wheel 的平台。
-- [ ] 构建选择器只取 `cp311-manylinux_x86_64` / `cp311-macosx_arm64`，Linux 使用 manylinux2014 并记录实际镜像 digest，Mac 设置 deployment target=11.0。先运行 `python -m cibuildwheel --print-build-identifiers backends/jsx-grammars` 核对实际选择，再构建，不能误产 cp314 wheel 后改名成 abi3。
-- [ ] CI 的每个 JS job 先下载该提交构建的 companion wheel，以 `--no-index --only-binary=:all: --find-links` 安装，再安装主产品 extra；四个 Linux Python 与两个 Mac Python 均按实际 wheel 安装。base jobs 不安装 companion。
-- [ ] 现有 native 固定测试列表增加 `tests.test_jsx_ampersand`，保持零 skip 要求；原生命周期、地图 DOM/SVG job 保留。
-- [ ] `build_grammar_bundle.py --wheelhouse ABS --out NEW_ZIP` 只接受版本 0.1.0 的两个预期平台 wheel，验证元数据、tag、SHA；缺失/重复/源码包/多版本退出非零。zip 内含两个 wheel 和 manifest，排序/时间戳固定以便重建核对，不吞掉不合格 wheel。
-- [ ] 安装文档按规格第5节先校验后端包，再仅本地安装 companion；补充基础安装单文件校验、平台不符错误、未发布候选不能猜 URL、升级后重导出 Skill 与回滚。普通用户无需 Node、编译器或 API key。
-- [ ] 验证错误平台的隔离安装只拒绝，不连公共索引尝试同名包；两个目标平台的文档命令从 Release 模拟目录实际执行。
+- [x] `requirements-build.txt` 固定 `cibuildwheel==4.3.0`、`auditwheel==6.8.2`、`abi3audit==0.0.26`；companion build-system 固定 setuptools 84.0.0。版本来源见本轮 `build-tool-versions.json`；对新 Linux 组合仍须实际验证，失败由主代理调查，不盲目升级。复用现有 checkout/setup-python/upload-artifact 的固定 action commit，使用 `python -m cibuildwheel`，不新增浮动 action。普通用户不安装审计工具。
+- [x] 原生 jobs 从同一个 product commit 构建：Linux x86_64 manylinux、Mac ARM，CPython 3.11 Limited API；不手工伪造平台 tag。Mac deployment target=11.0，但最终支持声明以 Mac 15 runner 实测为准。
+- [x] 所有 native wheel 严格 abi3audit，Linux repair 后核对依赖与 tags，Mac 核对 load commands；产物 artifact 包含每个 wheel、生成源身份、机型与工具链。不要跳过缺 wheel 的平台。
+- [x] 构建选择器只取 `cp311-manylinux_x86_64` / `cp311-macosx_arm64`，Linux 使用 manylinux2014 并记录实际镜像 digest，Mac 设置 deployment target=11.0。先运行 `python -m cibuildwheel --print-build-identifiers backends/jsx-grammars` 核对实际选择，再构建，不能误产 cp314 wheel 后改名成 abi3。
+- [x] CI 的每个 JS job 先下载该提交构建的 companion wheel，以 `--no-index --only-binary=:all: --find-links` 安装，再安装主产品 extra；四个 Linux Python 与两个 Mac Python 均按实际 wheel 安装。base jobs 不安装 companion。
+- [x] 现有 native 固定测试列表增加 `tests.test_jsx_ampersand`，保持零 skip 要求；原生命周期、地图 DOM/SVG job 保留。
+- [x] `build_grammar_bundle.py --wheelhouse ABS --out NEW_ZIP` 只接受版本 0.1.0 的两个预期平台 wheel，验证元数据、tag、SHA；缺失/重复/源码包/多版本退出非零。zip 内含两个 wheel 和 manifest，排序/时间戳固定以便重建核对，不吞掉不合格 wheel。
+- [x] 安装文档按规格第5节先校验后端包，再仅本地安装 companion；补充基础安装单文件校验、平台不符错误、未发布候选不能猜 URL、升级后重导出 Skill 与回滚。普通用户无需 Node、编译器或 API key。
+- [x] 验证错误平台的隔离安装只拒绝，不连公共索引尝试同名包；两个目标平台的文档命令从 Release 模拟目录实际执行。
 
 出口：记录远端 exact head 的全部实际 job 状态，不能把一台 Mac 或旧 PR45 结果算成本轮通过。wheel 不够、依赖/ABI/安装失败即回到对应阶段 debug。提交：`ci: build and validate supported native grammar wheels`。
 
@@ -215,14 +215,14 @@ python tools/check_public_docs.py --root .
 
 **文件：** 新建 `docs/delivery/2026-10-09-jsx-grammar-repair.md`；本轮新证据目录的 `products.json`、`preservation.json`、`completion.json`、中文报告。发布日期变化时以实际日期新建记录，不回写历史。
 
-- [ ] 主代理逐个审查 grammar 四处规则、生成差异、LICENSE/provenance、C capsule、依赖/extra、base 懒加载、源码引用和安装失败路径。源码/wheel/安装 runtime 与生成 parser SHA 必须匹配。
-- [ ] 审核只针对已发现风险补测，不机械重跑500组。单目标重查不解释为全样本新成绩，不把原型或源码测试算作安装验证。
-- [ ] 创建修复草稿 PR 并附到当前聊天；若 CF-001 PR45 未合并，以其分支为 base 明示依赖，不能把它的修复误计为本次新增。合并顺序先CF-001再本修复，核对 base/head 和最终 tree。
-- [ ] 生成 1.0.1rc2 发布件清单：pure Python wheel、两个 native wheel、后端zip、校验件、元数据与证据。所有候选产物不覆盖 rc1 或0.0.0.dev0。
+- [x] 主代理逐个审查 grammar 四处规则、生成差异、LICENSE/provenance、C capsule、依赖/extra、base 懒加载、源码引用和安装失败路径。源码/wheel/安装 runtime 与生成 parser SHA 必须匹配。
+- [x] 审核只针对已发现风险补测，不机械重跑500组。单目标重查不解释为全样本新成绩，不把原型或源码测试算作安装验证。
+- [x] 创建修复草稿 PR 并附到当前聊天；若 CF-001 PR45 未合并，以其分支为 base 明示依赖，不能把它的修复误计为本次新增。合并顺序先CF-001再本修复，核对 base/head 和最终 tree。
+- [x] 生成 1.0.1rc2 发布件清单：pure Python wheel、两个 native wheel、后端zip、校验件、元数据与证据。所有候选产物不覆盖 rc1 或0.0.0.dev0。
 - [ ] 只有 T1–T5 全部出口通过且审查无未解决发布阻塞，才准备正式1.0.1：更新版本后重建、核对实际正式SHA/包身份，重跑必要安装与 exact-head CI；不能给 rc2 wheel 改名。
 - [ ] GitHub Release 上传主wheel、后端zip及校验件，下载发布件再装新目录做同一五步调查。没有可下载且可安装的后端就不能称为完成发布。
 - [ ] 安装切换在发布件复验后进行；保存旧入口，使用已有升级/回滚流程；Skill 导出到新目录或按既有受保护绑定流程处理，不覆盖自定义 Skill。1.0.0 仍可通过绝对路径运行。
-- [ ] 中文交付报告逐项列“已完成/仍有范围限制”，明确 Flow、正文裸 &、动态调用等范围；报告 exact commit、wheel SHA、native版本/平台、命令数、CI链接、真实仓库结果与回滚入口。
+- [x] 中文交付报告逐项列“已完成/仍有范围限制”，明确 Flow、正文裸 &、动态调用等范围；报告 exact commit、wheel SHA、native版本/平台、命令数、CI链接、真实仓库结果与回滚入口。
 
 最终闭环条件：用户按随发行件提供的文档能安装 JS/TS 环境，对原 R051 使用五命令获得真实结构与引用，并能退回旧版本。任何一个环节仍靠本地原型、源码 cwd、编译器或未提供的 PyPI 包，都不能勾选完成。
 
@@ -233,3 +233,5 @@ python tools/check_public_docs.py --root .
 ## 本轮实施记录（2026-10-09）
 
 T1–T4 已以实际产品实现、独立安装和原 R051 验证通过；本地最后完整回归 563 项，无 skip。上游原有 corpus 116 + 112 全部通过。证据在本清单全局约束指定的新目录，原型和产品证据分开。T5 首次远端运行编译/repair/ABI 通过，但 `{project}/tests` 错误指向主项目；已改为 `{package}/tests`，从源码目录外的安装后原生测试 3 项通过。该失败保留在 `ci-initial-failure.txt`；T5 完成以修正后 exact-head CI 和最终分发安装为准。草稿 PR46 依赖未合并的 PR45。
+
+T5 现已通过：a41a5c1 的 push/PR 各15任务成功，两平台 cp311-abi3 wheels已下载核验，Mac原样文档安装与原R051复查通过。aa20a7e 将同一安装文档原样执行加入 Linux 独立安装，push/PR各15任务通过。候选产物仍归 a41a5c1，后续CI/文档不重标已有wheel。T6候选交付项目已完成，正式1.0.1重建/发布/全局切换3项继续待办。详见 [交付记录](../../delivery/2026-10-09-jsx-grammar-repair.md)。

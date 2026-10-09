@@ -2,7 +2,7 @@
 
 <!-- repo-doctor-development-version: 1.0.1rc2 -->
 
-当前开发候选为 1.0.1rc2，继承源码物理行修复并接入独立 JSX grammar 后端；公开正式版本仍为 1.0.0。[安装指导](INSTALL.md) 与 [CLI 合同](CLI_CONTRACT.md) 规定使用方式。下表属于既有 1.0.0 及其前置候选的证据，不代表 1.0.1rc2 已通过这些远端组合；正式提交 CI 与产物身份见 [交付记录](delivery/2026-10-08-v1.0.0-product-closure.md)。不能用本地 ARM Mac 结果代替其他系统/版本的运行证据。
+当前开发候选为 1.0.1rc2，继承源码物理行修复并接入独立 JSX grammar 后端；公开正式版本仍为 1.0.0。[安装指导](INSTALL.md) 与 [CLI 合同](CLI_CONTRACT.md) 规定使用方式。下表属于既有 1.0.0 及其前置候选的证据，1.0.1rc2 的独立证据列于下方候选小节；正式提交 CI 与产物身份见 [交付记录](delivery/2026-10-08-v1.0.0-product-closure.md)。不能用本地 ARM Mac 结果代替其他系统/版本的运行证据。
 
 ## 平台门禁
 
@@ -38,3 +38,15 @@ CI 每个安装 runner 记录 uname、Python、实际平台/架构，并保留�
 V3 精确构建 `50a97b84327860c86a33d4456285838e770bb399`：35 个 runtime 文件源码/wheel/两套安装一致，119 项冻结相关回归和 40 条自有规模查询通过。阶段新增 CI 和之后 RC/正式版须记录各自精确 SHA，历史 200 仓库结果不重标为当前候选全量验收。
 
 V4 平台门禁：[push 运行](https://github.com/kisara174/ai-repo-doctor/actions/runs/37771770415)与[PR 运行](https://github.com/kisara174/ai-repo-doctor/actions/runs/37771840654)均指向 `88392c131818c1d5e90cad9b859a70f1223bf69a`，各 11 个任务全部成功。下载并核对 push 的 10 份 runner artifacts，包含 12 份独立 base/js 安装 summary、162 条实际/预期退出码一致的命令（36 条预期拒绝）。Linux 实际 x86_64/glibc2.39，macOS 实际 15.7.9/arm64。既有生命周期和地图 DOM/SVG job 保留并通过。
+
+## 1.0.1rc2 原生 grammar 候选门禁
+
+本候选独立验证，未改变上面旧版证据归属；详见 [候选交付](delivery/2026-10-09-jsx-grammar-repair.md)。发行件构建来源为 `a41a5c1e4208a7ba2d644b52019a9f7b3bedc765`，两轮CI各15任务成功；后续 `aa20a7e` 的两轮15任务增加安装指导原样执行验收，也已通过。
+
+| 实际运行环境 | Python | 安装结果 |
+| --- | --- | --- |
+| Ubuntu24.04 / x86_64 / glibc2.39 | 3.11、3.12、3.13、3.14 | base独立安装、同提交manylinux companion + JS-extra独立安装均通过 |
+| macOS15.7.9 / arm64 | 3.11、3.14 | base与macosx_11_0_arm64 companion + JS-extra独立安装均通过 |
+| 本地macOS27 / arm64 | 3.14.5 | 四文件候选安装指导原样执行通过，原R051五命令闭环通过 |
+
+两平台companion严格abi3审计通过；Mac 11.0 tag仅为二进制最低目标，不作Mac11实机验收声明。用户不需要Node或编译器；不支持的平台在仅本地匹配wheel时拒绝。候选尚未正式发布，正式1.0.0仍为原安装入口。
