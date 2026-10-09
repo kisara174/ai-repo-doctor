@@ -1,48 +1,75 @@
 # 安装、Codex 接入、升级与回滚
 
-<!-- repo-doctor-install-versions: 1.0.0, 1.0.1rc2 -->
+<!-- repo-doctor-install-versions: 1.0.1, 1.0.0, 1.0.1rc2 -->
 
-适用范围：macOS/Linux，Python 3.11+。1.0 正式版本通过 GitHub Release wheel 分发；实际平台组合见 [支持矩阵](SUPPORT_MATRIX.md)，正式承诺由精确提交的 CI 与发行报告确认，Windows 暂不承诺。
+适用范围：Python 3.11+，Linux x86_64/glibc 与 Mac ARM。实际平台组合见 [支持矩阵](SUPPORT_MATRIX.md)。本页安装目标为 1.0.1；发行身份见 [1.0.1 交付记录](delivery/2026-10-09-v1.0.1-release.md)。Windows、Intel Mac、Linux ARM/musl 暂不承诺。
 
-以下步骤安装固定正式版本 1.0.0，下载后先核对 SHA256，再安装到新环境。
+1.0.1 修复源码物理行引用和 JSX/TSX 带引号属性的裸 `&`。主产品为纯 Python wheel；JS/TS 需要同批独立 native grammar wheels。没有 PyPI 发行，不能只对远端产品 URL 加 `[js]` 而跳过后端安装。
 
-## 1. 选择来源与安装目录
+## 1. 下载并校验到新目录
 
-确认 `python3 --version` 至少为 3.11；若系统默认较旧，使用已经安装的合适解释器绝对路径替换 python3。安装不修改系统 Python。
-
-在新终端下载 wheel 和校验文件到**新目录**：
+确认 python3 至少为 3.11；若默认解释器较旧，使用合适解释器的绝对路径。安装不修改系统 Python。以下发行件在 Release 可下载后使用，下载或校验失败即停止；不清空既有目录重试。
 
 ```sh
 set -e
-RD_VERSION=1.0.0
+RD_VERSION=1.0.1
 RD_ROOT="$HOME/.local/share/ai-repo-doctor/releases/v$RD_VERSION"
 mkdir -p "$(dirname "$RD_ROOT")"
 mkdir "$RD_ROOT"
-RD_WHEEL="$RD_ROOT/ai_repo_doctor-$RD_VERSION-py3-none-any.whl"
 RD_URL="https://github.com/kisara174/ai-repo-doctor/releases/download/v$RD_VERSION"
+RD_WHEEL="$RD_ROOT/ai_repo_doctor-$RD_VERSION-py3-none-any.whl"
 curl --fail --location "$RD_URL/ai_repo_doctor-$RD_VERSION-py3-none-any.whl" --output "$RD_WHEEL"
-curl --fail --location "$RD_URL/SHA256SUMS" --output "$RD_ROOT/SHA256SUMS"
-(cd "$RD_ROOT" && shasum -a 256 -c SHA256SUMS)
+curl --fail --location "$RD_URL/ai_repo_doctor-$RD_VERSION-py3-none-any.whl.sha256" --output "$RD_WHEEL.sha256"
+(cd "$RD_ROOT" && if command -v sha256sum >/dev/null 2>&1; then sha256sum -c "$(basename "$RD_WHEEL").sha256"; else shasum -a 256 -c "$(basename "$RD_WHEEL").sha256"; fi)
 ```
 
-校验失败立即停止，不能继续安装。已有同名目录则保留并调查其版本，不清空重试。Linux 若无 shasum，可使用 `sha256sum -c SHA256SUMS`。
-
-其他版本应同时替换 RD_VERSION 和对应下载件；升级时选择新目录，先核对随附 SHA256 和源码提交。
-
-## 2. 安装到独立环境
-
-推荐完整环境（Python 与可选 JS/TS）：
+仅分析 Python 时，在新 venv 安装已校验产品 wheel，无需后端包：
 
 ```sh
 python3 -m venv "$RD_ROOT/venv"
-"$RD_ROOT/venv/bin/python" -m pip install "${RD_WHEEL}[js]"
+"$RD_ROOT/venv/bin/python" -m pip install --no-index "$RD_WHEEL"
 RD_CLI="$RD_ROOT/venv/bin/repo-doctor"
 "$RD_CLI" --version
 ```
 
-仅使用 Python 时，在一个单独的新环境将 pip 参数改为 `"$RD_WHEEL"`，不加 `[js]`。缺 extra 时显式选择 JS/TS 会报错并提示安装方式，不会默默只分析 Python。
+## 2. 完整 Python + JS/TS 安装
 
-安装依赖可能需要联网；安装后的五个只读调查命令无需 API key、服务或网络，也不运行目标项目代码。分析 JS/TS 不需要 Node；开发产品的 DOM 验证环境另有 Node 依赖。
+在上面的新目录继续下载后端 zip 与校验件，然后按四文件安装步骤建立另一个新环境。普通用户无需 Node、C 编译器或 API key。
+
+```sh
+curl --fail --location "$RD_URL/jsx-backend-wheels-0.1.0.zip" --output "$RD_ROOT/jsx-backend-wheels-0.1.0.zip"
+curl --fail --location "$RD_URL/jsx-backend-wheels-0.1.0.zip.sha256" --output "$RD_ROOT/jsx-backend-wheels-0.1.0.zip.sha256"
+cd "$RD_ROOT"
+```
+
+### 从四个已下载文件安装
+
+进入含产品 wheel、产品 `.sha256`、后端 zip、后端 `.sha256` 的目录，原样执行；同名环境或解压目录已存在时停止并选新目录。
+
+```sh
+set -e
+RD_VERSION=1.0.1
+RD_CAND_DIR="$PWD"
+check_sha() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum -c "$1";
+  else shasum -a 256 -c "$1"; fi
+}
+check_sha "ai_repo_doctor-$RD_VERSION-py3-none-any.whl.sha256"
+check_sha jsx-backend-wheels-0.1.0.zip.sha256
+test ! -e "$RD_CAND_DIR/venv-js"
+test ! -e "$RD_CAND_DIR/backend-wheels"
+python3 -m zipfile -e jsx-backend-wheels-0.1.0.zip "$RD_CAND_DIR/backend-wheels"
+python3 -m venv "$RD_CAND_DIR/venv-js"
+"$RD_CAND_DIR/venv-js/bin/python" -m pip install --no-index --only-binary=:all: \
+  --find-links "$RD_CAND_DIR/backend-wheels" ai-repo-doctor-grammars==0.1.0
+"$RD_CAND_DIR/venv-js/bin/python" -m pip install "${RD_CAND_DIR}/ai_repo_doctor-$RD_VERSION-py3-none-any.whl[js]"
+RD_CLI="$RD_CAND_DIR/venv-js/bin/repo-doctor"
+"$RD_CLI" --version
+```
+
+后端包仅提供已验证的 Linux x86_64/glibc 与 Mac ARM wheel，由 pip 选择。不兼容时仅本地匹配失败就停止，不从公共索引下载同名 companion 或要求用户编译。安装主产品 extra 的两个官方依赖可能联网；安装后的五个只读调查命令离线工作，不运行目标源码或安装其依赖。发行 source commit 与详细回执见 Release 的 SOURCE_COMMIT.txt 和 release-receipt.json。
+
+以下 rc2 段落仅供保留旧候选使用；新正式安装使用上面的 1.0.1。
 
 ### 1.0.1rc2 原生 grammar 候选（尚未正式发布）
 
