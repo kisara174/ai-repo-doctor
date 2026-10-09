@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools==84.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-repo-doctor-grammars"
+version = "0.1.0"
+description = "Source-preserving patched JavaScript and TSX grammars for AI Repo Doctor"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE", "licenses/*-LICENSE"]
+
+[project.urls]
+Repository = "https://github.com/kisara174/ai-repo-doctor"
+
+[tool.setuptools]
+include-package-data = false
