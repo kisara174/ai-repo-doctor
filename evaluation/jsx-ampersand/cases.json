@@ -1,0 +1,360 @@
+{
+  "repository": "octokatherine/readme.so",
+  "commit": "90420ff0f33d1ef0e9cf4fd67515662ab626acee",
+  "tree": "e5e04167acbea9c06287cf7d054804063315d5ad",
+  "files": {
+    "components/DownloadModal.js": "b6380f2e4d103d36e5ea03dc6ea3d3104afd07fbf96a93334be374a7a438f08f",
+    "pages/editor.js": "b5df9dbbc3f07915922e5d801422ef2783e464eb6dacafc7683ff5b29ac1642a"
+  },
+  "symbol": "components/DownloadModal.js::DownloadModal",
+  "declaration": {
+    "line": 10,
+    "text": "export const DownloadModal = ({ showModal, setShowModal }) => {"
+  },
+  "url_line": 75,
+  "expected_symbols": 45,
+  "old_symbols": [
+    {
+      "id": "components/ColumnHeader.js::Heading",
+      "file": "components/ColumnHeader.js",
+      "name": "Heading",
+      "qualname": "Heading",
+      "kind": "function",
+      "start_line": 1
+    },
+    {
+      "id": "components/ColumnHeader.js::Tab",
+      "file": "components/ColumnHeader.js",
+      "name": "Tab",
+      "qualname": "Tab",
+      "kind": "function",
+      "start_line": 12
+    },
+    {
+      "id": "components/CustomSection.js::CustomSection",
+      "file": "components/CustomSection.js",
+      "name": "CustomSection",
+      "qualname": "CustomSection",
+      "kind": "function",
+      "start_line": 12
+    },
+    {
+      "id": "components/CustomSection.js::CustomSection.addCustomSection",
+      "file": "components/CustomSection.js",
+      "name": "addCustomSection",
+      "qualname": "CustomSection.addCustomSection",
+      "kind": "function",
+      "start_line": 25
+    },
+    {
+      "id": "components/EditPreviewContainer.js::EditPreviewContainer",
+      "file": "components/EditPreviewContainer.js",
+      "name": "EditPreviewContainer",
+      "qualname": "EditPreviewContainer",
+      "kind": "function",
+      "start_line": 9
+    },
+    {
+      "id": "components/EditorColumn.js::EditorColumn",
+      "file": "components/EditorColumn.js",
+      "name": "EditorColumn",
+      "qualname": "EditorColumn",
+      "kind": "function",
+      "start_line": 6
+    },
+    {
+      "id": "components/EditorColumn.js::EditorColumn.getMarkdown",
+      "file": "components/EditorColumn.js",
+      "name": "getMarkdown",
+      "qualname": "EditorColumn.getMarkdown",
+      "kind": "function",
+      "start_line": 7
+    },
+    {
+      "id": "components/EditorColumn.js::EditorColumn.handleEditorDidMount",
+      "file": "components/EditorColumn.js",
+      "name": "handleEditorDidMount",
+      "qualname": "EditorColumn.handleEditorDidMount",
+      "kind": "function",
+      "start_line": 37
+    },
+    {
+      "id": "components/EditorColumn.js::EditorColumn.onEdit",
+      "file": "components/EditorColumn.js",
+      "name": "onEdit",
+      "qualname": "EditorColumn.onEdit",
+      "kind": "function",
+      "start_line": 25
+    },
+    {
+      "id": "components/LanguageDropDown.js::LanguageDropDown",
+      "file": "components/LanguageDropDown.js",
+      "name": "LanguageDropDown",
+      "qualname": "LanguageDropDown",
+      "kind": "function",
+      "start_line": 86
+    },
+    {
+      "id": "components/Nav.js::Nav",
+      "file": "components/Nav.js",
+      "name": "Nav",
+      "qualname": "Nav",
+      "kind": "function",
+      "start_line": 6
+    },
+    {
+      "id": "components/Nav.js::Nav.downloadMarkdownFile",
+      "file": "components/Nav.js",
+      "name": "downloadMarkdownFile",
+      "qualname": "Nav.downloadMarkdownFile",
+      "kind": "function",
+      "start_line": 25
+    },
+    {
+      "id": "components/PreviewColumn.js::PreviewColumn",
+      "file": "components/PreviewColumn.js",
+      "name": "PreviewColumn",
+      "qualname": "PreviewColumn",
+      "kind": "function",
+      "start_line": 6
+    },
+    {
+      "id": "components/RawPreview.js::RawPreview",
+      "file": "components/RawPreview.js",
+      "name": "RawPreview",
+      "qualname": "RawPreview",
+      "kind": "function",
+      "start_line": 3
+    },
+    {
+      "id": "components/RawPreview.js::RawPreview.copyToClipBoard",
+      "file": "components/RawPreview.js",
+      "name": "copyToClipBoard",
+      "qualname": "RawPreview.copyToClipBoard",
+      "kind": "function",
+      "start_line": 16
+    },
+    {
+      "id": "components/SectionFilter.js::SectionFilter",
+      "file": "components/SectionFilter.js",
+      "name": "SectionFilter",
+      "qualname": "SectionFilter",
+      "kind": "function",
+      "start_line": 1
+    },
+    {
+      "id": "components/SectionsColumn.js::SectionsColumn",
+      "file": "components/SectionsColumn.js",
+      "name": "SectionsColumn",
+      "qualname": "SectionsColumn",
+      "kind": "function",
+      "start_line": 27
+    },
+    {
+      "id": "components/SectionsColumn.js::SectionsColumn.getAutoCompleteResults",
+      "file": "components/SectionsColumn.js",
+      "name": "getAutoCompleteResults",
+      "qualname": "SectionsColumn.getAutoCompleteResults",
+      "kind": "function",
+      "start_line": 174
+    },
+    {
+      "id": "components/SectionsColumn.js::SectionsColumn.handleDragEnd",
+      "file": "components/SectionsColumn.js",
+      "name": "handleDragEnd",
+      "qualname": "SectionsColumn.handleDragEnd",
+      "kind": "function",
+      "start_line": 91
+    },
+    {
+      "id": "components/SectionsColumn.js::SectionsColumn.onAddSection",
+      "file": "components/SectionsColumn.js",
+      "name": "onAddSection",
+      "qualname": "SectionsColumn.onAddSection",
+      "kind": "function",
+      "start_line": 76
+    },
+    {
+      "id": "components/SectionsColumn.js::SectionsColumn.onDeleteSection",
+      "file": "components/SectionsColumn.js",
+      "name": "onDeleteSection",
+      "qualname": "SectionsColumn.onDeleteSection",
+      "kind": "function",
+      "start_line": 103
+    },
+    {
+      "id": "components/SectionsColumn.js::SectionsColumn.onResetSection",
+      "file": "components/SectionsColumn.js",
+      "name": "onResetSection",
+      "qualname": "SectionsColumn.onResetSection",
+      "kind": "function",
+      "start_line": 111
+    },
+    {
+      "id": "components/SectionsColumn.js::SectionsColumn.resetSearchFilter",
+      "file": "components/SectionsColumn.js",
+      "name": "resetSearchFilter",
+      "qualname": "SectionsColumn.resetSearchFilter",
+      "kind": "function",
+      "start_line": 182
+    },
+    {
+      "id": "components/SectionsColumn.js::SectionsColumn.resetSelectedSections",
+      "file": "components/SectionsColumn.js",
+      "name": "resetSelectedSections",
+      "qualname": "SectionsColumn.resetSelectedSections",
+      "kind": "function",
+      "start_line": 139
+    },
+    {
+      "id": "components/SectionsColumn.js::SectionsColumn.updateSlugsOnAdd",
+      "file": "components/SectionsColumn.js",
+      "name": "updateSlugsOnAdd",
+      "qualname": "SectionsColumn.updateSlugsOnAdd",
+      "kind": "function",
+      "start_line": 72
+    },
+    {
+      "id": "components/SectionsColumn.js::kebabCaseToTitleCase",
+      "file": "components/SectionsColumn.js",
+      "name": "kebabCaseToTitleCase",
+      "qualname": "kebabCaseToTitleCase",
+      "kind": "function",
+      "start_line": 18
+    },
+    {
+      "id": "components/SortableItem.js::onClickReset",
+      "file": "components/SortableItem.js",
+      "name": "onClickReset",
+      "qualname": "onClickReset",
+      "kind": "function",
+      "start_line": 22
+    },
+    {
+      "id": "components/SortableItem.js::onClickSection",
+      "file": "components/SortableItem.js",
+      "name": "onClickSection",
+      "qualname": "onClickSection",
+      "kind": "function",
+      "start_line": 13
+    },
+    {
+      "id": "components/SortableItem.js::onClickTrash",
+      "file": "components/SortableItem.js",
+      "name": "onClickTrash",
+      "qualname": "onClickTrash",
+      "kind": "function",
+      "start_line": 18
+    },
+    {
+      "id": "components/SortableItem.js::onKeyUp",
+      "file": "components/SortableItem.js",
+      "name": "onKeyUp",
+      "qualname": "onKeyUp",
+      "kind": "function",
+      "start_line": 31
+    },
+    {
+      "id": "components/Tabs.js::Tabs",
+      "file": "components/Tabs.js",
+      "name": "Tabs",
+      "qualname": "Tabs",
+      "kind": "function",
+      "start_line": 4
+    },
+    {
+      "id": "components/__tests__/EditorColumn.test.js::Editor",
+      "file": "components/__tests__/EditorColumn.test.js",
+      "name": "Editor",
+      "qualname": "Editor",
+      "kind": "function",
+      "start_line": 8
+    },
+    {
+      "id": "components/icons/Close.js::Close",
+      "file": "components/icons/Close.js",
+      "name": "Close",
+      "qualname": "Close",
+      "kind": "function",
+      "start_line": 1
+    },
+    {
+      "id": "components/icons/Menu.js::Menu",
+      "file": "components/icons/Menu.js",
+      "name": "Menu",
+      "qualname": "Menu",
+      "kind": "function",
+      "start_line": 1
+    },
+    {
+      "id": "hooks/useDeviceDetect.js::useDeviceDetect",
+      "file": "hooks/useDeviceDetect.js",
+      "name": "useDeviceDetect",
+      "qualname": "useDeviceDetect",
+      "kind": "function",
+      "start_line": 3
+    },
+    {
+      "id": "hooks/useLocalStorage.js::useLocalStorage",
+      "file": "hooks/useLocalStorage.js",
+      "name": "useLocalStorage",
+      "qualname": "useLocalStorage",
+      "kind": "function",
+      "start_line": 3
+    },
+    {
+      "id": "hooks/useLocalStorage.js::useLocalStorage.deleteBackup",
+      "file": "hooks/useLocalStorage.js",
+      "name": "deleteBackup",
+      "qualname": "useLocalStorage.deleteBackup",
+      "kind": "function",
+      "start_line": 31
+    },
+    {
+      "id": "hooks/useLocalStorage.js::useLocalStorage.saveBackup",
+      "file": "hooks/useLocalStorage.js",
+      "name": "saveBackup",
+      "qualname": "useLocalStorage.saveBackup",
+      "kind": "function",
+      "start_line": 15
+    },
+    {
+      "id": "pages/_app.js::MyApp",
+      "file": "pages/_app.js",
+      "name": "MyApp",
+      "qualname": "MyApp",
+      "kind": "function",
+      "start_line": 9
+    },
+    {
+      "id": "pages/_document.js::MyDocument",
+      "file": "pages/_document.js",
+      "name": "MyDocument",
+      "qualname": "MyDocument",
+      "kind": "function",
+      "start_line": 3
+    },
+    {
+      "id": "pages/index.js::DotPattern",
+      "file": "pages/index.js",
+      "name": "DotPattern",
+      "qualname": "DotPattern",
+      "kind": "function",
+      "start_line": 5
+    },
+    {
+      "id": "pages/index.js::Home",
+      "file": "pages/index.js",
+      "name": "Home",
+      "qualname": "Home",
+      "kind": "function",
+      "start_line": 22
+    }
+  ],
+  "old_symbol_source": "independent installed 1.0.1rc1; original SHA-frozen source",
+  "expected_new_ids": [
+    "components/DownloadModal.js::DownloadModal",
+    "pages/editor.js::Editor",
+    "pages/editor.js::Editor.getTemplate"
+  ]
+}

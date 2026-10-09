@@ -60,7 +60,7 @@ def validate(mode, python, cli, out, expected_version=VERSION):
         "import json,sys,importlib.util,repo_doctor; from importlib.metadata import version; "
         "print(json.dumps({'version':version('ai-repo-doctor'),'path':repo_doctor.__file__,"
         "'extras':{n:importlib.util.find_spec(n) is not None for n in "
-        "('tree_sitter','tree_sitter_javascript','tree_sitter_typescript')},"
+        "('tree_sitter','ai_repo_doctor_grammars','tree_sitter_typescript')},"
         "'loaded':[n for n in sys.modules if n.startswith('tree_sitter')]}))"]).stdout)
     require(metadata["version"] == expected_version, "wrong installed version")
     require("site-packages" in Path(metadata["path"]).parts, "source checkout imported")
@@ -87,8 +87,8 @@ def validate(mode, python, cli, out, expected_version=VERSION):
         'Card.tsx': 'export function Card() { return <div />; }\n',
         'App.tsx': "import {value} from './helper.js';\nimport {Card} from './Card';\n"
                    'export function App() { return <Card onClick={() => value()}>{value()}</Card>; }\n',
-        'Legacy.jsx': 'export const Legacy = () => <section>中文😀</section>;\n',
-        'bad.js': 'export function leaked() { return 1; }\nexport function broken() {\n  return leaked();\n',
+        'Legacy.jsx': 'export const Legacy = () => <section title="?a=1&b=2">中文😀</section>;\n',
+        'bad.js': 'export function leaked() { return <img src="?a=1&b=2" />; }\nexport function broken() {\n  return leaked();\n',
         'consumer.js': "import {leaked} from './bad.js';\nexport function consume() { return leaked(); }\n",
     }
     frontend.mkdir()

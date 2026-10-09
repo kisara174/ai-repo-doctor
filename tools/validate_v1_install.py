@@ -99,7 +99,7 @@ class Validation:
             "'import_path':repo_doctor.__file__,'python':sys.version,"
             "'skill_sha256':hashlib.sha256(files('repo_doctor').joinpath('resources/skill/SKILL.md').read_bytes()).hexdigest(),"
             "'backends':{name:importlib.util.find_spec(name) is not None for name in "
-            "('tree_sitter','tree_sitter_javascript','tree_sitter_typescript')}}))"
+            "('tree_sitter','ai_repo_doctor_grammars','tree_sitter_typescript')}}))"
         )
         metadata = json.loads(self.run('metadata', [self.python, '-B', '-c', code]))
         require(metadata['version'] == self.version, 'wrong installed version')
