@@ -1,0 +1,2 @@
+# Unified patch context lines contain a required single space on blank lines.
+backends/jsx-grammars/patches/*.patch -whitespace
