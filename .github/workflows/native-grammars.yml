@@ -67,7 +67,7 @@ jobs:
           CIBW_BEFORE_BUILD_LINUX: 'python -m pip install auditwheel==6.8.2'
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: 'python -m auditwheel repair -w {dest_dir} {wheel}'
           CIBW_TEST_REQUIRES: 'tree-sitter==0.26.0'
-          CIBW_TEST_COMMAND: 'python -m unittest discover -s {project}/tests -v'
+          CIBW_TEST_COMMAND: 'python -m unittest discover -s {package}/tests -v'
         run: |
           python -m pip install -r backends/jsx-grammars/requirements-build.txt
           python -m cibuildwheel --print-build-identifiers backends/jsx-grammars
