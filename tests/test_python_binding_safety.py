@@ -73,3 +73,27 @@ class PythonBindingSafetyTests(unittest.TestCase):
         index = self.make_index('def helper():\n    return 1\n'
             'class Worker:\n    helper = 2\n    def caller(self):\n        return helper()\n')
         self.assertIn(('app.py::Worker.caller', 'app.py::helper'), self.edges(index))
+
+    def test_rebound_nested_function_is_unresolved(self):
+        for change in ('helper = replacement', 'del helper',
+                       'import math as helper', 'helper += replacement'):
+            with self.subTest(change=change):
+                index = self.make_index('def replacement():\n    return 2\n'
+                    'def caller():\n    def helper():\n        return 1\n'
+                    '    ' + change + '\n    return helper()\n')
+                self.assertNotIn(('app.py::caller', 'app.py::caller.helper'), self.edges(index))
+
+    def test_conditional_nested_definition_is_not_a_stable_target(self):
+        index = self.make_index('def caller(flag):\n    if flag:\n'
+            '        def helper():\n            return 1\n    return helper()\n')
+        self.assertNotIn(('app.py::caller', 'app.py::caller.helper'), self.edges(index))
+
+    def test_stable_nested_definition_remains_resolved(self):
+        index = self.make_index('def caller():\n    def helper():\n        return 1\n    return helper()\n')
+        self.assertIn(('app.py::caller', 'app.py::caller.helper'), self.edges(index))
+
+    def test_nested_nonlocal_write_blocks_stable_callable(self):
+        index = self.make_index('def caller():\n    def helper():\n        return 1\n'
+            '    def mutate():\n        nonlocal helper\n        helper = None\n'
+            '    mutate()\n    return helper()\n')
+        self.assertNotIn(('app.py::caller', 'app.py::caller.helper'), self.edges(index))

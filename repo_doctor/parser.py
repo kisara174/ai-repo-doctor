@@ -131,14 +131,17 @@ def _reassigned_parameters(
 
 def _scope_writes(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
+    *, unsafe: set[str] | None = None,
 ) -> frozenset[str]:
     """Collect writes in this lexical scope, including definition creation expressions."""
     reassigned: set[str] = set()
 
     class ReassignmentVisitor(ast.NodeVisitor):
-        def _record(self, name: str | None) -> None:
+        def _record(self, name: str | None, *, stable_definition: bool = False) -> None:
             if name is not None:
                 reassigned.add(name)
+                if unsafe is not None and not stable_definition:
+                    unsafe.add(name)
 
         def visit_Name(self, current: ast.Name) -> None:
             if isinstance(current.ctx, (ast.Store, ast.Del)):
@@ -149,7 +152,12 @@ def _scope_writes(
                 for statement in current.body:
                     self.visit(statement)
                 return
-            self._record(current.name)
+            self._record(current.name, stable_definition=current in node.body)
+            # An explicit nonlocal/global in a nested body may mutate this scope.
+            for child in ast.walk(current):
+                if isinstance(child, (ast.Nonlocal, ast.Global)):
+                    for name in child.names:
+                        self._record(name)
             self._visit_function_creation(current)
 
         def visit_AsyncFunctionDef(self, current: ast.AsyncFunctionDef) -> None:
@@ -157,7 +165,12 @@ def _scope_writes(
                 for statement in current.body:
                     self.visit(statement)
                 return
-            self._record(current.name)
+            self._record(current.name, stable_definition=current in node.body)
+            # An explicit nonlocal/global in a nested body may mutate this scope.
+            for child in ast.walk(current):
+                if isinstance(child, (ast.Nonlocal, ast.Global)):
+                    for name in child.names:
+                        self._record(name)
             self._visit_function_creation(current)
 
         def _visit_function_creation(
@@ -187,7 +200,7 @@ def _scope_writes(
                     self.visit(expression)
 
         def visit_ClassDef(self, current: ast.ClassDef) -> None:
-            self._record(current.name)
+            self._record(current.name, stable_definition=current in node.body)
             for expression in (*current.decorator_list, *current.bases):
                 self.visit(expression)
             for keyword in current.keywords:
@@ -257,6 +270,18 @@ def _scope_writes(
 
     ReassignmentVisitor().visit(node)
     return frozenset(reassigned)
+
+
+def _unsafe_call_bindings(node: ast.FunctionDef | ast.AsyncFunctionDef) -> frozenset[str]:
+    unsafe: set[str] = set()
+    _scope_writes(node, unsafe=unsafe)
+    args = node.args
+    unsafe.update(arg.arg for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs))
+    if args.vararg:
+        unsafe.add(args.vararg.arg)
+    if args.kwarg:
+        unsafe.add(args.kwarg.arg)
+    return frozenset(unsafe)
 
 
 def _constructor_expression(value: ast.expr) -> str | None:
@@ -723,6 +748,11 @@ class _Extractor(ast.NodeVisitor):
                 end_line=node.end_lineno or node.lineno,
                 parent=self._ids[-1] if self._ids else None,
                 local_bindings=local_bindings,
+                unsafe_call_bindings=(
+                    _unsafe_call_bindings(node)
+                    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    else frozenset()
+                ),
                 local_constructors=local_constructors,
                 returns_self=returns_self,
                 is_async=isinstance(node, ast.AsyncFunctionDef),

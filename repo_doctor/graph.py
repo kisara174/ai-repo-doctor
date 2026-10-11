@@ -207,6 +207,8 @@ def _resolve_call(
         return None
 
     if call.receiver is None and call.expression == call.name:
+        if call.name in caller.unsafe_call_bindings:
+            return None
         nested = f"{caller.file}::{caller.qualname}.{call.name}"
         if nested in index.symbols:
             return nested
