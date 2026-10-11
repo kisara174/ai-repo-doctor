@@ -748,6 +748,7 @@ class _Extractor(ast.NodeVisitor):
                 end_line=node.end_lineno or node.lineno,
                 parent=self._ids[-1] if self._ids else None,
                 local_bindings=local_bindings,
+                is_instance_method=is_instance_method,
                 unsafe_call_bindings=(
                     _unsafe_call_bindings(node)
                     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))

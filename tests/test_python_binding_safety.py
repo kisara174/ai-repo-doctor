@@ -97,3 +97,24 @@ class PythonBindingSafetyTests(unittest.TestCase):
             '    def mutate():\n        nonlocal helper\n        helper = None\n'
             '    mutate()\n    return helper()\n')
         self.assertNotIn(('app.py::caller', 'app.py::caller.helper'), self.edges(index))
+
+    def test_rebound_self_does_not_resolve_original_method(self):
+        for change in ('self = Other()', 'del self', 'self += 1', 'self, other = (Other(), 1)',
+                       'def mutate():\n            nonlocal self\n            self = Other()\n        mutate()'):
+            with self.subTest(change=change):
+                index = self.make_index('class Other:\n    def work(self):\n        return 1\n'
+                    'class Worker:\n    def work(self):\n        return 2\n'
+                    '    def caller(self):\n        ' + change + '\n        return self.work()\n')
+                self.assertNotIn(('app.py::Worker.caller', 'app.py::Worker.work'), self.edges(index))
+
+    def test_normal_instance_method_self_call_remains_resolved(self):
+        index = self.make_index('class Worker:\n    def work(self):\n        return 2\n'
+            '    def caller(self):\n        return self.work()\n')
+        self.assertIn(('app.py::Worker.caller', 'app.py::Worker.work'), self.edges(index))
+
+    def test_self_named_static_or_class_parameter_is_not_instance_receiver(self):
+        for decorator in ('staticmethod', 'classmethod'):
+            with self.subTest(decorator=decorator):
+                index = self.make_index('class Worker:\n    def work(self):\n        return 2\n'
+                    '    @' + decorator + '\n    def caller(self):\n        return self.work()\n')
+                self.assertNotIn(('app.py::Worker.caller', 'app.py::Worker.work'), self.edges(index))

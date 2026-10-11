@@ -237,6 +237,8 @@ def _resolve_call(
     if receiver is None or call.expression != f"{receiver}.{call.name}":
         return None
     if receiver == "self" and caller.kind == "method" and caller.parent:
+        if not caller.is_instance_method or "self" in caller.reassigned_parameters:
+            return None
         target = f"{caller.parent}.{call.name}"
         return target if target in index.symbols else None
     if receiver in caller.local_bindings:
