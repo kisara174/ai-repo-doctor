@@ -2,7 +2,7 @@
 
 <!-- repo-doctor-development-version: 1.0.2 -->
 
-当前源版本为 1.0.2（可靠性修复，准备发布），继承已验证 rc2 的源码物理行修复及独立 JSX grammar 后端。正式发行的精确提交及公开下载验收见 [1.0.1 交付记录](delivery/2026-10-09-v1.0.1-release.md)。[安装指导](INSTALL.md) 与 [CLI 合同](CLI_CONTRACT.md) 规定使用方式。下表属于既有 1.0.0 及其前置候选的证据，1.0.1rc2 的独立证据列于下方候选小节；正式提交 CI 与产物身份见 [交付记录](delivery/2026-10-08-v1.0.0-product-closure.md)。不能用本地 ARM Mac 结果代替其他系统/版本的运行证据。
+当前源版本为 1.0.2（可靠性修复），继承已验证 rc2 的源码物理行修复及独立 JSX grammar 后端。本次发行的精确提交与实际完成状态见 [1.0.2 交付记录](delivery/2026-10-11-v1.0.2-reliability.md)。[安装指导](INSTALL.md) 与 [CLI 合同](CLI_CONTRACT.md) 规定使用方式。下表属于既有 1.0.0 及其前置候选的证据，1.0.1rc2 的独立证据列于下方候选小节；旧正式提交 CI 与产物身份见 [交付记录](delivery/2026-10-08-v1.0.0-product-closure.md)。不能用本地 ARM Mac 结果代替其他系统/版本的运行证据。
 
 ## 平台门禁
 
@@ -66,3 +66,5 @@ V4 平台门禁：[push 运行](https://github.com/kisara174/ai-repo-doctor/acti
 ## 1.0.2 可靠性修复
 
 依赖和平台承诺继承1.0.1。具体提交、安装验证和CI以 [本轮交付记录](delivery/2026-10-11-v1.0.2-reliability.md) 为准；既有表格不自动转标为新版本结果。
+
+`e9519c1` 精确源码的 [PR CI](https://github.com/kisara174/ai-repo-doctor/actions/runs/38124566801) 与 [push CI](https://github.com/kisara174/ai-repo-doctor/actions/runs/38124553214) 各15项成功。已下载并核对12套base/js安装的612条可靠性命令：Linux x86_64/glibc Python3.11–3.14，Mac arm64 Python3.11/3.14。原生后端双平台构建/ABI审计与地图DOM/SVG门禁属于本提交；不扩展到其他平台。
