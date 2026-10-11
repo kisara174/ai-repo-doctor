@@ -3,6 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 from repo_doctor.index import build_index
+from repo_doctor.context import build_context, build_impact
+from repo_doctor.repo_map import build_map
 
 
 class PythonBindingSafetyTests(unittest.TestCase):
@@ -46,3 +48,28 @@ class PythonBindingSafetyTests(unittest.TestCase):
             'def caller():\n    def nested(value=(helper := 1)):\n        pass\n'
             '    return helper()\n')
         self.assertNotIn(('app.py::caller', 'app.py::helper'), self.edges(index))
+
+    def test_enclosing_binding_blocks_global_fallback(self):
+        for outer_binding in ('def helper():\n        return 2', 'helper = 2'):
+            with self.subTest(binding=outer_binding):
+                index = self.make_index('def helper():\n    return 1\n'
+                    'def outer():\n    ' + outer_binding + '\n'
+                    '    def inner():\n        return helper()\n    return inner()\n')
+                self.assertNotIn(('app.py::outer.inner', 'app.py::helper'), self.edges(index))
+                context = build_context(index, 'app.py::outer.inner')
+                self.assertFalse(any(e['callee'] == 'app.py::helper' for e in context['call_evidence']))
+                impact = build_impact(index, 'app.py::helper')
+                self.assertNotIn('app.py::outer.inner', {row['symbol'] for row in impact['affected_symbols']})
+                self.assertFalse(any(e['kind'] == 'call'
+                    and e['source'] == 'symbol:app.py::outer.inner'
+                    and e['target'] == 'symbol:app.py::helper' for e in build_map(index)['edges']))
+
+    def test_enclosing_scope_without_binding_preserves_module_call(self):
+        index = self.make_index('def helper():\n    return 1\n'
+            'def outer():\n    def inner():\n        return helper()\n    return inner()\n')
+        self.assertIn(('app.py::outer.inner', 'app.py::helper'), self.edges(index))
+
+    def test_class_attributes_are_not_method_lexical_bindings(self):
+        index = self.make_index('def helper():\n    return 1\n'
+            'class Worker:\n    helper = 2\n    def caller(self):\n        return helper()\n')
+        self.assertIn(('app.py::Worker.caller', 'app.py::helper'), self.edges(index))

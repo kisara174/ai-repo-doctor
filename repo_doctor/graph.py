@@ -212,6 +212,14 @@ def _resolve_call(
             return nested
         if call.name in caller.local_bindings:
             return None
+        enclosing = index.symbols.get(caller.parent or "")
+        while enclosing is not None:
+            if enclosing.kind != "class" and (
+                call.name in enclosing.local_bindings
+                or call.name in enclosing.unsafe_call_bindings
+            ):
+                return None
+            enclosing = index.symbols.get(enclosing.parent or "")
         if call.name in index.module_bindings.get(caller.file, set()):
             return None
         same_file = f"{caller.file}::{call.name}"
