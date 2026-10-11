@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "source_review": "/Users/kisara/.local/share/ai-repo-doctor/evaluations/2026-10-11-product-review-v1",
+  "cases": [
+    {
+      "id": "F01",
+      "fixture": "closure_shadow",
+      "files": {
+        "app.py": "def helper():\n    return 'module'\n\ndef outer():\n    def helper():\n        return 'closure'\n    def inner():\n        return helper()\n    return inner()\n"
+      },
+      "forbidden_edges": [
+        [
+          "app.py::outer.inner",
+          "app.py::helper"
+        ]
+      ]
+    },
+    {
+      "id": "F02",
+      "fixture": "nested_rebinding",
+      "files": {
+        "app.py": "def replacement():\n    return 'replacement'\n\ndef caller():\n    def helper():\n        return 'nested'\n    helper = replacement\n    return helper()\n"
+      },
+      "forbidden_edges": [
+        [
+          "app.py::caller",
+          "app.py::caller.helper"
+        ]
+      ]
+    },
+    {
+      "id": "F03",
+      "fixture": "self_rebinding",
+      "files": {
+        "app.py": "class Other:\n    def work(self):\n        return 'other'\n\nclass Worker:\n    def work(self):\n        return 'worker'\n    def caller(self):\n        self = Other()\n        return self.work()\n"
+      },
+      "forbidden_edges": [
+        [
+          "app.py::Worker.caller",
+          "app.py::Worker.work"
+        ]
+      ]
+    },
+    {
+      "id": "F04",
+      "fixture": "source_change",
+      "files": {
+        "app.py": "def original():\n    return 1\n"
+      },
+      "mutation": "def replacement():\n    return 2\n",
+      "requested_symbol": "app.py::original",
+      "expected_exit": 2
+    },
+    {
+      "id": "F05",
+      "fixture": "comprehension_scope",
+      "files": {
+        "app.py": "def helper():\n    return 1\n\ndef caller():\n    values = [helper for helper in (1, 2)]\n    return helper()\n"
+      },
+      "required_edges": [
+        [
+          "app.py::caller",
+          "app.py::helper"
+        ]
+      ]
+    },
+    {
+      "id": "F06",
+      "fixture": "js_error_label",
+      "files": {
+        "app.js": "export function broken( {\n"
+      },
+      "expected_language": "javascript"
+    }
+  ]
+}
