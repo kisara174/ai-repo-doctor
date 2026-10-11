@@ -29,21 +29,7 @@ def _bindings(node: ast.FunctionDef | ast.AsyncFunctionDef) -> frozenset[str]:
         names.add(args.vararg.arg)
     if args.kwarg:
         names.add(args.kwarg.arg)
-    for child in ast.walk(node):
-        if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
-            names.add(child.id)
-        elif isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and child is not node:
-            names.add(child.name)
-        elif isinstance(child, ast.Import):
-            names.update(alias.asname or alias.name.split(".", 1)[0] for alias in child.names)
-        elif isinstance(child, ast.ImportFrom):
-            names.update(alias.asname or alias.name for alias in child.names)
-        elif isinstance(child, ast.MatchAs) and child.name:
-            names.add(child.name)
-        elif isinstance(child, ast.MatchStar) and child.name:
-            names.add(child.name)
-        elif isinstance(child, ast.MatchMapping) and child.rest:
-            names.add(child.rest)
+    names.update(_scope_writes(node))
     return frozenset(names)
 
 
@@ -134,23 +120,24 @@ def _class_bindings(node: ast.ClassDef) -> frozenset[str]:
 def _reassigned_parameters(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> frozenset[str]:
-    parameters = {
-        argument.arg
-        for argument in (
-            *node.args.posonlyargs,
-            *node.args.args,
-            *node.args.kwonlyargs,
-        )
-    }
-    if node.args.vararg is not None:
-        parameters.add(node.args.vararg.arg)
-    if node.args.kwarg is not None:
-        parameters.add(node.args.kwarg.arg)
+    args = node.args
+    parameters = {arg.arg for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs)}
+    if args.vararg:
+        parameters.add(args.vararg.arg)
+    if args.kwarg:
+        parameters.add(args.kwarg.arg)
+    return _scope_writes(node) & parameters
+
+
+def _scope_writes(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> frozenset[str]:
+    """Collect writes in this lexical scope, including definition creation expressions."""
     reassigned: set[str] = set()
 
     class ReassignmentVisitor(ast.NodeVisitor):
         def _record(self, name: str | None) -> None:
-            if name in parameters:
+            if name is not None:
                 reassigned.add(name)
 
         def visit_Name(self, current: ast.Name) -> None:

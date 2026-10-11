@@ -87,6 +87,8 @@ class Symbol:
     base_expressions: tuple[str, ...] = ()
     class_bindings: frozenset[str] = frozenset()
     reassigned_parameters: frozenset[str] = frozenset()
+    unsafe_call_bindings: frozenset[str] = frozenset()
+    is_instance_method: bool = False
 
 
 @dataclass(frozen=True, slots=True)
