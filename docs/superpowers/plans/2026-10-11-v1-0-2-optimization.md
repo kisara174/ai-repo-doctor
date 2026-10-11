@@ -189,16 +189,16 @@ def test_comprehension_name_does_not_shadow_module_call(self):
 
 **新建/修改：** tools/validate_reliability_install.py、evaluation/reliability-v1/*、tests/test_v1_contract.py、CI接入安装validator；发行版本/文档准备。
 
-- [ ] 新validator必须显式接收`--python --cli --expected-version --cases --out`，cwd设新输出目录，逐条记录argv/exit/stdout/stderr；确认import来自site-packages和metadata匹配。
-- [ ] 安装validator断言“正确行为”而非审查脚本的“旧bug存在”：F01/F02/F03错误边不在context/impact/map，F05正确边存在，F06语言提示正确。
-- [ ] F04以安装Python加载自己的产品模块并施加受控钩子；不执行fixture代码。退出2、无成功JSON、无snapshot/map产物作为验收。
-- [ ] 加入普通模块调用、稳定嵌套函数、正常self、稳定快照/地图正例，防止通过全删关系来消除误报。
-- [ ] 选择一个固定公开Python仓库，人工先核对含相关结构再做五命令只读调查；保存commit/tree/来源SHA、范围限制、发现前后差异。没有真实受影响结构就如实记录，不编造命中率。
-- [ ] 原R051复查保持JSX修复、45符号/0解析错误及源码引用正确；核心五命令与HTML/SVG均能交付。
-- [ ] 六项修复集成后执行一次完整源码回归；有js extra，skip必须逐项说明，不以旧563数目代替新执行结果。
-- [ ] 准备真实候选版本，精确提交构建主wheel；native源码未变时验证同提交平台产物的runtime等价，不把旧bundle来源改写为新SHA。
-- [ ] 独立base/js安装执行本计划validator、现有生命周期/base/js/v1和R051validators。源码、wheel、安装35份runtime按实际新文件数核对；不得盲写固定35如果增加runtime模块。
-- [ ] 在既有CI矩阵接入新安装validator，等待精确候选head全部15任务成功；审核后合并，核对最终tree。
+- [x] 新validator必须显式接收`--python --cli --expected-version --cases --out`，cwd设新输出目录，逐条记录argv/exit/stdout/stderr；确认import来自site-packages和metadata匹配。
+- [x] 安装validator断言“正确行为”而非审查脚本的“旧bug存在”：F01/F02/F03错误边不在context/impact/map，F05正确边存在，F06语言提示正确。
+- [x] F04以安装Python加载自己的产品模块并施加受控钩子；不执行fixture代码。退出2、无成功JSON、无snapshot/map产物作为验收。
+- [x] 加入普通模块调用、稳定嵌套函数、正常self、稳定快照/地图正例，防止通过全删关系来消除误报。
+- [x] 选择一个固定公开Python仓库，人工先核对含相关结构再做五命令只读调查；保存commit/tree/来源SHA、范围限制、发现前后差异。没有真实受影响结构就如实记录，不编造命中率。
+- [x] 原R051复查保持JSX修复、45符号/0解析错误及源码引用正确；核心五命令与HTML/SVG均能交付。
+- [x] 六项修复集成后执行一次完整源码回归；有js extra，skip必须逐项说明，不以旧563数目代替新执行结果。
+- [x] 准备真实候选版本，精确提交构建主wheel；native源码未变时验证同提交平台产物的runtime等价，不把旧bundle来源改写为新SHA。
+- [x] 独立base/js安装执行本计划validator、现有生命周期/base/js/v1和R051validators。源码、wheel、安装35份runtime按实际新文件数核对；不得盲写固定35如果增加runtime模块。
+- [x] 在既有CI矩阵接入新安装validator，等待精确候选head全部15任务成功；审核后合并，核对最终tree。
 
 核心命令：
 
@@ -216,13 +216,13 @@ python tools/validate_reliability_install.py --python "$INSTALLED_PYTHON" --cli 
 
 **文件：** _version.py、CHANGELOG.md、README.md、INSTALL/SUPPORT_MATRIX/COMPATIBILITY/CLI_CONTRACT，实际日期交付记录；新证据products/preservation/completion/中文报告。
 
-- [ ] 版本真实设为1.0.2；同步安装链接/验证器及正式SHA后重新构建，不重命名候选wheel。版本改变的最终head需自己的CI与安装事实。
-- [ ] 发布主wheel、native后端zip、校验件、来源提交和release-receipt；native0.1.0不改版本或内容时仍按已审计发布规则保留真实来源。
-- [ ] 从公开URL匿名下载四文件，在新目录原样执行tagged安装文档；再执行六项修复validator和真实仓库调查，校验源码/wheel/安装/公开资产一致。
-- [ ] 公开安装复验后，备份当前1.0.1全局入口并原子切换；验证1.0.2→1.0.1→1.0.2，旧1.0.0/1.0.1环境均保留。
-- [ ] 导出新目录Skill并绑定1.0.2绝对CLI，保留旧Skill。格式/绑定验证和新会话实际加载分别报告，不把导出成功写成会话加载成功。
-- [ ] 发布后再核对保护清单、Git状态、旧证据归属，完成中文报告；已知限制仍明确，记录修复反例与公开样本不同性质。
-- [ ] 指导书完成标记、独立审查、收尾文档合并，GraphFlow增量索引；所有事实已验证才写completion=closed。
+- [x] 版本真实设为1.0.2；同步安装链接/验证器及正式SHA后重新构建，不重命名候选wheel。版本改变的最终head需自己的CI与安装事实。
+- [x] 发布主wheel、native后端zip、校验件、来源提交和release-receipt；native0.1.0不改版本或内容时仍按已审计发布规则保留真实来源。
+- [x] 从公开URL匿名下载四文件，在新目录原样执行tagged安装文档；再执行六项修复validator和真实仓库调查，校验源码/wheel/安装/公开资产一致。
+- [x] 公开安装复验后，备份当前1.0.1全局入口并原子切换；验证1.0.2→1.0.1→1.0.2，旧1.0.0/1.0.1环境均保留。
+- [x] 导出新目录Skill并绑定1.0.2绝对CLI，保留旧Skill。格式/绑定验证和新会话实际加载分别报告，不把导出成功写成会话加载成功。
+- [x] 发布后再核对保护清单、Git状态、旧证据归属，完成中文报告；已知限制仍明确，记录修复反例与公开样本不同性质。
+- [x] 指导书、中文交付记录与独立复审已整理；GraphFlow增量索引。收尾文档合并及最终`completion=closed`状态以Release最终回执为准，合并前保留documentation_closure_pending。
 
 最终出口：六项问题关闭、普通正例保留、公开下载安装成功、五命令/地图可交付、Codex绑定正确、升级回滚成功、旧文件/证据未覆盖。未达到出口不得称1.0.2已闭环。
 
@@ -269,7 +269,7 @@ R5若已经完成该复用，本项记为由R5覆盖，不重复实施。
 - [x] 当前版本/六项问题已调查并独立复现。
 - [x] 可靠性设计、任务范围、顺序与完成条件写入指导书。
 - [x] R0–R6实现与定向回归。
-- [ ] R7–R8安装、CI与发行闭环。
+- [x] R7–R8安装、CI、正式发行、本机部署及回滚；收尾文档合并状态见Release最终回执。
 - [ ] U1–U4按真实收益择项实施。
 
 本清单是产品优化指导书；验证步骤用于证明每项优化成立，不是另起一个扩大测试数量的项目。

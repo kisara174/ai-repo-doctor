@@ -2,7 +2,7 @@
 
 <!-- repo-doctor-install-versions: 1.0.2, 1.0.1, 1.0.0, 1.0.1rc2 -->
 
-适用范围：Python 3.11+，Linux x86_64/glibc 与 Mac ARM。实际平台组合见 [支持矩阵](SUPPORT_MATRIX.md)。本页安装目标为 1.0.2；发行身份与当前准备状态见 [1.0.2 交付记录](delivery/2026-10-11-v1.0.2-reliability.md)。Windows、Intel Mac、Linux ARM/musl 暂不承诺。
+适用范围：Python 3.11+，Linux x86_64/glibc 与 Mac ARM。实际平台组合见 [支持矩阵](SUPPORT_MATRIX.md)。本页安装目标为 1.0.2；发行身份与实际安装验收见 [1.0.2 交付记录](delivery/2026-10-11-v1.0.2-reliability.md)。Windows、Intel Mac、Linux ARM/musl 暂不承诺。
 
 1.0.2 修复 Python 绑定误连、推导式绑定、源码一致性及跨语言覆盖提示，继承 1.0.1 的物理行和 JSX 属性修复。主产品为纯 Python wheel；JS/TS 需要同批独立 native grammar wheels。没有 PyPI 发行，不能只对远端产品 URL 加 `[js]` 而跳过后端安装。
 
