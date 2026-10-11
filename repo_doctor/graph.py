@@ -206,6 +206,11 @@ def _resolve_call(
     if caller is None or not call.name:
         return None
 
+    if call.receiver in call.shadowed_bindings or (
+        call.expression == call.name and call.name in call.shadowed_bindings
+    ):
+        return None
+
     if call.receiver is None and call.expression == call.name:
         if call.name in caller.unsafe_call_bindings:
             return None

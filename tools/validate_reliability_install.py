@@ -133,6 +133,10 @@ with patch.object(index,'parse_python_file',side_effect=edited):
         self.results.append({'id': 'F06', 'status': 'passed', 'languages': ['javascript','typescript']})
 
     def positives(self):
+        self.check_edges({'id': 'comprehension-inner', 'files': {'app.py':
+            'def helper():\n    return 1\n'
+            'def caller(callbacks):\n    return [helper() for helper in callbacks]\n'},
+            'forbidden_edges': [['app.py::caller', 'app.py::helper']]})
         source = ('def leaf():\n    return 1\n'
                   'def entry():\n    return leaf()\n'
                   'def outer():\n    def nested():\n        return 1\n    return nested()\n'

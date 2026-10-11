@@ -692,6 +692,7 @@ class _Extractor(ast.NodeVisitor):
         self._ids: list[str] = []
         self._kinds: list[str] = []
         self._instance_methods: list[bool] = []
+        self._comprehension_bindings: frozenset[str] = frozenset()
 
     def _add_symbol(self, node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef, kind: str) -> None:
         qualname = ".".join([*self._names, node.name])
@@ -853,6 +854,8 @@ class _Extractor(ast.NodeVisitor):
             and isinstance(func.value, ast.Name)
             and len(node.args) == 1
             and isinstance(node.args[0], ast.Name)
+            and func.value.id not in self._comprehension_bindings
+            and node.args[0].id not in self._comprehension_bindings
             and not node.keywords
             and (
                 not self._ids
@@ -892,7 +895,8 @@ class _Extractor(ast.NodeVisitor):
             name = func.id if isinstance(func, ast.Name) else func.attr if isinstance(func, ast.Attribute) else ""
             receiver = func.value.id if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name) else None
             self.calls.append(
-                CallSite(self.file, self._ids[-1], ast.unparse(func), name, receiver, node.lineno, node.col_offset)
+                CallSite(self.file, self._ids[-1], ast.unparse(func), name, receiver,
+                         node.lineno, node.col_offset, self._comprehension_bindings)
             )
         self.generic_visit(node)
 
@@ -935,6 +939,40 @@ class _Extractor(ast.NodeVisitor):
     def visit_GeneratorExp(self, node: ast.GeneratorExp) -> None:
         # The generator body also runs when the result is iterated later.
         return
+
+    def _visit_eager_comprehension(self, node: ast.ListComp | ast.SetComp | ast.DictComp) -> None:
+        # Only the first iterable is evaluated in the surrounding scope.
+        self.visit(node.generators[0].iter)
+        outer = self._comprehension_bindings
+        targets = frozenset(
+            child.id for generator in node.generators
+            for child in ast.walk(generator.target)
+            if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store)
+        )
+        self._comprehension_bindings = outer | targets
+        try:
+            for position, generator in enumerate(node.generators):
+                if position:
+                    self.visit(generator.iter)
+                self.visit(generator.target)
+                for condition in generator.ifs:
+                    self.visit(condition)
+            if isinstance(node, ast.DictComp):
+                self.visit(node.key)
+                self.visit(node.value)
+            else:
+                self.visit(node.elt)
+        finally:
+            self._comprehension_bindings = outer
+
+    def visit_ListComp(self, node: ast.ListComp) -> None:
+        self._visit_eager_comprehension(node)
+
+    def visit_SetComp(self, node: ast.SetComp) -> None:
+        self._visit_eager_comprehension(node)
+
+    def visit_DictComp(self, node: ast.DictComp) -> None:
+        self._visit_eager_comprehension(node)
 
 
 def parse_python_file(

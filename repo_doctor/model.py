@@ -113,6 +113,7 @@ class CallSite:
     receiver: str | None
     line: int
     column: int
+    shadowed_bindings: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)

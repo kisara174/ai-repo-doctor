@@ -34,6 +34,38 @@ class PythonBindingSafetyTests(unittest.TestCase):
             '    return helper()\n')
         self.assertIn(('app.py::caller', 'app.py::helper'), self.edges(index))
 
+    def test_comprehension_calls_do_not_resolve_shadowed_global(self):
+        for expression in ('[helper() for helper in callbacks]',
+                           '{helper() for helper in callbacks}',
+                           '{helper(): 1 for helper in callbacks}',
+                           '(helper() for helper in callbacks)',
+                           '[item for helper in callbacks if helper()]',
+                           '[[helper() for item in helper()] for helper in callbacks]'):
+            with self.subTest(expression=expression):
+                index = self.make_index('def helper():\n    return 1\n'
+                    'def caller(callbacks):\n    return ' + expression + '\n')
+                self.assertNotIn(('app.py::caller', 'app.py::helper'), self.edges(index))
+                self.assertFalse(build_context(index, 'app.py::caller')['call_evidence'])
+                self.assertFalse(build_impact(index, 'app.py::helper')['affected_symbols'])
+                self.assertFalse(any(e['kind'] == 'call' for e in build_map(index)['edges']))
+
+    def test_comprehension_first_iterable_uses_outer_scope(self):
+        index = self.make_index('def helper():\n    return []\n'
+            'def caller():\n    return [\n        helper()\n'
+            '        for helper in helper()\n    ]\n')
+        evidence = build_context(index, 'app.py::caller')['call_evidence']
+        self.assertEqual([(e['callee'], e['line']) for e in evidence], [('app.py::helper', 6)])
+
+    def test_comprehension_unshadowed_calls_remain_resolved(self):
+        index = self.make_index('def helper():\n    return 1\n'
+            'def caller(items):\n    return [helper() for item in items]\n')
+        self.assertIn(('app.py::caller', 'app.py::helper'), self.edges(index))
+
+    def test_comprehension_receiver_is_not_original_self(self):
+        index = self.make_index('class Worker:\n    def work(self):\n        return 1\n'
+            '    def caller(self, others):\n        return [self.work() for self in others]\n')
+        self.assertNotIn(('app.py::Worker.caller', 'app.py::Worker.work'), self.edges(index))
+
     def test_real_bindings_remain_shadowing(self):
         for binding in ('helper = 1', 'import math as helper',
                         'try:\n        pass\n    except ValueError as helper:\n        pass',
