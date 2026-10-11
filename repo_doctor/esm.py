@@ -59,7 +59,9 @@ def _resolve_source(file: str, specifier: str, path_set: set[str],
 
 
 def resolve_esm_graph(index: RepoIndex, *, resolve_calls: bool = True) -> None:
-    paths, _ = discover_files(index.root)
+    paths = index.discovered_paths
+    if paths is None:
+        paths, _ = discover_files(index.root, budget=index.budget)
     path_set = set(paths)
     failed = {row.file for row in index.parse_errors}
     seen_limits = set(index.analysis_limits)

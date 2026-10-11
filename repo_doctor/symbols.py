@@ -3,6 +3,7 @@
 from difflib import get_close_matches
 
 from repo_doctor.model import RepoIndex, Symbol
+from .source import validate_index_sources
 
 
 def search_symbols(index: RepoIndex, query: str, limit: int = 20) -> list[dict]:
@@ -10,6 +11,7 @@ def search_symbols(index: RepoIndex, query: str, limit: int = 20) -> list[dict]:
     if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 100:
         raise ValueError("limit must be between 1 and 100")
 
+    validate_index_sources(index)
     normalized_query = query.strip().casefold()
     if not normalized_query:
         raise ValueError("query must not be empty")

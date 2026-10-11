@@ -197,6 +197,32 @@ def _resolve_module_instance_call(
     return target
 
 
+def _call_has_shadowed_binding(call: CallSite, index: RepoIndex) -> bool:
+    """Apply lexical guards before ordinary and re-export resolution alike."""
+    binding = call.receiver or (call.name if call.expression == call.name else None)
+    if binding is None:
+        return False
+    if binding in call.shadowed_bindings:
+        return True
+    caller = index.symbols.get(call.caller)
+    if caller is None:
+        return True
+    if call.receiver is None and binding in caller.unsafe_call_bindings:
+        return True
+    if binding in caller.local_bindings:
+        # Stable nested definitions and local constructors have their own guards.
+        return False
+    enclosing = index.symbols.get(caller.parent or "")
+    while enclosing is not None:
+        if enclosing.kind != "class" and (
+            binding in enclosing.local_bindings
+            or binding in enclosing.unsafe_call_bindings
+        ):
+            return True
+        enclosing = index.symbols.get(enclosing.parent or "")
+    return False
+
+
 def _resolve_call(
     call: CallSite,
     index: RepoIndex,
@@ -207,6 +233,8 @@ def _resolve_call(
         return None
 
     if call.receiver is None and call.expression == call.name:
+        if call.name in caller.unsafe_call_bindings:
+            return None
         nested = f"{caller.file}::{caller.qualname}.{call.name}"
         if nested in index.symbols:
             return nested
@@ -227,6 +255,8 @@ def _resolve_call(
     if receiver is None or call.expression != f"{receiver}.{call.name}":
         return None
     if receiver == "self" and caller.kind == "method" and caller.parent:
+        if not caller.is_instance_method or "self" in caller.reassigned_parameters:
+            return None
         target = f"{caller.parent}.{call.name}"
         return target if target in index.symbols else None
     if receiver in caller.local_bindings:
@@ -509,6 +539,8 @@ def _resolve_graph(index: RepoIndex) -> None:
     )
 
     for call in index.calls:
+        if _call_has_shadowed_binding(call, index):
+            continue
         target = _resolve_call(call, index, aliases)
         via_reexports: tuple[ExportHop, ...] = ()
         binding = _reexport_binding_for_call(call, index, aliases)

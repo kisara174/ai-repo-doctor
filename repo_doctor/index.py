@@ -35,6 +35,7 @@ def build_index(root: Path, *, languages: tuple[str, ...] = ("python",),
         parsed = parse_python_file(root, path, root_identity=root_identity, budget=budget)
         budget.checkpoint(path)
         index.files.append(parsed.file)
+        index.source_digests[path] = parsed.source_digest
         for symbol in parsed.symbols:
             candidates_by_id.setdefault(symbol.id, []).append(symbol)
         index.imports.extend(parsed.imports)
@@ -90,6 +91,7 @@ def build_index(root: Path, *, languages: tuple[str, ...] = ("python",),
             budget.checkpoint(path)
             parsed = data.parsed
             index.files.append(parsed.file)
+            index.source_digests[path] = parsed.source_digest
             index.file_languages[path] = language_for_path(path)
             index.calls.extend(parsed.calls)
             if parsed.error:

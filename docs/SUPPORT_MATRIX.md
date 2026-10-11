@@ -1,8 +1,8 @@
 # 1.0 平台与能力支持矩阵
 
-<!-- repo-doctor-development-version: 1.0.1 -->
+<!-- repo-doctor-development-version: 1.0.2 -->
 
-当前源版本为 1.0.1，继承已验证 rc2 的源码物理行修复及独立 JSX grammar 后端。正式发行的精确提交及公开下载验收见 [1.0.1 交付记录](delivery/2026-10-09-v1.0.1-release.md)。[安装指导](INSTALL.md) 与 [CLI 合同](CLI_CONTRACT.md) 规定使用方式。下表属于既有 1.0.0 及其前置候选的证据，1.0.1rc2 的独立证据列于下方候选小节；正式提交 CI 与产物身份见 [交付记录](delivery/2026-10-08-v1.0.0-product-closure.md)。不能用本地 ARM Mac 结果代替其他系统/版本的运行证据。
+当前源版本为 1.0.2（可靠性修复，准备发布），继承已验证 rc2 的源码物理行修复及独立 JSX grammar 后端。正式发行的精确提交及公开下载验收见 [1.0.1 交付记录](delivery/2026-10-09-v1.0.1-release.md)。[安装指导](INSTALL.md) 与 [CLI 合同](CLI_CONTRACT.md) 规定使用方式。下表属于既有 1.0.0 及其前置候选的证据，1.0.1rc2 的独立证据列于下方候选小节；正式提交 CI 与产物身份见 [交付记录](delivery/2026-10-08-v1.0.0-product-closure.md)。不能用本地 ARM Mac 结果代替其他系统/版本的运行证据。
 
 ## 平台门禁
 
@@ -62,3 +62,7 @@ V4 平台门禁：[push 运行](https://github.com/kisara174/ai-repo-doctor/acti
 | 本地macOS27 / arm64 | 3.14.5 | 公开四文件匿名下载校验安装、R051调查、全局切换与回滚通过 |
 
 共20份安装summary、4份生命周期receipt、458条CI命令核对通过。主包35个runtime文件及3个native runtime文件与正式源码/wheel/公开安装一致。Mac11.0仅为wheel最低目标，未新增Mac11实机承诺。详见 [正式交付记录](delivery/2026-10-09-v1.0.1-release.md) 及 [公开回执](https://github.com/kisara174/ai-repo-doctor/releases/download/v1.0.1/release-receipt.json)。
+
+## 1.0.2 可靠性修复
+
+依赖和平台承诺继承1.0.1。具体提交、安装验证和CI以 [本轮交付记录](delivery/2026-10-11-v1.0.2-reliability.md) 为准；既有表格不自动转标为新版本结果。

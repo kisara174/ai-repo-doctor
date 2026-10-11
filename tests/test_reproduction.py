@@ -175,6 +175,8 @@ class ReproductionTests(unittest.TestCase):
                                     "--reproduction", "R-001", "--preview")
             self.assertEqual(preview[0], 0, preview[2])
 
+            previous_target = json.loads((case_dir / "case.json").read_text())["target"]
+
             def change_other_source(*args, **kwargs):
                 (repo / "other.py").write_text("def helper():\n    return 2\n", encoding="utf-8")
                 return DeepSeekResult("deepseek-flash", {"findings": []})
@@ -190,6 +192,7 @@ class ReproductionTests(unittest.TestCase):
             self.assertIn("source changed", error.lower())
             case = json.loads((case_dir / "case.json").read_text(encoding="utf-8"))
             self.assertEqual(case["issues"], [])
+            self.assertEqual(case["target"], previous_target)
             self.assertEqual(case["diagnoses"][-1]["status"], "source_changed")
             self.assertEqual(case["diagnoses"][-1]["reproduction_id"], "R-001")
 

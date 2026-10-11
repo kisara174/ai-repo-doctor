@@ -10,6 +10,7 @@ from .model import RepoIndex
 from .scanner import discover_files
 from .map_render import render_html, render_svg
 from .languages import analysis_metadata
+from .source import validate_index_sources
 
 
 LAYOUT = {'node_width': 260, 'node_height': 54, 'column_gap': 320,
@@ -180,6 +181,7 @@ def write_map(index: RepoIndex, destination: Path, *, symbol: str | None = None,
                  'map.html': render_html(data),
                  'structure.svg': render_svg(data, data['views']['structure']),
                  'relations.svg': render_svg(data, data['views']['relations'])}
+    validate_index_sources(index)
     index.budget.checkpoint("map artifacts prepared")
     destination.mkdir(parents=True)
     for name, content in artifacts.items():

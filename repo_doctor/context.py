@@ -6,7 +6,7 @@ from dataclasses import asdict
 
 from .model import CallEdge, RepoIndex, SemanticEdge, Symbol
 from .limits import AnalysisLimitError
-from .source import read_source, split_source_lines
+from .source import read_index_source, split_source_lines, validate_index_sources
 from .languages import analysis_metadata
 
 
@@ -35,8 +35,7 @@ def _require_symbol(index: RepoIndex, symbol_id: str) -> Symbol:
 
 def _read_lines(index: RepoIndex, path: str) -> list[str]:
     language = index.file_languages.get(path, "python")
-    source = read_source(index.root, path, index.root_identity,
-                         language=language, budget=index.budget)
+    source = read_index_source(index, path)
     return split_source_lines(source, language=language)
 
 
@@ -79,6 +78,7 @@ def build_context(
     include_symbols: tuple[str, ...] = (),
 ) -> dict:
     """Return target-first selected and graph context within a source-line budget."""
+    validate_index_sources(index)
     target = _require_symbol(index, symbol_id)
     if max_lines < 1:
         raise ValueError("max_lines must be at least 1")
@@ -331,6 +331,7 @@ def build_context(
 
 def build_impact(index: RepoIndex, symbol_id: str, depth: int = 2) -> dict:
     """Follow reverse static call edges; this is not runtime coverage."""
+    validate_index_sources(index)
     target = _require_symbol(index, symbol_id)
     if not 1 <= depth <= 10:
         raise ValueError("depth must be from 1 through 10")

@@ -15,7 +15,7 @@ from .leads import build_review_leads
 from .limits import AnalysisBudget, AnalysisLimitError
 from .scanner import run_git
 from .model import RepoIndex
-from .source import read_source
+from .source import read_index_source, validate_index_paths, SourceConsistencyError
 
 
 SCHEMA_VERSION = 1
@@ -29,14 +29,14 @@ def timestamp() -> str:
 
 def source_fingerprint(index: RepoIndex) -> str:
     """Hash the scanned Python paths and source, including local worktree edits."""
+    validate_index_paths(index)
     digest = hashlib.sha256()
     for item in sorted(index.files, key=lambda record: record.path):
         digest.update(item.path.encode("utf-8"))
         digest.update(b"\0")
         try:
-            content = read_source(index.root, item.path, index.root_identity,
-                                  language=index.file_languages.get(item.path, "python"), budget=index.budget)
-        except AnalysisLimitError:
+            content = read_index_source(index, item.path)
+        except (AnalysisLimitError, SourceConsistencyError):
             raise
         except (OSError, ValueError, UnicodeError, SyntaxError):
             content = "<unreadable>"
@@ -64,17 +64,21 @@ def _revision(root: Path, *, budget: AnalysisBudget | None = None) -> str | None
 def _static_issues(index: RepoIndex) -> list[dict]:
     issues = []
     for error in sorted(index.parse_errors, key=lambda item: (item.file, item.line)):
+        language = index.file_languages.get(error.file)
+        display = {'python': 'Python', 'javascript': 'JavaScript', 'typescript': 'TypeScript'}.get(language, 'Source')
+        backend = {'python': 'Python AST', 'javascript': 'JavaScript Tree-sitter',
+                   'typescript': 'TypeScript Tree-sitter'}.get(language, 'source analysis')
         issues.append({
             "id": f"S-{len(issues) + 1:03d}",
             "origin": "static",
-            "title": f"Python parse error in {error.file}:{error.line}",
+            "title": f"{display} parse error in {error.file}:{error.line}",
             "category": "parse_error",
             "evidence_status": "static_fact",
             "evidence": [{"file": error.file, "start_line": error.line, "end_line": error.line,
                           "message": error.message}],
-            "reasoning": "The local Python parser could not parse this file; analysis of it is incomplete.",
+            "reasoning": f"The local {backend} backend could not parse this file; analysis of it is incomplete. This does not establish that the source is invalid.",
             "impact": "Symbols and relationships in this file may be missing from the scan.",
-            "suggested_fix": "Inspect the syntax and rerun a new scan after editing.",
+            "suggested_fix": "Inspect the source and backend support, then rerun a new scan after resolving the coverage limitation.",
             "human_status": "unreviewed",
             "human_history": [],
             "verification": [],
@@ -408,7 +412,15 @@ def record_diagnosis_failure(
     response_format: str, model: str, status: str, category: str,
     *, reproduction_id: str | None = None,
 ) -> None:
-    set_target(case, index, context["symbol"])
+    if str(index.root) != case["repository"]["root"]:
+        raise ValueError("repository does not match case")
+    # A rejected request records its original identity, not fresh evidence from
+    # a stale index. Preserve any target previously selected by the preview.
+    if status != "source_changed":
+        try:
+            set_target(case, index, context["symbol"])
+        except SourceConsistencyError:
+            status = category = "source_changed"
     attempt = {
         "at": timestamp(),
         "status": status,
