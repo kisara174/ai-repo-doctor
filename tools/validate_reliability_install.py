@@ -137,6 +137,13 @@ with patch.object(index,'parse_python_file',side_effect=edited):
             'def helper():\n    return 1\n'
             'def caller(callbacks):\n    return [helper() for helper in callbacks]\n'},
             'forbidden_edges': [['app.py::caller', 'app.py::helper']]})
+        for identifier, statement, expression in (
+            ('imported-comprehension', 'from library import helper', '[helper() for helper in items]'),
+            ('module-comprehension', 'import library', '[library.helper() for library in items]'),
+        ):
+            self.check_edges({'id': identifier, 'files': {'library.py': 'def helper():\n    return 1\n',
+                'app.py': statement + '\ndef caller(items):\n    return ' + expression + '\n'},
+                'forbidden_edges': [['app.py::caller', 'library.py::helper']]})
         source = ('def leaf():\n    return 1\n'
                   'def entry():\n    return leaf()\n'
                   'def outer():\n    def nested():\n        return 1\n    return nested()\n'

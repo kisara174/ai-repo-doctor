@@ -66,6 +66,37 @@ class PythonBindingSafetyTests(unittest.TestCase):
             '    def caller(self, others):\n        return [self.work() for self in others]\n')
         self.assertNotIn(('app.py::Worker.caller', 'app.py::Worker.work'), self.edges(index))
 
+    def test_comprehension_bindings_block_import_reexport_fallback(self):
+        for statement, expression in (
+            ('from library import helper', '[helper() for helper in items]'),
+            ('import library', '[library.helper() for library in items]'),
+        ):
+            with self.subTest(statement=statement):
+                directory = tempfile.TemporaryDirectory()
+                self.addCleanup(directory.cleanup)
+                root = Path(directory.name)
+                (root / 'library.py').write_text('def helper():\n    return 1\n')
+                (root / 'app.py').write_text(statement + '\ndef caller(items):\n    return ' + expression + '\n')
+                index = build_index(root)
+                self.assertNotIn(('app.py::caller', 'library.py::helper'), self.edges(index))
+                self.assertFalse(build_context(index, 'app.py::caller')['call_evidence'])
+                self.assertFalse(build_impact(index, 'library.py::helper')['affected_symbols'])
+
+    def test_enclosing_binding_blocks_import_reexport_fallback(self):
+        for statement, binding, expression in (
+            ('from library import helper', 'helper = None', 'helper()'),
+            ('import library', 'library = None', 'library.helper()'),
+        ):
+            with self.subTest(statement=statement):
+                directory = tempfile.TemporaryDirectory()
+                self.addCleanup(directory.cleanup)
+                root = Path(directory.name)
+                (root / 'library.py').write_text('def helper():\n    return 1\n')
+                (root / 'app.py').write_text(statement + '\ndef outer():\n    ' + binding
+                    + '\n    def inner():\n        return ' + expression + '\n    return inner()\n')
+                index = build_index(root)
+                self.assertNotIn(('app.py::outer.inner', 'library.py::helper'), self.edges(index))
+
     def test_real_bindings_remain_shadowing(self):
         for binding in ('helper = 1', 'import math as helper',
                         'try:\n        pass\n    except ValueError as helper:\n        pass',
