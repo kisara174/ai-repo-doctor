@@ -944,8 +944,9 @@ def parse_python_file(
     """Parse one file; return an error record instead of stopping a scan."""
     root = Path(root).resolve() if root_identity is None else Path(root)
     path = root / relative_path
+    source_digests: dict[str, str] = {}
     try:
-        source = read_source(root, relative_path, root_identity, budget=budget)
+        source = read_source(root, relative_path, root_identity, budget=budget, source_digests=source_digests)
         lines = split_source_lines(source)
         file = FileRecord(
             path=relative_path,
@@ -965,6 +966,7 @@ def parse_python_file(
             [],
             [],
             error=ParseError(relative_path, getattr(exc, "lineno", None) or 1, str(exc)),
+            source_digest=source_digests.get(relative_path),
         )
     module_import_ids = {
         id(node) for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))
@@ -986,4 +988,5 @@ def parse_python_file(
         registration_calls=extractor.registration_calls,
         attribute_rebindings=extractor.attribute_rebindings,
         module_instances=_module_instance_bindings(tree),
+        source_digest=source_digests.get(relative_path),
     )

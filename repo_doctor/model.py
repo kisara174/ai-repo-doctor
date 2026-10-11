@@ -133,6 +133,7 @@ class ParsedFile:
     registration_calls: list[CommandRegistrationCall] = field(default_factory=list)
     attribute_rebindings: list[AttributeRebinding] = field(default_factory=list)
     module_instances: dict[str, ModuleInstanceBinding] = field(default_factory=dict)
+    source_digest: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -263,3 +264,4 @@ class RepoIndex:
     js_call_imports: dict[tuple[str, str, int], ESMImportRef] = field(default_factory=dict)
     budget: AnalysisBudget = field(default_factory=AnalysisBudget, repr=False)
     discovered_paths: tuple[str, ...] | None = None
+    source_digests: dict[str, str | None] = field(default_factory=dict)

@@ -308,11 +308,14 @@ def parse_js_ts_file(root: Path, relative_path: str, *,
     parts = PurePosixPath(relative_path).parts
     is_test = ("test" in parts or "tests" in parts or
                PurePosixPath(relative_path).name.startswith("test_"))
+    source_digests: dict[str, str] = {}
     try:
-        source = read_source(root, relative_path, root_identity, language=language, budget=budget)
+        source = read_source(root, relative_path, root_identity, language=language, budget=budget,
+                             source_digests=source_digests)
     except (UnicodeError, SyntaxError) as exc:
         parsed = ParsedFile(FileRecord(relative_path, 0, 0, is_test), [], [], [],
-                            error=ParseError(relative_path, 1, "Invalid UTF-8 source: " + str(exc)))
+                            error=ParseError(relative_path, 1, "Invalid UTF-8 source: " + str(exc)),
+                            source_digest=source_digests.get(relative_path))
         return JSParsedFile(parsed, [], [], [], set(), {}, [])
     lines = split_source_lines(source, language=language)
     data = extract(source, file=relative_path, language=language)
@@ -322,7 +325,8 @@ def parse_js_ts_file(root: Path, relative_path: str, *,
     # Ownerless module/callback calls cannot masquerade as a named-symbol CallSite.
     calls = [CallSite(**row) for row in data["calls"] if row["caller"] is not None]
     parsed = ParsedFile(FileRecord(relative_path, len(lines), sum(bool(line.strip()) for line in lines), is_test),
-                        symbols, [], calls, error=ParseError(**data["error"]) if data["error"] else None)
+                        symbols, [], calls, error=ParseError(**data["error"]) if data["error"] else None,
+                        source_digest=source_digests.get(relative_path))
     return JSParsedFile(parsed, [ESMImportRef(**row) for row in data["esm_imports"]],
                         [ESMExportRef(**row) for row in data["esm_exports"]],
                         [IdentifierUse(**row) for row in data["identifier_uses"]],

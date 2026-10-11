@@ -1,12 +1,17 @@
 """Read scanned source without following repository path symlinks."""
 
+import hashlib
 import io
 import os
 import stat
 import tokenize
 from pathlib import Path, PurePosixPath
+from typing import TYPE_CHECKING
 
-from .limits import AnalysisBudget
+from .limits import AnalysisBudget, AnalysisLimitError
+
+if TYPE_CHECKING:
+    from .model import RepoIndex
 
 
 def split_source_lines(source: str, *, language: str = "python") -> list[str]:
@@ -71,6 +76,7 @@ def _open_checked_fallback(
 def read_source(
     root: Path, relative_path: str, root_identity: tuple[int, int] | None = None,
     *, language: str = "python", budget: AnalysisBudget | None = None,
+    source_digests: dict[str, str] | None = None,
 ) -> str:
     """Read selected source with path containment; Python retains encoding cookies."""
     if language not in ("python", "javascript", "typescript"):
@@ -95,7 +101,60 @@ def read_source(
         raw = stream.read(budget.read_size())
         budget.record_read(len(raw), relative_path)
         budget.checkpoint(relative_path)
+        if source_digests is not None:
+            source_digests[relative_path] = hashlib.sha256(raw).hexdigest()
         encoding = "utf-8-sig"
         if language == "python":
             encoding, _ = tokenize.detect_encoding(io.BytesIO(raw).readline)
         return raw.decode(encoding)
+
+
+class SourceConsistencyError(ValueError):
+    """Parsed source identity changed; callers must not publish stale evidence."""
+
+
+def read_index_source(index: "RepoIndex", relative_path: str) -> str:
+    digests: dict[str, str] = {}
+    expected = index.source_digests.get(relative_path)
+    captured = relative_path in index.source_digests
+    try:
+        source = read_source(index.root, relative_path, index.root_identity,
+                             language=index.file_languages.get(relative_path, 'python'),
+                             budget=index.budget, source_digests=digests)
+    except (OSError, ValueError, UnicodeError, SyntaxError) as exc:
+        if isinstance(exc, AnalysisLimitError):
+            raise
+        if captured and digests.get(relative_path) != expected:
+            raise SourceConsistencyError(f'source changed after parsing: {relative_path} ({exc}); collect again') from exc
+        raise
+    if captured and digests.get(relative_path) != expected:
+        raise SourceConsistencyError(f'source changed after parsing: {relative_path}; collect again')
+    return source
+
+
+def validate_index_paths(index: "RepoIndex") -> None:
+    if index.discovered_paths is None:
+        return  # Compatibility for manually constructed, non-scanned records.
+    from .scanner import discover_files
+    from .languages import language_for_path
+    paths, _ = discover_files(index.root, budget=index.budget)
+    def relevant(path):
+        # ESM ambiguity also depends on extensionless, .json/.node and package
+        # configuration paths; the resolver consumes the full discovery set.
+        return index.analysis_languages != ('python',) or language_for_path(path) in index.analysis_languages
+    if {p for p in paths if relevant(p)} != {p for p in index.discovered_paths if relevant(p)}:
+        raise SourceConsistencyError('source changed after scanning: source candidate set; collect again')
+
+
+def validate_index_sources(index: "RepoIndex") -> None:
+    for path in index.source_digests:
+        try:
+            read_index_source(index, path)
+        except SourceConsistencyError:
+            raise
+        except (OSError, ValueError, UnicodeError, SyntaxError) as exc:
+            if isinstance(exc, AnalysisLimitError):
+                raise
+            # Stable unreadable/undecodable input remains a coverage limitation.
+    validate_index_paths(index)
+    index.budget.checkpoint('parsed source consistency')

@@ -15,7 +15,7 @@ from .leads import build_review_leads
 from .limits import AnalysisBudget, AnalysisLimitError
 from .scanner import run_git
 from .model import RepoIndex
-from .source import read_source
+from .source import read_index_source, validate_index_paths, SourceConsistencyError
 
 
 SCHEMA_VERSION = 1
@@ -29,14 +29,14 @@ def timestamp() -> str:
 
 def source_fingerprint(index: RepoIndex) -> str:
     """Hash the scanned Python paths and source, including local worktree edits."""
+    validate_index_paths(index)
     digest = hashlib.sha256()
     for item in sorted(index.files, key=lambda record: record.path):
         digest.update(item.path.encode("utf-8"))
         digest.update(b"\0")
         try:
-            content = read_source(index.root, item.path, index.root_identity,
-                                  language=index.file_languages.get(item.path, "python"), budget=index.budget)
-        except AnalysisLimitError:
+            content = read_index_source(index, item.path)
+        except (AnalysisLimitError, SourceConsistencyError):
             raise
         except (OSError, ValueError, UnicodeError, SyntaxError):
             content = "<unreadable>"
