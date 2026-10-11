@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - 按设计中的版本、依赖、平台、资源限制、JSON兼容、MIT署名及证据保护要求执行。
-- 当前只完成规划，所有实施项保持未勾选；未修改实现、未新建发布、未创建新goal。
+- 用户已批准实施。按实际完成事实更新勾选；发布、安装和部署仅在相应门禁通过后标记。未创建新goal。
 - 实施在干净正式工作树进行；主目录旧0.5.3及15份改动不动。不要使用reset/clean覆盖既有内容。
 - 基线稳定提交348b956778bb5538c05181c2fcefae50fe23583a。远端已变化时先重新核对差异，不盲目沿用SHA。
 - 不给1.0.1wheel改名，不移动v1.0.1tag，不覆盖旧安装/Skill/历史评估。
@@ -65,12 +65,12 @@ R0→R1→R2→R3→R4→R5→R6→R7→R8。R1先修绑定采集，因为调用
 
 **文件：** 新证据目录baseline.json；evaluation/reliability-v1/cases.json、README.md；本计划状态。
 
-- [ ] 使用list_artifacts/git worktree list检查可复用正式工作树，核对HEAD、tree、分支及待提交文件。
-- [ ] 先保存本计划与设计；在稳定基线创建`codex/v1-0-2-reliability`实施分支。不得直接在已合并的旧release分支堆实现提交。
-- [ ] 保护主目录15份内容/状态、当前1.0.1入口及runtime/Skill、旧1.0.0、rc1/rc2和历史评估manifest，记录SHA与版本。
-- [ ] 新建`.../evaluations/v1-0-2-reliability-v1`；存在时选择递增新目录，不覆盖。
-- [ ] 从审查fixtures复制六条静态源码及真实预期到cases.json：旧wrong边禁止，新正确直接边必需；先在已安装1.0.1记录旧结果。
-- [ ] F04不能直接复制已被复现钩子改写的app.py：使用审查source-change-result.json的old_source建立初始文件、new_source作为钩子替换内容，requested_symbol保持app.py::original。
+- [x] 使用list_artifacts/git worktree list检查可复用正式工作树，核对HEAD、tree、分支及待提交文件。
+- [x] 先保存本计划与设计；在稳定基线创建`codex/v1-0-2-reliability`实施分支。不得直接在已合并的旧release分支堆实现提交。
+- [x] 保护主目录15份内容/状态、当前1.0.1入口及runtime/Skill、旧1.0.0、rc1/rc2和历史评估manifest，记录SHA与版本。
+- [x] 新建`.../evaluations/v1-0-2-reliability-v1`；存在时选择递增新目录，不覆盖。
+- [x] 从审查fixtures复制六条静态源码及真实预期到cases.json：旧wrong边禁止，新正确直接边必需；先在已安装1.0.1记录旧结果。
+- [x] F04不能直接复制已被复现钩子改写的app.py：使用审查source-change-result.json的old_source建立初始文件、new_source作为钩子替换内容，requested_symbol保持app.py::original。
 
 验证：`git status --short`、`git rev-parse HEAD`、已安装1.0.1 `--version`；所有保护记录可重读，六条发现ID与审查一致。提交：`docs: freeze1.0.2 reliability scope and regression cases`。
 
@@ -80,7 +80,7 @@ R0→R1→R2→R3→R4→R5→R6→R7→R8。R1先修绑定采集，因为调用
 
 **接口：** `_bindings(node) -> frozenset[str]`保持；Symbol追加`unsafe_call_bindings=frozenset()`、`is_instance_method=False`。本任务填充当前作用域事实，R2/R3读取该事实。
 
-- [ ] 在新unittest类建立`make_index(source)`辅助方法：TemporaryDirectory写app.py，build_index后返回index；测试不执行source。
+- [x] 在新unittest类建立`make_index(source)`辅助方法：TemporaryDirectory写app.py，build_index后返回index；测试不执行source。
 
 辅助方法保留目录直到该测试结束，以便context/impact/map验证继续读取同一份源码：
 
@@ -99,7 +99,7 @@ class PythonBindingSafetyTests(unittest.TestCase):
         return build_index(root)
 ```
 
-- [ ] 写以下失败测试，并先确认F05反例失败：
+- [x] 写以下失败测试，并先确认F05反例失败：
 
 ```python
 def test_comprehension_name_does_not_shadow_module_call(self):
@@ -112,9 +112,9 @@ def test_comprehension_name_does_not_shadow_module_call(self):
                   {(e.caller, e.callee) for e in index.call_edges})
 ```
 
-- [ ] 用作用域感知visitor替代跨全部嵌套正文的ast.walk。采集参数、当前Store/Del/import/except/match；定义名字采集，嵌套正文隔离；定义创建表达式与推导式特殊绑定按设计处理。
-- [ ] 正例/反例覆盖list/set/dict推导式、嵌套函数局部名、普通参数遮蔽、普通赋值、except别名、global/nonlocal保守标记；不要因清除污染导致真实遮蔽失效。
-- [ ] 运行验证、审查事实字段和公开序列化兼容，提交。
+- [x] 用作用域感知visitor替代跨全部嵌套正文的ast.walk。采集参数、当前Store/Del/import/except/match；定义名字采集，嵌套正文隔离；定义创建表达式与推导式特殊绑定按设计处理。
+- [x] 正例/反例覆盖list/set/dict推导式、嵌套函数局部名、普通参数遮蔽、普通赋值、except别名、global/nonlocal保守标记；不要因清除污染导致真实遮蔽失效。
+- [x] 运行验证、审查事实字段和公开序列化兼容，提交。
 
 验证：`python -m unittest tests.test_python_binding_safety tests.test_parser tests.test_graph -v`。提交：`fix: isolate Python lexical binding scopes`。
 
@@ -124,11 +124,11 @@ def test_comprehension_name_does_not_shadow_module_call(self):
 
 **接口：** 消费Symbol.parent/local_bindings/unsafe_call_bindings；保留CallEdge和Symbol ID合同。
 
-- [ ] 固定审查closure_shadow源码，写`test_enclosing_binding_blocks_global_fallback`；断言禁止outer.inner→模块helper。
-- [ ] 沿parent链检查函数作用域，跳过类属性作用域；发现外层同名绑定或风险标记时保留未知，不做本轮之外的闭包目标推断。
-- [ ] 正例：外层不绑定helper时原全局调用仍成立；类属性同名不被错当方法闭包；外层参数同名不误连模块。
-- [ ] 将同一反例送入build_context/build_impact/build_map，三处均不得出现错误边；不是只改context输出过滤。
-- [ ] 验证、审查、提交。
+- [x] 固定审查closure_shadow源码，写`test_enclosing_binding_blocks_global_fallback`；断言禁止outer.inner→模块helper。
+- [x] 沿parent链检查函数作用域，跳过类属性作用域；发现外层同名绑定或风险标记时保留未知，不做本轮之外的闭包目标推断。
+- [x] 正例：外层不绑定helper时原全局调用仍成立；类属性同名不被错当方法闭包；外层参数同名不误连模块。
+- [x] 将同一反例送入build_context/build_impact/build_map，三处均不得出现错误边；不是只改context输出过滤。
+- [x] 验证、审查、提交。
 
 验证：`python -m unittest tests.test_python_binding_safety tests.test_context tests.test_repo_map -v`。提交：`fix: guard module fallback against enclosing Python bindings`。
 
@@ -136,11 +136,11 @@ def test_comprehension_name_does_not_shadow_module_call(self):
 
 **修改：** parser.py的不安全绑定事实，graph.py当前nested提前返回；同一测试文件。
 
-- [ ] 写审查反例`test_rebound_nested_function_is_unresolved`，断言helper=replacement后不得有caller→caller.helper。
-- [ ] 在nested返回前核对unsafe_call_bindings；记录赋值/增量赋值/删除、import冲突、重复或条件定义等风险。不新增赋值别名推断。
-- [ ] 正例：普通单一定义且未重绑的嵌套helper仍有正确边；有效overload和已有歧义处理保持；参数与局部import的真实遮蔽不失效。
-- [ ] 用“普通定义”与“仅增加一条重绑语句”成对测试，避免让所有嵌套调用都变未知。
-- [ ] 验证、审查、提交。
+- [x] 写审查反例`test_rebound_nested_function_is_unresolved`，断言helper=replacement后不得有caller→caller.helper。
+- [x] 在nested返回前核对unsafe_call_bindings；记录赋值/增量赋值/删除、import冲突、重复或条件定义等风险。不新增赋值别名推断。
+- [x] 正例：普通单一定义且未重绑的嵌套helper仍有正确边；有效overload和已有歧义处理保持；参数与局部import的真实遮蔽不失效。
+- [x] 用“普通定义”与“仅增加一条重绑语句”成对测试，避免让所有嵌套调用都变未知。
+- [x] 验证、审查、提交。
 
 验证：`python -m unittest tests.test_python_binding_safety tests.test_graph tests.test_index -v`。提交：`fix: reject rebound nested callable targets`。
 
@@ -148,11 +148,11 @@ def test_comprehension_name_does_not_shadow_module_call(self):
 
 **修改：** parser.py:_add_symbol实例身份填充，graph.py:self分支；model.py已有新默认字段；同一测试文件。
 
-- [ ] 写`test_rebound_self_does_not_resolve_original_method`：Worker.caller中self=Other()后禁止Worker.work边；原Other构造调用仍可存在。
-- [ ] 在self快捷分支要求is_instance_method且self不在reassigned_parameters；有身份不明或重绑定风险时保留未知，不猜新类实例。
-- [ ] 覆盖正常self.work、self删除、增量/解包赋值、嵌套nonlocal写；staticmethod/classmethod参数恰好叫self时不得凭名字按原类连接。
-- [ ] 运行模块实例、Click语义与正常本地构造实例正例，保证现有支持保留。
-- [ ] 验证、审查、提交。
+- [x] 写`test_rebound_self_does_not_resolve_original_method`：Worker.caller中self=Other()后禁止Worker.work边；原Other构造调用仍可存在。
+- [x] 在self快捷分支要求is_instance_method且self不在reassigned_parameters；有身份不明或重绑定风险时保留未知，不猜新类实例。
+- [x] 覆盖正常self.work、self删除、增量/解包赋值、嵌套nonlocal写；staticmethod/classmethod参数恰好叫self时不得凭名字按原类连接。
+- [x] 运行模块实例、Click语义与正常本地构造实例正例，保证现有支持保留。
+- [x] 验证、审查、提交。
 
 验证：`python -m unittest tests.test_python_binding_safety tests.test_graph tests.test_module_instances tests.test_module_instance_outputs tests.test_semantics -v`。提交：`fix: verify instance receiver identity before method resolution`。
 
@@ -162,14 +162,14 @@ def test_comprehension_name_does_not_shadow_module_call(self):
 
 **接口：** 设计规定的source_digests可选捕获、ParsedFile.source_digest、RepoIndex.source_digests、SourceConsistencyError、read_index_source。公开fingerprint算法和read_source默认返回str不变。
 
-- [ ] 写失败测试：在cli.main的一次context过程中，patch index.parse_python_file使其读取后把original改名replacement；必须退出2，stdout不输出成功JSON，snapshot不存在。
-- [ ] 写Python与JS/TS解析输入摘要测试：摘要来自同一次实际raw读取，不能在解析结束后再读文件作为基线；不增加无界读取。
-- [ ] 捕获raw SHA并传入索引；所有后续源证据读取使用read_index_source。区分稳定坏编码/语法覆盖错误与分析中来源变化。
-- [ ] 五命令输出准备、快照与地图写入前核对来源/集合；JS/TS候选集合变化不得继续使用旧关联。指纹except分支必须显式传播SourceConsistencyError。
-- [ ] 复用已有指纹/预算检查；仅R5需要的同次扫描复用可提前实现，传已有budget，不单独创建隐形新预算。
-- [ ] 反例覆盖目标/相关调用者变更、删除、解析后变编码、选中实现文件新增、JS/TS候选新增；稳定源码、稳定坏编码、语法错误覆盖提示仍按合同返回。
-- [ ] 地图失败时目录不存在，快照失败时文件不存在；已有案件/输出未改变。资源超限仍退出2，不返回部分成功。
-- [ ] 核对物理行、BOM/编码cookie、CRLF、2MiB/64MiB预算及旧fingerprint稳定值，审查后提交。
+- [x] 写失败测试：在cli.main的一次context过程中，patch index.parse_python_file使其读取后把original改名replacement；必须退出2，stdout不输出成功JSON，snapshot不存在。
+- [x] 写Python与JS/TS解析输入摘要测试：摘要来自同一次实际raw读取，不能在解析结束后再读文件作为基线；不增加无界读取。
+- [x] 捕获raw SHA并传入索引；所有后续源证据读取使用read_index_source。区分稳定坏编码/语法覆盖错误与分析中来源变化。
+- [x] 五命令输出准备、快照与地图写入前核对来源/集合；JS/TS候选集合变化不得继续使用旧关联。指纹except分支必须显式传播SourceConsistencyError。
+- [x] 复用已有指纹/预算检查；仅R5需要的同次扫描复用可提前实现，传已有budget，不单独创建隐形新预算。
+- [x] 反例覆盖目标/相关调用者变更、删除、解析后变编码、选中实现文件新增、JS/TS候选新增；稳定源码、稳定坏编码、语法错误覆盖提示仍按合同返回。
+- [x] 地图失败时目录不存在，快照失败时文件不存在；已有案件/输出未改变。资源超限仍退出2，不返回部分成功。
+- [x] 核对物理行、BOM/编码cookie、CRLF、2MiB/64MiB预算及旧fingerprint稳定值，审查后提交。
 
 验证：`python -m unittest tests.test_source_consistency tests.test_source_lines tests.test_analysis_limits tests.test_agent_tools tests.test_context tests.test_repo_map tests.test_cli -v`。提交：`fix: keep repository evidence tied to parsed source identity`。
 
@@ -177,11 +177,11 @@ def test_comprehension_name_does_not_shadow_module_call(self):
 
 **修改：** case.py:_static_issues、leads.py仅需文案时；新建tests/test_review_lead_languages.py；关联public docs。
 
-- [ ] Python/JS/TS各造一个静态语法失败样本；先确认app.js的review_leads错误写Python。
-- [ ] 依据index.file_languages生成实际语言/后端文案；JS/TS解释为Tree-sitter覆盖失败，不直接建议修补“非法源码”。
-- [ ] 保留issue ID/category、evidence、人工状态、case schema；未知语言使用中性提示。
-- [ ] 五命令帮助描述补充optional JS/TS事实；不在本任务重新设计全部legacy命令分组。
-- [ ] 验证、审查、提交。
+- [x] Python/JS/TS各造一个静态语法失败样本；先确认app.js的review_leads错误写Python。
+- [x] 依据index.file_languages生成实际语言/后端文案；JS/TS解释为Tree-sitter覆盖失败，不直接建议修补“非法源码”。
+- [x] 保留issue ID/category、evidence、人工状态、case schema；未知语言使用中性提示。
+- [x] 五命令帮助描述补充optional JS/TS事实；不在本任务重新设计全部legacy命令分组。
+- [x] 验证、审查、提交。
 
 验证：`python -m unittest tests.test_review_lead_languages tests.test_agent_tools tests.test_product_cli tests.test_public_docs -v`；`python tools/check_public_docs.py --root .`。提交：`fix: report parse coverage using the actual language backend`。
 
@@ -268,7 +268,12 @@ R5若已经完成该复用，本项记为由R5覆盖，不重复实施。
 
 - [x] 当前版本/六项问题已调查并独立复现。
 - [x] 可靠性设计、任务范围、顺序与完成条件写入指导书。
-- [ ] R0–R8实施与发行闭环。
+- [x] R0–R6实现与定向回归。
+- [ ] R7–R8安装、CI与发行闭环。
 - [ ] U1–U4按真实收益择项实施。
 
 本清单是产品优化指导书；验证步骤用于证明每项优化成立，不是另起一个扩大测试数量的项目。
+
+## 实施记录补充
+
+R5复用同次ESM发现路径（U2由R5覆盖）。ESM解析使用整个已发现路径集合判断扩展名为空、JSON/node和package.json等歧义，因此集合校验必须覆盖它实际消费的所有路径。完整回归发现旧诊断失败记录会重读旧索引，已增加源码变化时保留原target、只记录失败身份的兼容修复；不新增云端功能。

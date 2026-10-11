@@ -121,3 +121,7 @@ map.json 的 schema_version=1，含 repository、coverage、nodes、edges、file
 无 --cli 时保留通用 SKILL.md 导出；绑定后使用。指定 --cli 时先核对可执行文件和版本，成功生成 SKILL.md 与 installation.json。binding 为 `{schema_version: 1, cli: string, version: string}`；cli 为解析符号链接后的绝对路径，版本与导出包一致。版本核验以独立 argv 执行 --version，5 秒超时；不从 PATH 猜测替代 CLI。
 
 已有目录/符号链接拒绝覆盖，输入错误不创建导出目录，写入失败清理本次已写文件。新 Skill 名称 repo-doctor-v1，可与用户现有 repo-doctor 并存；真实加载成功由独立 Codex 会话验证，不由 JSON 导出成功替代。
+
+## 1.0.2 源码一致性
+
+五命令的索引与证据以实际解析输入为基准。检测到源码/候选集合变化时退出2，不打印成功JSON，不创建新快照或地图。重新运行命令调查当前源码；检查点保护不承诺持续修改目录的原子快照。源码重复校验仍计入同一资源预算。

@@ -1,10 +1,10 @@
 # 安装、Codex 接入、升级与回滚
 
-<!-- repo-doctor-install-versions: 1.0.1, 1.0.0, 1.0.1rc2 -->
+<!-- repo-doctor-install-versions: 1.0.2, 1.0.1, 1.0.0, 1.0.1rc2 -->
 
-适用范围：Python 3.11+，Linux x86_64/glibc 与 Mac ARM。实际平台组合见 [支持矩阵](SUPPORT_MATRIX.md)。本页安装目标为 1.0.1；发行身份见 [1.0.1 交付记录](delivery/2026-10-09-v1.0.1-release.md)。Windows、Intel Mac、Linux ARM/musl 暂不承诺。
+适用范围：Python 3.11+，Linux x86_64/glibc 与 Mac ARM。实际平台组合见 [支持矩阵](SUPPORT_MATRIX.md)。本页安装目标为 1.0.2；发行身份与当前准备状态见 [1.0.2 交付记录](delivery/2026-10-11-v1.0.2-reliability.md)。Windows、Intel Mac、Linux ARM/musl 暂不承诺。
 
-1.0.1 修复源码物理行引用和 JSX/TSX 带引号属性的裸 `&`。主产品为纯 Python wheel；JS/TS 需要同批独立 native grammar wheels。没有 PyPI 发行，不能只对远端产品 URL 加 `[js]` 而跳过后端安装。
+1.0.2 修复 Python 绑定误连、推导式绑定、源码一致性及跨语言覆盖提示，继承 1.0.1 的物理行和 JSX 属性修复。主产品为纯 Python wheel；JS/TS 需要同批独立 native grammar wheels。没有 PyPI 发行，不能只对远端产品 URL 加 `[js]` 而跳过后端安装。
 
 ## 1. 下载并校验到新目录
 
@@ -12,7 +12,7 @@
 
 ```sh
 set -e
-RD_VERSION=1.0.1
+RD_VERSION=1.0.2
 RD_ROOT="$HOME/.local/share/ai-repo-doctor/releases/v$RD_VERSION"
 mkdir -p "$(dirname "$RD_ROOT")"
 mkdir "$RD_ROOT"
@@ -48,7 +48,7 @@ cd "$RD_ROOT"
 
 ```sh
 set -e
-RD_VERSION=1.0.1
+RD_VERSION=1.0.2
 RD_CAND_DIR="$PWD"
 check_sha() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum -c "$1";
@@ -69,7 +69,7 @@ RD_CLI="$RD_CAND_DIR/venv-js/bin/repo-doctor"
 
 后端包仅提供已验证的 Linux x86_64/glibc 与 Mac ARM wheel，由 pip 选择。不兼容时仅本地匹配失败就停止，不从公共索引下载同名 companion 或要求用户编译。安装主产品 extra 的两个官方依赖可能联网；安装后的五个只读调查命令离线工作，不运行目标源码或安装其依赖。发行 source commit 与详细回执见 Release 的 SOURCE_COMMIT.txt 和 release-receipt.json。
 
-以下 rc2 段落仅供保留旧候选使用；新正式安装使用上面的 1.0.1。
+以下 rc2 段落仅供保留旧候选使用；新正式安装使用上面的 1.0.2。
 
 ### 1.0.1rc2 原生 grammar 候选（尚未正式发布）
 

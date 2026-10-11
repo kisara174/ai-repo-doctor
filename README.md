@@ -1,10 +1,10 @@
 # AI Repo Doctor
 
-<!-- repo-doctor-install-versions: 1.0.1 -->
+<!-- repo-doctor-install-versions: 1.0.2, 1.0.1 -->
 
 为 Codex 提供 Python、JavaScript、TypeScript 仓库的静态源码证据，为人提供离线结构关系图。Codex 负责判断和修改代码。主要流程无需 API key、服务或 Node，不运行目标仓库代码。
 
-**1.0.1 版本**通过 GitHub Release 分发，入口见 [v1.0.1](https://github.com/kisara174/ai-repo-doctor/releases/tag/v1.0.1)。它修复源码行号引用和 JSX 属性 URL 的裸 `&`。安装、版本绑定 Skill、升级和回滚见 [安装指南](docs/INSTALL.md)，精确发行身份与公开安装验收见 [交付记录](docs/delivery/2026-10-09-v1.0.1-release.md)。
+**1.0.2 正在准备发布**，修复调用绑定误连、源码证据一致性和跨语言提示。完成状态见 [1.0.2 交付记录](docs/delivery/2026-10-11-v1.0.2-reliability.md)。已发布的 [1.0.1](https://github.com/kisara174/ai-repo-doctor/releases/tag/v1.0.1) 仍可使用；安装、Skill 绑定、升级和回滚见 [安装指南](docs/INSTALL.md)。
 
 ## 安装固定版本
 

@@ -106,6 +106,11 @@ jobs:
             --python "$RUNNER_TEMP/repo-doctor-venv/bin/python" \
             --cli "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" \
             --expected-version "$RD_EXPECTED_VERSION" --out "$RUNNER_TEMP/installed-v1-base-evidence"
+          python "$GITHUB_WORKSPACE/tools/validate_reliability_install.py" \
+            --python "$RUNNER_TEMP/repo-doctor-venv/bin/python" --cli "$RUNNER_TEMP/repo-doctor-venv/bin/repo-doctor" \
+            --expected-version "$RD_EXPECTED_VERSION" \
+            --cases "$GITHUB_WORKSPACE/evaluation/reliability-v1/cases.json" \
+            --out "$RUNNER_TEMP/installed-reliability-base-evidence"
       - name: Preserve installed base evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -116,6 +121,7 @@ jobs:
             ${{ runner.temp }}/installed-release-evidence
             ${{ runner.temp }}/installed-base-preview-evidence
             ${{ runner.temp }}/installed-v1-base-evidence
+            ${{ runner.temp }}/installed-reliability-base-evidence
 
   js-preview:
     needs: native-grammars
@@ -159,7 +165,7 @@ jobs:
         run: |
           python - <<'PY'
           import unittest
-          modules = ['tests.test_languages', 'tests.test_js_ts', 'tests.test_esm', 'tests.test_index', 'tests.test_context', 'tests.test_cli', 'tests.test_agent_tools', 'tests.test_repo_map', 'tests.test_js_ts_spike', 'tests.test_js_ts_dialects', 'tests.test_jsx_ampersand', 'tests.test_source_lines', 'tests.test_analysis_limits', 'tests.test_v1_contract', 'tests.test_skill_binding', 'tests.test_public_docs']
+          modules = ['tests.test_languages', 'tests.test_js_ts', 'tests.test_esm', 'tests.test_index', 'tests.test_context', 'tests.test_cli', 'tests.test_agent_tools', 'tests.test_repo_map', 'tests.test_js_ts_spike', 'tests.test_js_ts_dialects', 'tests.test_jsx_ampersand', 'tests.test_source_lines', 'tests.test_analysis_limits', 'tests.test_v1_contract', 'tests.test_skill_binding', 'tests.test_public_docs', 'tests.test_python_binding_safety', 'tests.test_source_consistency', 'tests.test_review_lead_languages']
           result = unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromNames(modules))
           assert result.wasSuccessful() and not result.skipped, 'JS contract gate failed or skipped'
           PY
@@ -190,6 +196,11 @@ jobs:
             --python "$RUNNER_TEMP/candidate-release/venv-js/bin/python" \
             --cli "$RUNNER_TEMP/candidate-release/venv-js/bin/repo-doctor" \
             --expected-version "$RD_EXPECTED_VERSION" --out "$RUNNER_TEMP/installed-v1-js-evidence"
+          python "$GITHUB_WORKSPACE/tools/validate_reliability_install.py" \
+            --python "$RUNNER_TEMP/candidate-release/venv-js/bin/python" --cli "$RUNNER_TEMP/candidate-release/venv-js/bin/repo-doctor" \
+            --expected-version "$RD_EXPECTED_VERSION" \
+            --cases "$GITHUB_WORKSPACE/evaluation/reliability-v1/cases.json" \
+            --out "$RUNNER_TEMP/installed-reliability-js-evidence"
       - name: Preserve installed JS evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -199,6 +210,7 @@ jobs:
             ${{ runner.temp }}/machine.json
             ${{ runner.temp }}/installed-js-preview-evidence
             ${{ runner.temp }}/installed-v1-js-evidence
+            ${{ runner.temp }}/installed-reliability-js-evidence
 
   mac-install:
     needs: native-grammars
@@ -251,6 +263,11 @@ jobs:
             (cd "$RUNNER_TEMP" && "$RD_ENV/bin/python" "$GITHUB_WORKSPACE/tools/validate_v1_install.py" \
               --mode "$RD_MODE" --python "$RD_ENV/bin/python" --cli "$RD_ENV/bin/repo-doctor" \
               --expected-version "$RD_EXPECTED_VERSION" --out "$RUNNER_TEMP/installed-v1-$RD_MODE-evidence")
+            python "$GITHUB_WORKSPACE/tools/validate_reliability_install.py" \
+              --python "$RD_ENV/bin/python" --cli "$RD_ENV/bin/repo-doctor" \
+              --expected-version "$RD_EXPECTED_VERSION" \
+              --cases "$GITHUB_WORKSPACE/evaluation/reliability-v1/cases.json" \
+              --out "$RUNNER_TEMP/installed-reliability-$RD_MODE-evidence"
           done
       - name: Preserve installed macOS evidence
         if: always()
@@ -260,7 +277,9 @@ jobs:
           path: |
             ${{ runner.temp }}/machine.json
             ${{ runner.temp }}/installed-v1-base-evidence
+            ${{ runner.temp }}/installed-reliability-base-evidence
             ${{ runner.temp }}/installed-v1-js-evidence
+            ${{ runner.temp }}/installed-reliability-js-evidence
 
   map-viewer:
     needs: native-grammars

@@ -412,7 +412,15 @@ def record_diagnosis_failure(
     response_format: str, model: str, status: str, category: str,
     *, reproduction_id: str | None = None,
 ) -> None:
-    set_target(case, index, context["symbol"])
+    if str(index.root) != case["repository"]["root"]:
+        raise ValueError("repository does not match case")
+    # A rejected request records its original identity, not fresh evidence from
+    # a stale index. Preserve any target previously selected by the preview.
+    if status != "source_changed":
+        try:
+            set_target(case, index, context["symbol"])
+        except SourceConsistencyError:
+            status = category = "source_changed"
     attempt = {
         "at": timestamp(),
         "status": status,
