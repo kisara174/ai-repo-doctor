@@ -369,7 +369,7 @@ def _print_doctor(payload: dict) -> None:
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="repo-doctor", description="Evidence-first analysis of a local Python repository")
+    parser = argparse.ArgumentParser(prog="repo-doctor", description="Evidence-first analysis of local Python repositories and optional JS/TS source")
     parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}')
     subcommands = parser.add_subparsers(dest="command", required=True)
     skill = subcommands.add_parser('skill', help='Export the bundled Codex skill')

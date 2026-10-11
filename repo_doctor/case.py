@@ -64,17 +64,21 @@ def _revision(root: Path, *, budget: AnalysisBudget | None = None) -> str | None
 def _static_issues(index: RepoIndex) -> list[dict]:
     issues = []
     for error in sorted(index.parse_errors, key=lambda item: (item.file, item.line)):
+        language = index.file_languages.get(error.file)
+        display = {'python': 'Python', 'javascript': 'JavaScript', 'typescript': 'TypeScript'}.get(language, 'Source')
+        backend = {'python': 'Python AST', 'javascript': 'JavaScript Tree-sitter',
+                   'typescript': 'TypeScript Tree-sitter'}.get(language, 'source analysis')
         issues.append({
             "id": f"S-{len(issues) + 1:03d}",
             "origin": "static",
-            "title": f"Python parse error in {error.file}:{error.line}",
+            "title": f"{display} parse error in {error.file}:{error.line}",
             "category": "parse_error",
             "evidence_status": "static_fact",
             "evidence": [{"file": error.file, "start_line": error.line, "end_line": error.line,
                           "message": error.message}],
-            "reasoning": "The local Python parser could not parse this file; analysis of it is incomplete.",
+            "reasoning": f"The local {backend} backend could not parse this file; analysis of it is incomplete. This does not establish that the source is invalid.",
             "impact": "Symbols and relationships in this file may be missing from the scan.",
-            "suggested_fix": "Inspect the syntax and rerun a new scan after editing.",
+            "suggested_fix": "Inspect the source and backend support, then rerun a new scan after resolving the coverage limitation.",
             "human_status": "unreviewed",
             "human_history": [],
             "verification": [],
